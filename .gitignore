@@ -1,0 +1,54 @@
+# ===== Backend =====
+# IDE配置
+backend/.idea/
+backend/*.iml
+backend/*.ipr
+backend/*.iws
+
+# 编译输出
+backend/target/
+backend/out/
+
+# 日志
+backend/logs/
+backend/*.log
+
+# 环境配置（可能包含密码）
+backend/application-local.properties
+backend/application-local.yml
+backend/.env
+
+# ===== Frontend =====
+# 依赖
+frontend/node_modules/
+
+# 构建输出
+frontend/dist/
+frontend/.vite/
+
+# IDE配置
+frontend/.vscode/
+frontend/.idea/
+
+# 环境配置
+frontend/.env
+frontend/.env.local
+
+# 日志
+frontend/*.log
+frontend/npm-debug.log*
+
+# ===== 通用 =====
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.swp
+*.bak
+~*
+
+# 数据库文件
+*.db
+*.sqlite

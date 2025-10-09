@@ -1,0 +1,100 @@
+[
+  {
+    "id": 3,
+    "type": "choice",
+    "text": "你们二人共同拥有一片土地，若种相同作物则收益减半。",
+    "options": [
+      { "key": "A", "text": "粮食作物（收获4，买种子消耗1）" },
+      { "key": "B", "text": "经济作物（收获8，买种子消耗4）" },
+      { "key": "C", "text": "什么都不种（获得对方一半分数）" }
+    ],
+    "defaultChoice": "C",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "strategyId": "Q003"
+  },
+  {
+    "id": 4,
+    "type": "bid",
+    "text": "村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。",
+    "defaultChoice": "4",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "min": 2,
+    "max": 7,
+    "strategyId": "Q004"
+  },
+  {
+    "id": 5,
+    "type": "bid",
+    "text": "你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。",
+    "defaultChoice": "2",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "min": 2,
+    "max": 8,
+    "strategyId": "Q005"
+  },
+  {
+    "id": 6,
+    "type": "bid",
+    "text": "你们二人共同修路，总共需要 6 分。出分较高的人得 8 分，较低的得 4 分，相同则均得 4 分。",
+    "defaultChoice": "3",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "min": 0,
+    "max": 6,
+    "strategyId": "Q006"
+  },
+  {
+    "id": 8,
+    "type": "choice",
+    "text": "你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10）2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择",
+    "defaultChoice": "C",
+    "options": [
+      { "key": "A", "text": "核心地段（消耗5分）" },
+      { "key": "B", "text": "边缘地段（消耗3分）" },
+      { "key": "C", "text": "什么都不做" }
+    ],
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "strategyId": "Q008"
+  },
+  {
+    "id": 2,
+    "type": "choice",
+    "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",
+    "options": [
+      { "key": "A", "text": "精致的侍卫服装（7）" },
+      { "key": "B", "text": "王子服装（5）" },
+      { "key": "C", "text": "普通侍卫服装（3）" }
+    ],
+    "defaultChoice": "C",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "strategyId": "Q002"
+  },
+  {
+    "id": 7,
+    "type": "bid",
+    "text": "你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。",
+    "defaultChoice": "5",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "min": 0,
+    "max": 10,
+    "strategyId": "Q007"
+  },
+  {
+    "id": 1,
+    "type": "bid",
+    "text": "现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除",
+    "defaultChoice": "4",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "min": 1,
+    "max": 6,
+    "strategyId": "Q001"
+  }
+]
+

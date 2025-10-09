@@ -1,0 +1,33 @@
+spring:
+  # 数据库配置
+  datasource:
+    url: jdbc:mysql://localhost:3306/game_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
+    username: gameuser
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  # JPA配置
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # 开发环境用create-drop，生产环境改成update或validate
+    show-sql: true
+    properties:
+      hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+# CORS配置
+cors:
+  allowed-origins: http://localhost:5173  # Vue开发服务器地址
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  max-age: 3600
+
+# 服务器配置
+server:
+  port: 8080
+

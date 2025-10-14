@@ -21,7 +21,7 @@ public class GameEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JoinColumn(name = "room_id", nullable = false)
+    @JoinColumn(name = "room_code", nullable = false)
     private String roomCode;  // ❌ 不加cascade
 
     private LocalDateTime startTime;

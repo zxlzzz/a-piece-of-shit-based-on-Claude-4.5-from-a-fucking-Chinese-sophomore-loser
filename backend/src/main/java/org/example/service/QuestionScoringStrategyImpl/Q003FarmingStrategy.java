@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +17,7 @@ import java.util.Map;
  * - 不同作物：正常收益
  * - C选项：获得对方得分的一半（向下取整）
  */
+@Component
 @Slf4j
 public class Q003FarmingStrategy extends BaseQuestionStrategy {
 

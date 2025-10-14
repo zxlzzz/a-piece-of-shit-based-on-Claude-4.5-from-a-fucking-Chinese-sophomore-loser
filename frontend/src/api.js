@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8080/api",
+  baseURL: "/api",
   timeout: 10000,
 });
 
@@ -41,10 +41,8 @@ api.interceptors.response.use(
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers = 4, questionCount = 10) =>
-  api.post(`/rooms`, null, {
-    params: { maxPlayers, questionCount }
-  });
+export const createRoom = (roomConfig) =>
+  api.post('/rooms', roomConfig);
 
 export const joinRoom = (roomCode, playerId, playerName) =>
   api.post(`/rooms/${roomCode}/join`, null, {
@@ -75,6 +73,9 @@ export const deleteRoom = (roomCode) =>
 
 export const getAllActiveRooms = () =>
   api.get(`/rooms`);
+
+export const updateRoomSettings = (roomCode, settings) =>
+  api.put(`/rooms/${roomCode}/settings`, settings);
 
 // ============ 玩家相关API ============
 

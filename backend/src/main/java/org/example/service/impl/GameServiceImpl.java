@@ -2,21 +2,21 @@ package org.example.service.impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.controller.GameController;
 import org.example.dto.*;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.*;
 import org.example.repository.*;
-import org.example.service.GameService;
-import org.example.service.QuesService;
-import org.example.service.QuestionFactory;
-import org.example.service.QuestionSelectorService;
+import org.example.service.*;
+import org.example.service.QuestionScoringStrategyImpl.QR.RepeatableQuestionStrategy;
 import org.example.utils.DTOConverter;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -34,7 +34,6 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final PlayerRepository playerRepository;
     private final PlayerGameRepository playerGameRepository;
-    private final QuesService questionService;
     private final SubmissionRepository submissionRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final GameResultRepository gameResultRepository;
@@ -42,15 +41,16 @@ public class GameServiceImpl implements GameService {
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
     private final QuestionSelectorService questionSelector;
+    private final Map<String, Map<String, Integer>> roomStrategyRounds = new ConcurrentHashMap<>();
 
-    // 活跃房间（内存/Redis 存储）
+    // 活跃房间（内存存储）
     private final Map<String, GameRoom> activeRooms = new ConcurrentHashMap<>();
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
     // 题目超时定时器
-    private final Map<String, ScheduledFuture<?>> roomTimers = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledFuture<?>> questionTimeouts = new ConcurrentHashMap<>();
 
     // 推进锁（防止并发推进）
     private final Map<String, AtomicBoolean> advancing = new ConcurrentHashMap<>();
@@ -58,23 +58,29 @@ public class GameServiceImpl implements GameService {
     // 默认答题时间
     private final long defaultQuestionTimeoutSeconds = 30L;
 
-    // ==================== 公开方法 ====================
+
+    // 在 GameServiceImpl 类中修改和新增以下方法：
 
     @Override
     @Transactional
     public RoomDTO createRoom(Integer maxPlayers, Integer questionCount) {
         String roomCode = generateRoomCode();
 
-        // 创建房间实体（数据库）
+        // 🔥 创建房间实体（只有基础字段）
         RoomEntity roomEntity = RoomEntity.builder()
                 .roomCode(roomCode)
                 .status(RoomStatus.WAITING)
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
+                // 🔥 高级规则使用默认值
+                .rankingMode("standard")
+                .targetScore(null)
+                .winConditionsJson(null)
                 .build();
+
         RoomEntity savedRoom = roomRepository.save(roomEntity);
 
-        // 创建游戏房间（内存）
+        // 创建内存房间（原有逻辑）
         GameRoom gameRoom = new GameRoom();
         gameRoom.setRoomCode(roomCode);
         gameRoom.setMaxPlayers(maxPlayers);
@@ -86,12 +92,75 @@ public class GameServiceImpl implements GameService {
         gameRoom.setSubmissions(new ConcurrentHashMap<>());
         gameRoom.setScores(new ConcurrentHashMap<>());
         gameRoom.setDisconnectedPlayers(new ConcurrentHashMap<>());
+        gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
 
         activeRooms.put(roomCode, gameRoom);
         advancing.put(roomCode, new AtomicBoolean(false));
 
         log.info("创建房间: {}, 最大人数: {}, 题目数: {}", roomCode, maxPlayers, questionCount);
         return toRoomDTO(savedRoom, gameRoom);
+    }
+
+    // 🔥 新增：更新房间设置
+    @Override
+    @Transactional
+    public RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request) {
+        // 1. 查找房间
+        RoomEntity room = roomRepository.findByRoomCode(roomCode)
+                .orElseThrow(() -> new BusinessException("房间不存在"));
+
+        GameRoom gameRoom = activeRooms.get(roomCode);
+        if (gameRoom == null) {
+            throw new BusinessException("房间状态异常");
+        }
+
+        synchronized (this.getInternedRoomCode(roomCode)) {
+            // 2. 校验：游戏未开始
+            if (gameRoom.isStarted()) {
+                throw new BusinessException("游戏已开始，无法修改设置");
+            }
+
+            // 3. 更新题目数量（可选）
+            if (request.getQuestionCount() != null && request.getQuestionCount() > 0) {
+                room.setQuestionCount(request.getQuestionCount());
+                log.info("房间 {} 题目数量更新为: {}", roomCode, request.getQuestionCount());
+            }
+
+            // 4. 更新排名模式
+            if (request.getRankingMode() != null) {
+                room.setRankingMode(request.getRankingMode());
+                log.info("房间 {} 排名模式更新为: {}", roomCode, request.getRankingMode());
+            }
+
+            // 5. 更新目标分数
+            room.setTargetScore(request.getTargetScore());
+
+            // 6. 更新通关条件
+            String winConditionsJson = null;
+            if (request.getWinConditions() != null) {
+                try {
+                    winConditionsJson = objectMapper.writeValueAsString(request.getWinConditions());
+                    log.info("房间 {} 通关条件更新为: {}", roomCode, winConditionsJson);
+                } catch (Exception e) {
+                    log.error("序列化通关条件失败", e);
+                    throw new BusinessException("通关条件格式错误");
+                }
+            }
+            room.setWinConditionsJson(winConditionsJson);
+
+            // 7. 保存到数据库
+            roomRepository.save(room);
+
+            log.info("✅ 房间 {} 设置更新成功", roomCode);
+
+            // 8. 转换为 DTO
+            RoomDTO roomDTO = toRoomDTO(room, gameRoom);
+
+            // 9. 🔥 广播给所有人
+            broadcastRoomState(roomCode);
+
+            return roomDTO;
+        }
     }
 
     @Override
@@ -105,7 +174,7 @@ public class GameServiceImpl implements GameService {
             throw new BusinessException("房间状态异常");
         }
 
-        synchronized (gameRoom) {
+        synchronized (this.getInternedRoomCode(roomCode)) {
             // 检查房间状态
             if (room.getStatus() != RoomStatus.WAITING) {
                 throw new BusinessException("房间已开始游戏或已结束");
@@ -121,12 +190,10 @@ public class GameServiceImpl implements GameService {
                     .anyMatch(p -> p.getPlayerId().equals(playerId));
 
             if (!playerExists) {
-                // ✅ 使用 playerId 查询或创建玩家
                 PlayerEntity player = playerRepository.findByPlayerId(playerId)
                         .orElse(null);
 
                 if (player == null) {
-                    // 第一次加入，创建玩家实体
                     player = PlayerEntity.builder()
                             .playerId(playerId)
                             .name(playerName)
@@ -134,13 +201,11 @@ public class GameServiceImpl implements GameService {
                             .room(room)
                             .build();
                 } else {
-                    // 已存在，更新房间
                     player.setRoom(room);
                     player.setReady(false);
                 }
                 playerRepository.save(player);
 
-                // 添加到内存房间
                 PlayerDTO playerDTO = PlayerDTO.builder()
                         .playerId(playerId)
                         .name(playerName)
@@ -196,23 +261,20 @@ public class GameServiceImpl implements GameService {
             throw new BusinessException("房间状态异常");
         }
 
-        synchronized (gameRoom) {
+        synchronized (this.getInternedRoomCode(roomCode)) {
             if (gameRoom.isStarted()) {
                 return toRoomDTO(room, gameRoom);
             }
 
-            // 更新房间状态
             room.setStatus(RoomStatus.PLAYING);
             roomRepository.save(room);
 
-            // 创建游戏记录
             GameEntity game = GameEntity.builder()
                     .roomCode(roomCode)
                     .startTime(LocalDateTime.now())
                     .build();
             GameEntity savedGame = gameRepository.save(game);
 
-            // 创建玩家-游戏关联记录
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
                 PlayerEntity player = playerRepository.findByPlayerId(playerDTO.getPlayerId())
                         .orElseThrow(() -> new BusinessException("玩家不存在: " + playerDTO.getPlayerId()));
@@ -225,10 +287,9 @@ public class GameServiceImpl implements GameService {
                 playerGameRepository.save(playerGame);
             }
 
-            // 初始化游戏数据
             List<QuestionEntity> questions = questionSelector.selectQuestions(
-                    room.getQuestionCount(),           // 总题数
-                    gameRoom.getPlayers().size()       // 玩家数
+                    room.getQuestionCount(),
+                    gameRoom.getPlayers().size()
             );
             gameRoom.setQuestions(questions);
             gameRoom.setGameId(savedGame.getId());
@@ -237,7 +298,6 @@ public class GameServiceImpl implements GameService {
             gameRoom.setQuestionStartTime(LocalDateTime.now());
             gameRoom.setTimeLimit(30);
 
-            // 启动超时定时器
             scheduleQuestionTimeout(gameRoom, defaultQuestionTimeoutSeconds);
 
             log.info("房间 {} 开始游戏，题目数: {}, 玩家数: {}",
@@ -246,71 +306,76 @@ public class GameServiceImpl implements GameService {
         }
     }
 
-    @Transactional
     @Override
     public RoomDTO submitAnswer(String roomCode, String playerId, String choice, boolean force) {
-        GameRoom gameRoom = activeRooms.get(roomCode);
-        if (gameRoom == null || !gameRoom.isStarted()) {
-            throw new BusinessException("游戏未开始");
+        synchronized (this.getInternedRoomCode(roomCode)) {
+            GameRoom gameRoom = activeRooms.get(roomCode);
+            if (gameRoom == null || !gameRoom.isStarted()) {
+                throw new BusinessException("游戏未开始");
+            }
+
+            QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
+            if (currentQuestion == null) {
+                throw new BusinessException("当前没有有效题目");
+            }
+
+            Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
+                    .get(gameRoom.getCurrentIndex());
+
+            if (currentRoundSubmissions != null && currentRoundSubmissions.containsKey(playerId)) {
+                throw new BusinessException("本轮已经提交过答案");
+            }
+
+            this.saveSubmissionInNewTransaction(playerId, currentQuestion, gameRoom, choice);
+
+            gameRoom.getSubmissions()
+                    .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
+                    .put(playerId, choice);
+
+            gameRoom.getPlayers().stream()
+                    .filter(p -> p.getPlayerId().equals(playerId))
+                    .findFirst()
+                    .ifPresent(p -> p.setReady(true));
+
+            log.info("💾 玩家 {} 提交答案: {}", playerId, choice);
+
+            boolean allSubmitted = gameRoom.getPlayers().stream()
+                    .allMatch(p -> gameRoom.getSubmissions()
+                            .get(gameRoom.getCurrentIndex())
+                            .containsKey(p.getPlayerId()));
+
+            if (allSubmitted || force) {
+                cancelQuestionTimeout(roomCode);
+                advanceQuestionIfNeeded(gameRoom, force ? "force" : "allSubmitted", force);
+            }
+
+            RoomEntity room = roomRepository.findByRoomCode(roomCode)
+                    .orElseThrow(() -> new BusinessException("房间不存在"));
+            return toRoomDTO(room, gameRoom);
         }
+    }
 
-        QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
-        if (currentQuestion == null) {
-            throw new BusinessException("当前没有有效题目");
-        }
-
-        RoomEntity room = roomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new BusinessException("房间不存在"));
-
-        // ✅ 使用 playerId 查询玩家
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveSubmissionInNewTransaction(String playerId, QuestionEntity question,
+                                               GameRoom gameRoom, String choice) {
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
         GameEntity game = gameRepository.findById(gameRoom.getGameId())
                 .orElseThrow(() -> new BusinessException("游戏不存在"));
 
-        // 检查是否已提交
-        Optional<SubmissionEntity> existingSubmission = submissionRepository
-                .findByPlayerAndQuestionAndGame(player, currentQuestion, game);
-
-        if (existingSubmission.isPresent()) {
-            throw new BusinessException("已经提交过答案");
-        }
-
-        // 保存提交记录
         SubmissionEntity submission = SubmissionEntity.builder()
                 .player(player)
-                .question(currentQuestion)
+                .question(question)
                 .game(game)
                 .choice(choice)
                 .build();
+
         submissionRepository.save(submission);
+    }
 
-        // 更新内存数据
-        gameRoom.getSubmissions()
-                .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                .put(playerId, choice);
-
-        // 标记玩家已提交
-        gameRoom.getPlayers().stream()
-                .filter(p -> p.getPlayerId().equals(playerId))
-                .findFirst()
-                .ifPresent(p -> p.setReady(true));
-
-        // 检查是否所有人都已提交
-        boolean allSubmitted = gameRoom.getPlayers().stream()
-                .allMatch(p -> gameRoom.getSubmissions()
-                        .get(gameRoom.getCurrentIndex())
-                        .containsKey(p.getPlayerId()));
-
-        if (allSubmitted || force) {
-            cancelQuestionTimeout(roomCode);
-            advanceQuestionIfNeeded(gameRoom, force ? "force" : "allSubmitted", force);
-        }
-
-        log.info("玩家 {} 在房间 {} 提交答案: {}", playerId, roomCode, choice);
-
-        return toRoomDTO(room, gameRoom);
+    private String getInternedRoomCode(String roomCode) {
+        return roomCode.intern();
     }
 
     @Override
@@ -319,7 +384,6 @@ public class GameServiceImpl implements GameService {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
-        // ✅ 使用 playerId 查询
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
@@ -330,7 +394,6 @@ public class GameServiceImpl implements GameService {
         player.setReady(ready);
         playerRepository.save(player);
 
-        // 同步更新内存
         GameRoom gameRoom = activeRooms.get(roomCode);
         if (gameRoom != null) {
             gameRoom.getPlayers().stream()
@@ -340,7 +403,10 @@ public class GameServiceImpl implements GameService {
         }
 
         log.info("玩家 {} 设置准备状态: {}", playerId, ready);
-        return toRoomDTO(room, gameRoom);
+        if (gameRoom != null) {
+            return toRoomDTO(room, gameRoom);
+        }
+        return null;
     }
 
     @Override
@@ -395,8 +461,7 @@ public class GameServiceImpl implements GameService {
             throw new BusinessException("房间状态异常");
         }
 
-        synchronized (gameRoom) {
-            // 记录断线（替代 leftPlayers）
+        synchronized (this.getInternedRoomCode(roomCode)) {
             gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
             PlayerDTO leavingPlayer = gameRoom.getPlayers().stream()
@@ -407,12 +472,10 @@ public class GameServiceImpl implements GameService {
             String playerName = leavingPlayer != null ? leavingPlayer.getName() : "未知玩家";
 
             if (!gameRoom.isStarted()) {
-                // 游戏未开始，直接移除玩家
                 boolean isRoomOwner = !gameRoom.getPlayers().isEmpty() &&
                         gameRoom.getPlayers().get(0).getPlayerId().equals(playerId);
 
                 if (isRoomOwner) {
-                    // 房主离开，解散房间
                     removeRoom(roomCode);
                     room.setStatus(RoomStatus.FINISHED);
                     roomRepository.save(room);
@@ -420,7 +483,6 @@ public class GameServiceImpl implements GameService {
                     log.info("房主 {} 离开，房间 {} 已解散", playerName, roomCode);
                     return null;
                 } else {
-                    // 普通玩家离开
                     gameRoom.getPlayers().removeIf(p -> p.getPlayerId().equals(playerId));
                     gameRoom.getScores().remove(playerId);
 
@@ -434,15 +496,14 @@ public class GameServiceImpl implements GameService {
                 }
 
             } else {
-                // 游戏进行中，标记为断线但不移除
                 log.info("玩家 {} 离开房间 {}（游戏进行中，后续自动提交）", playerName, roomCode);
 
-                // 如果所有人都离开了，解散房间
                 long connectedCount = gameRoom.getPlayers().stream()
                         .filter(p -> !gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()))
                         .count();
 
                 if (connectedCount == 0) {
+                    finishGame(roomCode);
                     removeRoom(roomCode);
                     room.setStatus(RoomStatus.FINISHED);
                     roomRepository.save(room);
@@ -465,18 +526,14 @@ public class GameServiceImpl implements GameService {
             throw new BusinessException("房间状态异常");
         }
 
-        synchronized (gameRoom) {
+        synchronized (this.getInternedRoomCode(roomCode)) {
             if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
                 gameRoom.getDisconnectedPlayers().remove(playerId);
 
-                PlayerDTO player = gameRoom.getPlayers().stream()
+                gameRoom.getPlayers().stream()
                         .filter(p -> p.getPlayerId().equals(playerId))
-                        .findFirst()
-                        .orElse(null);
+                        .findFirst().ifPresent(player -> log.info("玩家 {} 重新连接到房间 {}", player.getName(), roomCode));
 
-                if (player != null) {
-                    log.info("玩家 {} 重新连接到房间 {}", player.getName(), roomCode);
-                }
             }
 
             return toRoomDTO(room, gameRoom);
@@ -490,17 +547,13 @@ public class GameServiceImpl implements GameService {
             return;
         }
 
-        synchronized (gameRoom) {
+        synchronized (this.getInternedRoomCode(roomCode)) {
             gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
-            PlayerDTO player = gameRoom.getPlayers().stream()
+            gameRoom.getPlayers().stream()
                     .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .orElse(null);
+                    .findFirst().ifPresent(player -> log.info("玩家 {} 从房间 {} 断开连接", player.getName(), roomCode));
 
-            if (player != null) {
-                log.info("玩家 {} 从房间 {} 断开连接", player.getName(), roomCode);
-            }
         }
     }
 
@@ -524,7 +577,7 @@ public class GameServiceImpl implements GameService {
 
             GameResultEntity entity = GameResultEntity.builder()
                     .game(game)
-                    .roomCode(roomCode)  // ← 修复1：添加 roomCode
+                    .roomCode(roomCode)
                     .questionCount(gameRoom.getQuestions().size())
                     .playerCount(gameRoom.getPlayers().size())
                     .leaderboardJson(leaderboardJson)
@@ -536,7 +589,6 @@ public class GameServiceImpl implements GameService {
 
         } catch (Exception e) {
             log.error("保存游戏结果失败: roomCode={}", roomCode, e);
-            // ← 修复2：抛出异常，中断事务
             throw new RuntimeException("保存游戏结果失败", e);
         }
     }
@@ -545,65 +597,138 @@ public class GameServiceImpl implements GameService {
 
     private void advanceQuestionIfNeeded(GameRoom gameRoom, String reason, boolean fillDefaults) {
         String roomCode = gameRoom.getRoomCode();
-        AtomicBoolean isAdvancing = advancing.get(roomCode);
 
-        if (isAdvancing != null && !isAdvancing.compareAndSet(false, true)) {
+        AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
+        if (!isAdvancing.compareAndSet(false, true)) {
+            log.warn("⚠️ 房间 {} 正在推进中，跳过", roomCode);
             return;
         }
 
         try {
-            log.info("推进房间 {} 到下一题，原因: {}", roomCode, reason);
+            log.info("📊 推进房间 {} (原因: {})", roomCode, reason);
 
+            // 1. 填充默认答案
             if (fillDefaults) {
-                fillDefaultAnswers(gameRoom);
+                fillDefaultAnswersInNewTransaction(gameRoom);
             }
 
+            // 2. 计算当前题目分数
             calculateCurrentQuestionScores(gameRoom);
 
-            // 重置所有玩家的准备状态
+            // 3. 重置玩家准备状态
             gameRoom.getPlayers().forEach(p -> p.setReady(false));
 
-            if (gameRoom.nextQuestion()) {
-                // 推进到下一题
-                gameRoom.setQuestionStartTime(LocalDateTime.now());
-                scheduleQuestionTimeout(gameRoom, defaultQuestionTimeoutSeconds);
-                log.info("房间 {} 推进到第 {} 题", roomCode, gameRoom.getCurrentIndex() + 1);
+            QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
+            if (currentQuestion == null) {
+                log.warn("⚠️ 房间 {} 当前题目为空，结束游戏", roomCode);
+                finishGame(roomCode);
+                return;
+            }
 
-                // 推送房间更新
-                RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
-                if (room != null) {
-                    RoomDTO roomDTO = toRoomDTO(room, gameRoom);
-                    messagingTemplate.convertAndSend("/topic/room/" + roomCode, roomDTO);
+            QuestionScoringStrategy strategy = questionFactory.getStrategy(currentQuestion.getStrategyId());
+            if (strategy == null) {
+                log.error("❌ 房间 {} 无法获取题目 {} 的评分策略 {}",
+                        roomCode, currentQuestion.getId(), currentQuestion.getStrategyId());
+                finishGame(roomCode);
+                return;
+            }
+
+            // 4. 检查是否是重复题，且是否还有剩余轮次
+            boolean shouldAdvanceToNextQuestion = true;
+
+            if (strategy instanceof RepeatableQuestionStrategy repeatStrategy) {
+                int currentRound = getCurrentRound(roomCode, currentQuestion.getStrategyId());
+                int totalRounds = repeatStrategy.getTotalRounds();
+
+                log.info("🔄 房间 {} 题目 {} 当前轮次: {}/{}",
+                        roomCode, currentQuestion.getStrategyId(), currentRound, totalRounds);
+
+                // 🔥 判断是否完成：currentRound > totalRounds 才算完成
+                if (currentRound <= totalRounds) {
+                    shouldAdvanceToNextQuestion = false;
+                    log.info("⏸️ 房间 {} 题目 {} 继续重复（当前轮次 {}/{}）",
+                            roomCode, currentQuestion.getStrategyId(), currentRound, totalRounds);
+                } else {
+                    // 🔥 所有轮次已完成（currentRound > totalRounds）
+                    clearRoomRounds(roomCode);
+                    log.info("✅ 房间 {} 题目 {} 完成全部 {} 轮，准备下一题",
+                            roomCode, currentQuestion.getStrategyId(), totalRounds);
                 }
+            }
 
+            // 5. 推进题目或准备下一轮
+            if (shouldAdvanceToNextQuestion) {
+                // 推进到真正的下一题
+                if (gameRoom.nextQuestion()) {
+                    gameRoom.setQuestionStartTime(LocalDateTime.now());
+                    scheduleQuestionTimeout(gameRoom, defaultQuestionTimeoutSeconds);
+                    log.info("➡️ 房间 {} 推进到题目索引 {}", roomCode, gameRoom.getCurrentIndex());
+                    broadcastRoomState(roomCode);
+                } else {
+                    // 没有更多题目，游戏结束
+                    finishGame(roomCode);
+                    log.info("🎉 房间 {} 所有题目完成，游戏结束", roomCode);
+                }
             } else {
-                // 游戏结束
-                finishGame(gameRoom.getRoomCode());
-                log.info("房间 {} 游戏结束", roomCode);
+                // 重复题的下一轮（同一题，新的currentIndex）
+                if (gameRoom.nextQuestion()) {
+                    gameRoom.setQuestionStartTime(LocalDateTime.now());
+                    scheduleQuestionTimeout(gameRoom, defaultQuestionTimeoutSeconds);
+                    log.info("🔁 房间 {} 题目索引推进到 {}（重复题下一轮）", roomCode, gameRoom.getCurrentIndex());
+                    broadcastRoomState(roomCode);
+                } else {
+                    // 异常情况：重复题还没完成但没有下一个index
+                    log.error("❌ 房间 {} 重复题轮次未完成但无法推进 currentIndex", roomCode);
+                    finishGame(roomCode);
+                }
             }
         } finally {
-            if (isAdvancing != null) {
-                isAdvancing.set(false);
+            isAdvancing.set(false);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void fillDefaultAnswersInNewTransaction(GameRoom gameRoom) {
+        QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
+        GameEntity game = gameRepository.findById(gameRoom.getGameId()).orElse(null);
+        if (game == null) return;
+
+        Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
+                .get(gameRoom.getCurrentIndex());
+
+        for (PlayerDTO player : gameRoom.getPlayers()) {
+            if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(player.getPlayerId())) {
+                String defaultChoice = currentQuestion.getDefaultChoice() != null
+                        ? currentQuestion.getDefaultChoice()
+                        : "4";
+
+                PlayerEntity playerEntity = playerRepository.findByPlayerId(player.getPlayerId()).orElse(null);
+                if (playerEntity == null) continue;
+
+                SubmissionEntity submission = SubmissionEntity.builder()
+                        .player(playerEntity)
+                        .question(currentQuestion)
+                        .game(game)
+                        .choice(defaultChoice)
+                        .build();
+
+                submissionRepository.save(submission);
+
+                gameRoom.getSubmissions()
+                        .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
+                        .put(player.getPlayerId(), defaultChoice);
+
+                log.info("⏰ 玩家 {} 超时，填充默认答案: {}", player.getName(), defaultChoice);
             }
         }
     }
 
-    private void fillDefaultAnswers(GameRoom gameRoom) {
-        int currentIndex = gameRoom.getCurrentIndex();
-        Map<String, String> submissions = gameRoom.getSubmissions()
-                .computeIfAbsent(currentIndex, k -> new ConcurrentHashMap<>());
-
-        QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
-        String defaultChoice = currentQuestion.getDefaultChoice();
-
-        for (PlayerDTO player : gameRoom.getPlayers()) {
-            if (!submissions.containsKey(player.getPlayerId())) {
-                submissions.put(player.getPlayerId(), defaultChoice != null ? defaultChoice : "A");
-
-                if (gameRoom.getDisconnectedPlayers().containsKey(player.getPlayerId())) {
-                    log.info("玩家 {} 未提交，自动填充默认答案: {}",
-                            player.getName(), defaultChoice);
-                }
+    private void broadcastRoomState(String roomCode) {
+        RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
+        if (room != null) {
+            GameRoom gameRoom = activeRooms.get(roomCode);
+            if (gameRoom != null) {
+                messagingTemplate.convertAndSend("/topic/room/" + roomCode, toRoomDTO(room, gameRoom));
             }
         }
     }
@@ -614,23 +739,29 @@ public class GameServiceImpl implements GameService {
         Map<String, String> submissions = gameRoom.getSubmissions().get(currentIndex);
 
         if (submissions == null || submissions.isEmpty()) {
+            log.warn("⚠️ 房间 {} 题目索引 {} 没有提交记录", gameRoom.getRoomCode(), currentIndex);
             return;
         }
 
-        // 构建玩家状态
+        // 🔥 使用 GameRoom 中的持久化状态，而不是每次重新创建
         Map<String, PlayerGameState> playerStates = new HashMap<>();
         for (PlayerDTO player : gameRoom.getPlayers()) {
-            PlayerGameState state = PlayerGameState.builder()
-                    .playerId(player.getPlayerId())
-                    .name(player.getName())
-                    .totalScore(gameRoom.getScores().getOrDefault(player.getPlayerId(), 0))
-                    .activeBuffs(new ArrayList<>())
-                    .customData(new HashMap<>())
-                    .build();
+            int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
+
+            // 🔥 从 GameRoom 获取或创建状态（会保留 customData）
+            PlayerGameState state = gameRoom.getOrCreatePlayerState(
+                    player.getPlayerId(),
+                    player.getName(),
+                    currentScore
+            );
+
+            // 🔥 更新总分（可能在上一轮增加了）
+            state.setTotalScore(currentScore);
+
             playerStates.put(player.getPlayerId(), state);
         }
 
-        // 构建计分上下文
+        // 构建游戏上下文
         GameContext context = GameContext.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .currentQuestion(currentQuestion)
@@ -639,10 +770,39 @@ public class GameServiceImpl implements GameService {
                 .currentQuestionIndex(currentIndex)
                 .build();
 
-        // 调用计分策略
-        QuestionResult result = questionFactory.calculateScores(context);
+        // 获取策略并计算分数
+        QuestionResult result;
+        QuestionScoringStrategy strategy = questionFactory.getStrategy(currentQuestion.getStrategyId());
 
-        // 更新分数
+        if (strategy instanceof RepeatableQuestionStrategy repeatStrategy) {
+            // 重复题：获取当前轮次（从1开始）
+            int currentRound = getCurrentRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
+
+            log.info("💯 房间 {} 计算重复题分数: {} 第 {} 轮",
+                    gameRoom.getRoomCode(), currentQuestion.getStrategyId(), currentRound);
+
+            result = repeatStrategy.calculateRoundResult(context, currentRound);
+
+            // 🔥 加这行日志
+            log.info("📈 房间 {} 题目 {} 轮次递增: {} -> {}",
+                    gameRoom.getRoomCode(), currentQuestion.getStrategyId(),
+                    currentRound, currentRound + 1);
+
+            incrementRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
+
+            // 🔥 再加这行，看 increment 后的值
+            int afterRound = getCurrentRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
+            log.info("📊 房间 {} 题目 {} increment后轮次: {}",
+                    gameRoom.getRoomCode(), currentQuestion.getStrategyId(), afterRound);
+        } else {
+            // 普通题
+            log.info("💯 房间 {} 计算普通题分数: {}",
+                    gameRoom.getRoomCode(), currentQuestion.getStrategyId());
+
+            result = strategy.calculateResult(context);
+        }
+
+        // 应用分数到房间
         Map<String, GameRoom.QuestionScoreDetail> currentQuestionScores = new HashMap<>();
 
         for (Map.Entry<String, Integer> entry : result.getFinalScores().entrySet()) {
@@ -650,7 +810,11 @@ public class GameServiceImpl implements GameService {
             Integer finalScore = entry.getValue();
             Integer baseScore = result.getBaseScores().getOrDefault(playerId, finalScore);
 
+            // 累加到总分
             gameRoom.addScore(playerId, finalScore);
+
+            // 🔥 同步更新 playerGameState 的总分
+            gameRoom.updatePlayerStateTotalScore(playerId, gameRoom.getScores().get(playerId));
 
             // 更新玩家DTO的分数
             gameRoom.getPlayers().stream()
@@ -658,6 +822,7 @@ public class GameServiceImpl implements GameService {
                     .findFirst()
                     .ifPresent(p -> p.setScore(gameRoom.getScores().get(playerId)));
 
+            // 记录本题得分详情
             currentQuestionScores.put(playerId, GameRoom.QuestionScoreDetail.builder()
                     .baseScore(baseScore)
                     .finalScore(finalScore)
@@ -665,6 +830,49 @@ public class GameServiceImpl implements GameService {
         }
 
         gameRoom.getQuestionScores().put(currentIndex, currentQuestionScores);
+
+        log.info("✅ 房间 {} 题目索引 {} 分数计算完成", gameRoom.getRoomCode(), currentIndex);
+    }
+
+    /**
+     * 获取当前轮次（从1开始）
+     * 第1次调用返回1，第2次返回2，以此类推
+     */
+    private int getCurrentRound(String roomCode, String strategyId) {
+        Map<String, Integer> strategyRounds = roomStrategyRounds
+                .computeIfAbsent(roomCode, k -> new ConcurrentHashMap<>());
+
+        // 🔥 使用 getOrDefault，而不是再次 computeIfAbsent
+        int round = strategyRounds.getOrDefault(strategyId, 1);
+
+        // 🔥 如果是第一次访问（默认值），写入到Map中
+        if (!strategyRounds.containsKey(strategyId)) {
+            strategyRounds.put(strategyId, 1);
+        }
+
+        return round;
+    }
+
+    /**
+     * 增加轮次计数
+     * 每次调用后，getCurrentRound会返回+1的值
+     */
+    private void incrementRound(String roomCode, String strategyId) {
+        Map<String, Integer> strategyRounds = roomStrategyRounds
+                .computeIfAbsent(roomCode, k -> new ConcurrentHashMap<>());
+
+        // 🔥 先获取当前值，如果不存在则初始化为1，然后+1
+        int current = strategyRounds.getOrDefault(strategyId, 1);
+        strategyRounds.put(strategyId, current + 1);
+    }
+
+    /**
+     * 清理房间的所有轮次记录
+     * 在重复题完成所有轮次后调用
+     */
+    private void clearRoomRounds(String roomCode) {
+        roomStrategyRounds.remove(roomCode);
+        log.debug("🧹 清理房间 {} 的轮次记录", roomCode);
     }
 
     @Transactional
@@ -674,18 +882,16 @@ public class GameServiceImpl implements GameService {
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
         gameRoom.setFinished(true);
+        gameRoom.clearPlayerStates();
 
-        // 更新房间状态
         room.setStatus(RoomStatus.FINISHED);
         roomRepository.save(room);
 
-        // 更新游戏记录
         GameEntity game = gameRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("游戏记录不存在"));
         game.setEndTime(LocalDateTime.now());
         gameRepository.save(game);
 
-        // 更新玩家-游戏记录的分数
         for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
             String playerId = entry.getKey();
             PlayerEntity player = playerRepository.findByPlayerId(playerId)
@@ -699,34 +905,41 @@ public class GameServiceImpl implements GameService {
             playerGameRepository.save(playerGame);
         }
 
-        // 保存游戏结果
         saveGameResult(roomCode);
+        clearRoomRounds(roomCode);
 
-        // 推送最终状态
         RoomDTO roomDTO = toRoomDTO(room, gameRoom);
         messagingTemplate.convertAndSend("/topic/room/" + roomCode, roomDTO);
 
-        log.info("房间 {} 游戏结束，最终排名: {}", roomCode,
+        log.info("🎉 房间 {} 游戏结束，最终排名: {}", roomCode,
                 buildLeaderboard(gameRoom).stream()
+                        .limit(3)
                         .map(p -> p.getPlayerName() + ":" + p.getTotalScore())
                         .collect(Collectors.joining(", ")));
     }
 
     private void scheduleQuestionTimeout(GameRoom gameRoom, long seconds) {
-        cancelQuestionTimeout(gameRoom.getRoomCode());
-        Runnable timeoutTask = () -> {
-            try {
-                advanceQuestionIfNeeded(gameRoom, "timeout", true);
-            } catch (Exception e) {
-                log.error("题目超时处理异常，房间: {}", gameRoom.getRoomCode(), e);
+        String roomCode = gameRoom.getRoomCode();
+
+        ScheduledFuture<?> existingTimeout = questionTimeouts.get(roomCode);
+        if (existingTimeout != null && !existingTimeout.isDone()) {
+            existingTimeout.cancel(false);
+        }
+
+        ScheduledFuture<?> timeout = scheduler.schedule(() -> {
+            synchronized (this.getInternedRoomCode(roomCode)) {
+                GameRoom room = activeRooms.get(roomCode);
+                if (room != null && room.isStarted()) {
+                    advanceQuestionIfNeeded(room, "timeout", true);
+                }
             }
-        };
-        ScheduledFuture<?> future = scheduler.schedule(timeoutTask, seconds, TimeUnit.SECONDS);
-        roomTimers.put(gameRoom.getRoomCode(), future);
+        }, seconds, TimeUnit.SECONDS);
+
+        questionTimeouts.put(roomCode, timeout);
     }
 
     private void cancelQuestionTimeout(String roomCode) {
-        ScheduledFuture<?> future = roomTimers.remove(roomCode);
+        ScheduledFuture<?> future = questionTimeouts.remove(roomCode);
         if (future != null && !future.isCancelled()) {
             future.cancel(false);
         }
@@ -737,7 +950,6 @@ public class GameServiceImpl implements GameService {
     }
 
     private RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom) {
-        // 确定房间状态
         RoomStatus status = RoomStatus.WAITING;
         if (gameRoom.isFinished()) {
             status = RoomStatus.FINISHED;
@@ -754,6 +966,28 @@ public class GameServiceImpl implements GameService {
             );
         }
 
+        Integer questionCount = null;
+        if (gameRoom.getQuestions() != null && !gameRoom.getQuestions().isEmpty()) {
+            questionCount = gameRoom.getQuestions().size();
+        } else if (roomEntity != null && roomEntity.getQuestionCount() != null) {
+            questionCount = roomEntity.getQuestionCount();
+        } else {
+            questionCount = 10;
+        }
+
+        // 🔥 解析 winConditionsJson
+        RoomDTO.WinConditions winConditions = null;
+        if (roomEntity != null && roomEntity.getWinConditionsJson() != null) {
+            try {
+                winConditions = objectMapper.readValue(
+                        roomEntity.getWinConditionsJson(),
+                        RoomDTO.WinConditions.class
+                );
+            } catch (Exception e) {
+                log.error("解析通关条件失败", e);
+            }
+        }
+
         return RoomDTO.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
@@ -764,27 +998,147 @@ public class GameServiceImpl implements GameService {
                 .questionStartTime(gameRoom.getQuestionStartTime())
                 .timeLimit(gameRoom.getTimeLimit())
                 .currentIndex(gameRoom.getCurrentIndex())
-                .currentQuestion(currentQuestionDTO)  // ✅ 使用转换器
-                .questionCount(gameRoom.getQuestions() != null ? gameRoom.getQuestions().size() : 0)
+                .currentQuestion(currentQuestionDTO)
+                .questionCount(questionCount)
+                // 🔥 新增字段
+                .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
+                .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
+                .winConditions(winConditions)
                 .build();
     }
 
     private List<PlayerRankDTO> buildLeaderboard(GameRoom gameRoom) {
+        // 🔥 获取房间配置
+        RoomEntity roomEntity = roomRepository.findByRoomCode(gameRoom.getRoomCode()).orElse(null);
+        String rankingMode = roomEntity != null ? roomEntity.getRankingMode() : "standard";
+        Integer targetScore = roomEntity != null ? roomEntity.getTargetScore() : null;
+
+        // 🔥 解析通关条件
+        RoomDTO.WinConditions winConditions = null;
+        if (roomEntity != null && roomEntity.getWinConditionsJson() != null) {
+            try {
+                winConditions = objectMapper.readValue(
+                        roomEntity.getWinConditionsJson(),
+                        RoomDTO.WinConditions.class
+                );
+            } catch (Exception e) {
+                log.error("解析通关条件失败", e);
+            }
+        }
+
+        // 1️⃣ 构建玩家列表
         List<PlayerRankDTO> leaderboard = gameRoom.getPlayers().stream()
                 .map(player -> PlayerRankDTO.builder()
                         .playerId(player.getPlayerId())
                         .playerName(player.getName())
                         .totalScore(gameRoom.getScores().getOrDefault(player.getPlayerId(), 0))
                         .build())
-                .sorted(Comparator.comparing(PlayerRankDTO::getTotalScore).reversed())
                 .collect(Collectors.toList());
 
-        // 设置排名
+        // 2️⃣ 根据排名模式排序
+        switch (rankingMode) {
+            case "closest_to_avg": {
+                // 计算平均分
+                double avgScore = leaderboard.stream()
+                        .mapToInt(PlayerRankDTO::getTotalScore)
+                        .average()
+                        .orElse(0.0);
+
+                log.info("📊 房间 {} 使用接近平均分排名，平均分: {}", gameRoom.getRoomCode(), avgScore);
+
+                // 按离平均分的绝对差值排序
+                leaderboard.sort(Comparator.comparingDouble(p ->
+                        Math.abs(p.getTotalScore() - avgScore)
+                ));
+                break;
+            }
+            case "closest_to_target": {
+                if (targetScore == null) {
+                    log.warn("⚠️ 房间 {} 排名模式为 closest_to_target 但未设置目标分，使用标准排名",
+                            gameRoom.getRoomCode());
+                    leaderboard.sort(Comparator.comparing(PlayerRankDTO::getTotalScore).reversed());
+                } else {
+                    log.info("📊 房间 {} 使用接近目标分排名，目标分: {}", gameRoom.getRoomCode(), targetScore);
+
+                    // 按离目标分的绝对差值排序
+                    leaderboard.sort(Comparator.comparingInt(p ->
+                            Math.abs(p.getTotalScore() - targetScore)
+                    ));
+                }
+                break;
+            }
+            case "standard":
+            default:
+                // 标准排名：分数降序
+                leaderboard.sort(Comparator.comparing(PlayerRankDTO::getTotalScore).reversed());
+                break;
+        }
+
+        // 3️⃣ 分配排名（处理并列）
         for (int i = 0; i < leaderboard.size(); i++) {
             leaderboard.get(i).setRank(i + 1);
         }
 
+        // 4️⃣ 判断是否通关
+        boolean passed = checkWinConditions(leaderboard, winConditions);
+
+        // 🔥 设置每个玩家的通关状态
+        for (PlayerRankDTO player : leaderboard) {
+            player.setPassed(passed);
+        }
+
+        if (!passed && winConditions != null) {
+            log.warn("❌ 房间 {} 未达成通关条件", gameRoom.getRoomCode());
+        } else {
+            log.info("✅ 房间 {} 通关成功！", gameRoom.getRoomCode());
+        }
+
         return leaderboard;
+    }
+
+    /**
+     * 检查是否达成通关条件
+     */
+    private boolean checkWinConditions(List<PlayerRankDTO> leaderboard,
+                                       RoomDTO.WinConditions conditions) {
+        if (conditions == null) {
+            return true; // 无条件限制，默认通关
+        }
+
+        // 检查：所有人最低分
+        if (conditions.getMinScorePerPlayer() != null) {
+            boolean allPass = leaderboard.stream()
+                    .allMatch(p -> p.getTotalScore() >= conditions.getMinScorePerPlayer());
+            if (!allPass) {
+                log.info("❌ 未达成条件：所有人 ≥ {} 分", conditions.getMinScorePerPlayer());
+                return false;
+            }
+        }
+
+        // 检查：团队总分
+        if (conditions.getMinTotalScore() != null) {
+            int totalScore = leaderboard.stream()
+                    .mapToInt(PlayerRankDTO::getTotalScore)
+                    .sum();
+            if (totalScore < conditions.getMinTotalScore()) {
+                log.info("❌ 未达成条件：总分 {} < {}", totalScore, conditions.getMinTotalScore());
+                return false;
+            }
+        }
+
+        // 检查：平均分
+        if (conditions.getMinAvgScore() != null) {
+            double avgScore = leaderboard.stream()
+                    .mapToInt(PlayerRankDTO::getTotalScore)
+                    .average()
+                    .orElse(0.0);
+            if (avgScore < conditions.getMinAvgScore()) {
+                log.info("❌ 未达成条件：平均分 {} < {}", avgScore, conditions.getMinAvgScore());
+                return false;
+            }
+        }
+
+        return true; // 所有条件都满足
     }
 
     private List<QuestionDetailDTO> buildQuestionDetails(GameRoom gameRoom) {
@@ -798,17 +1152,14 @@ public class GameServiceImpl implements GameService {
                 continue;
             }
 
-            // 统计选择分布
             Map<String, Integer> choiceCounts = new HashMap<>();
             for (String choice : submissions.values()) {
                 choiceCounts.put(choice, choiceCounts.getOrDefault(choice, 0) + 1);
             }
 
-            // 获取该题的得分详情
             Map<String, GameRoom.QuestionScoreDetail> questionScores =
                     gameRoom.getQuestionScores().getOrDefault(i, new HashMap<>());
 
-            // 构建玩家提交列表
             List<PlayerSubmissionDTO> playerSubmissions = new ArrayList<>();
             for (Map.Entry<String, String> entry : submissions.entrySet()) {
                 String playerId = entry.getKey();
@@ -830,12 +1181,11 @@ public class GameServiceImpl implements GameService {
                             .choice(choice)
                             .baseScore(baseScore)
                             .finalScore(finalScore)
-                            .submittedAt(null)  // TODO: 可以从 SubmissionEntity 中获取
+                            .submittedAt(null)
                             .build());
                 }
             }
 
-            // 格式化选项文本
             String optionText = formatOptions(question);
 
             details.add(QuestionDetailDTO.builder()
@@ -857,14 +1207,12 @@ public class GameServiceImpl implements GameService {
         }
 
         if ("bid".equals(question.getType())) {
-            // 查询 bid 配置
             return bidConfigRepository.findByQuestionId(question.getId())
                     .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
                     .orElse("自由出价");
         }
 
         if ("choice".equals(question.getType())) {
-            // 查询 choice 配置
             return choiceConfigRepository.findByQuestionId(question.getId())
                     .map(config -> {
                         try {

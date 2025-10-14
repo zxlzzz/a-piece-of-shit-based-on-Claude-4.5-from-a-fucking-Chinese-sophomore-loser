@@ -62,7 +62,7 @@ export function connect(playerId, onConnect, onError) {
     }, 15000);
     
     stompClient = new Client({
-      webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
+      webSocketFactory: () => new SockJS("/ws"),
       
       connectHeaders: {
         'playerId': playerId

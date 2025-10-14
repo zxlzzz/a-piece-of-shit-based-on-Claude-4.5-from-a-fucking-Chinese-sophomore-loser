@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Map;
  * - 第二件出价 = 10 - 第一件出价
  * - 若某件出价相同，都不获得该件
  */
+@Component
 @Slf4j
 public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
 

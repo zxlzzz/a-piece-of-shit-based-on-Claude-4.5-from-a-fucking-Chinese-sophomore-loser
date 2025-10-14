@@ -2,6 +2,9 @@ package org.example.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
@@ -30,13 +33,14 @@ public class GameController {
     private final GameResultRepository gameResultRepository;
 
     /**
-     * 创建房间
+     * 创建房间（恢复原版 - 只有基础参数）
      * POST /api/rooms?maxPlayers=4&questionCount=10
      */
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
             @RequestParam(defaultValue = "10") Integer questionCount) {
+        System.out.println(questionCount);
         try {
             RoomDTO room = gameService.createRoom(maxPlayers, questionCount);
             log.info("创建房间成功: {}", room.getRoomCode());
@@ -46,6 +50,36 @@ public class GameController {
             return ResponseEntity.badRequest().body(null);
         }
     }
+
+    /**
+     * 🔥 新增：更新房间高级设置
+     * PUT /api/rooms/{roomCode}/settings
+     * Body: {
+     *   "questionCount": 10,
+     *   "rankingMode": "closest_to_avg",
+     *   "targetScore": 100,
+     *   "winConditions": {
+     *     "minScorePerPlayer": 80,
+     *     "minTotalScore": 500,
+     *     "minAvgScore": 60
+     *   }
+     * }
+     */
+    @PutMapping("/rooms/{roomCode}/settings")
+    public ResponseEntity<RoomDTO> updateRoomSettings(
+            @PathVariable String roomCode,
+            @RequestBody UpdateRoomSettingsRequest request) {
+        try {
+            RoomDTO room = gameService.updateRoomSettings(roomCode, request);
+            log.info("更新房间 {} 设置成功", roomCode);
+            return ResponseEntity.ok(room);
+        } catch (BusinessException e) {
+            log.error("更新房间设置失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+
 
     /**
      * 加入房间
@@ -259,4 +293,19 @@ public class GameController {
             log.warn("广播房间更新失败, roomCode={}: {}", room.getRoomCode(), e.getMessage());
         }
     }
+
+    /**
+     * 更新房间设置请求体
+     */
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    public static class UpdateRoomSettingsRequest {
+        private Integer questionCount;      // 题目数量（可选）
+        private String rankingMode;         // 排名模式
+        private Integer targetScore;        // 目标分数
+        private RoomDTO.WinConditions winConditions;  // 通关条件
+    }
 }
+
+

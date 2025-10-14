@@ -5,15 +5,20 @@ spring:
     username: gameuser
     password: 123456
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
 
   # JPA配置
   jpa:
     hibernate:
-      ddl-auto: create-drop  # 开发环境用create-drop，生产环境改成update或validate
-    show-sql: true
+      ddl-auto: create
+    show-sql: false  # ✅ 关闭SQL日志
     properties:
-      hibernate.format_sql: true
-      hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+      hibernate.format_sql: false
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect  # ✅ 用新的方言
+    open-in-view: false  # ✅ 关闭懒加载警告
 
   # Redis配置
   data:
@@ -21,9 +26,15 @@ spring:
       host: localhost
       port: 6379
 
+  web:
+    resources:
+      static-locations: classpath:/static/
+  mvc:
+    static-path-pattern: /**
+
 # CORS配置
 cors:
-  allowed-origins: http://localhost:5173  # Vue开发服务器地址
+  allowed-origins: "*"
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   max-age: 3600
 
@@ -31,3 +42,12 @@ cors:
 server:
   port: 8080
 
+# 日志配置
+logging:
+  level:
+    root: INFO
+    org.example: INFO  # ✅ 你的应用日志
+    org.hibernate: WARN
+    org.springframework: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"

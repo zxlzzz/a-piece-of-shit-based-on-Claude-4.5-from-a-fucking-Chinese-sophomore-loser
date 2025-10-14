@@ -1,8 +1,11 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
+import org.springframework.stereotype.Component;
+
 import java.util.HashMap;
 import java.util.Map;
 
+@Component
 public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy{
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions){

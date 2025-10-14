@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,6 +16,7 @@ import java.util.Map;
  * - 出价高者：获得 8-出价 分（拍到羊但要付钱）
  * - 出价相同：都按高价处理（8-出价）
  */
+@Component
 @Slf4j
 public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
 

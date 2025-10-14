@@ -9,6 +9,10 @@ const props = defineProps({
   }
 })
 
+const isPassed = computed(() => {
+  return currentPlayerRank.value?.passed ?? true  // 默认通关
+})
+
 const playerStore = usePlayerStore()
 const expandedQuestion = ref(null)
 
@@ -43,9 +47,23 @@ const getMyChoice = (questionDetail) => {
 
 <template>
   <div class="space-y-6">
+    <!-- 在最前面，"我的成绩"之前 -->
+    <div v-if="currentPlayerRank" 
+        class="rounded-xl p-6 text-center"
+        :class="isPassed 
+          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+          : 'bg-gradient-to-r from-red-500 to-pink-600 text-white'">
+      <i class="text-5xl mb-3" 
+        :class="isPassed ? 'pi pi-check-circle' : 'pi pi-times-circle'">
+      </i>
+      <h1 class="text-3xl font-bold mb-2">
+        {{ isPassed ? '已结束' : '未达成条件' }}
+      </h1>
+    </div>
     <!-- 我的成绩 -->
     <div v-if="currentPlayerRank" 
-         class="bg-white dark:bg-gray-800 rounded-xl border-2 border-blue-200 dark:border-blue-800 p-8">
+         class="bg-white dark:bg-gray-800 rounded-xl border-2 dark:border-gray-700 p-8"
+          :class="isPassed ? 'border-green-200' : 'border-red-200'">
       <div class="flex justify-between items-center">
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">排名</p>
@@ -53,7 +71,7 @@ const getMyChoice = (questionDetail) => {
             <span class="text-5xl font-semibold text-gray-900 dark:text-white">
               #{{ currentPlayerRank.rank }}
             </span>
-            <span v-if="currentPlayerRank.rank === 1" class="text-2xl">🏆</span>
+            <span v-if="currentPlayerRank.rank === 1" class="text-2xl"></span>
           </div>
         </div>
         <div class="text-right">
@@ -81,7 +99,7 @@ const getMyChoice = (questionDetail) => {
                     : player.rank === 2 ? 'text-gray-400' 
                     : player.rank === 3 ? 'text-orange-600'
                     : 'text-gray-600 dark:text-gray-400'">
-              {{ player.rank === 1 ? '🥇' : player.rank === 2 ? '🥈' : player.rank === 3 ? '🥉' : player.rank }}
+              {{ player.rank === 1 ? '1' : player.rank === 2 ? '2' : player.rank === 3 ? '3' : player.rank }}
             </span>
             <span class="font-medium text-gray-900 dark:text-white">
               {{ player.playerName }}

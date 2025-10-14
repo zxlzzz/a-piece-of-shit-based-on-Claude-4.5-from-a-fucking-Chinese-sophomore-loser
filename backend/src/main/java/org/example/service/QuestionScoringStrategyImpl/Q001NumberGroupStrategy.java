@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -10,6 +11,7 @@ import java.util.*;
  * 规则：同组获得该分数，不同组扣除该分数
  * 类型：bid (1-6)
  */
+@Component
 @Slf4j
 public class Q001NumberGroupStrategy extends BaseQuestionStrategy {
     private static final Set<Integer> GROUP_A = Set.of(1, 2, 3);

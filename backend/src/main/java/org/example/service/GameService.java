@@ -1,5 +1,6 @@
 package org.example.service;
 
+import org.example.controller.GameController;
 import org.example.entity.PlayerGameEntity;
 import org.example.dto.GameHistoryDTO;
 import org.example.dto.RoomDTO;
@@ -7,10 +8,11 @@ import org.example.dto.RoomDTO;
 import java.util.List;
 
 public interface GameService {
-    /**
-     * 创建房间
-     */
+    // 🔥 恢复原版签名
     RoomDTO createRoom(Integer maxPlayers, Integer questionCount);
+
+    // 🔥 新增：更新房间设置
+    RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);
 
     /**
      * 加入房间

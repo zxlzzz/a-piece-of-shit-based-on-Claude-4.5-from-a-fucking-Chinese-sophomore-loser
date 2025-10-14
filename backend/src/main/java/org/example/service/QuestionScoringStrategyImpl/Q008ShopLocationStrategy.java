@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
@@ -19,6 +20,7 @@ import java.util.*;
  * - 相同选址收益减少
  * - 最终得分 = 收益 - 成本
  */
+@Component
 @Slf4j
 public class Q008ShopLocationStrategy extends BaseQuestionStrategy {
 

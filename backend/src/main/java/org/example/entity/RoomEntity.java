@@ -76,6 +76,27 @@ public class RoomEntity {
     @Builder.Default
     private List<PlayerEntity> players = new ArrayList<>();
 
-    // ❌ 不关联 GameEntity，完全解耦
-    // Game 只存 roomCode 字符串，不做外键关联
+    /**
+     * 排名模式
+     * standard: 标准排名（分数高者胜）
+     * closest_to_avg: 接近平均分排名
+     * closest_to_target: 接近目标分排名
+     */
+    @Column(length = 20)
+    @Builder.Default
+    private String rankingMode = "standard";
+
+    /**
+     * 目标分数（仅当 rankingMode = closest_to_target 时有效）
+     */
+    @Column
+    private Integer targetScore;
+
+    /**
+     * 通关条件（JSON 格式存储）
+     * 例如: {"minScorePerPlayer":80,"minTotalScore":500,"minAvgScore":60}
+     * 使用 @Convert 或者直接存 JSON 字符串
+     */
+    @Column(columnDefinition = "TEXT")
+    private String winConditionsJson;
 }

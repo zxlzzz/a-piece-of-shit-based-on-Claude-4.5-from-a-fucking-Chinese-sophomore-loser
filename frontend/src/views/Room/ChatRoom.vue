@@ -213,7 +213,7 @@ const handleKeyPress = (event) => {
           type="text"
           placeholder="输入消息"
           @keypress="handleKeyPress"
-          class="flex-1 px-3 py-2 text-sm rounded-lg
+          class="chat-input flex-1 px-3 py-2 text-sm rounded-lg
                  bg-gray-100 dark:bg-gray-700
                  border border-transparent
                  text-gray-900 dark:text-gray-100

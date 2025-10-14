@@ -588,7 +588,7 @@ onMounted(() => {
                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
                 >
-                  <i class="pi pi-check-circle mr-2"></i>选择题
+                  <i></i>选择题
                 </button>
                 <button
                   type="button"
@@ -598,7 +598,7 @@ onMounted(() => {
                     ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
                 >
-                  <i class="pi pi-dollar mr-2"></i>竞价题
+                  <i></i>竞价题
                 </button>
               </div>
             </div>
@@ -698,7 +698,7 @@ onMounted(() => {
             <div v-if="form.type === 'bid'" 
                  class="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50/50 dark:bg-purple-900/10">
               <h3 class="font-semibold text-purple-700 dark:text-purple-400 mb-4">
-                <i class="pi pi-dollar mr-2"></i>竞价范围设置
+                <i></i>竞价范围
               </h3>
               
               <div class="grid grid-cols-3 gap-4">

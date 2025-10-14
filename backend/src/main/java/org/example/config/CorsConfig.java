@@ -8,6 +8,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class CorsConfig implements WebMvcConfigurer {
 
+    // 🔥 新增：允许的来源
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
@@ -19,11 +20,11 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")  // 所有接口都支持跨域
-                .allowedOrigins(allowedOrigins.split(","))  // 允许的前端地址
-                .allowedMethods(allowedMethods.split(","))  // 允许的HTTP方法
-                .allowedHeaders("*")  // 允许所有请求头
-                .allowCredentials(true)  // 允许携带Cookie
-                .maxAge(maxAge);  // 预检请求缓存时间（秒）
+        registry.addMapping("/**")
+                .allowedOriginPatterns("*")
+                .allowedMethods(allowedMethods.split(","))
+                .allowedHeaders("*")
+                .allowCredentials(true)
+                .maxAge(maxAge);
     }
 }

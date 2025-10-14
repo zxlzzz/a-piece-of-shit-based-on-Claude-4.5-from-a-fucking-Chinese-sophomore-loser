@@ -12,6 +12,10 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  step: {
+    type: Number,
+    default: 1
+  },
   modelValue: {
     type: Number,
     default: null
@@ -37,13 +41,14 @@ const model = computed({
   <div class="space-y-3">
     <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
       <span>最小值: {{ minval }}</span>
+      <span>步长: {{ step }}</span>
       <span>最大值: {{ maxval }}</span>
     </div>
     
     <div class="flex justify-center items-center">
       <InputNumber 
         v-model="model" 
-        :step="1" 
+        :step="step"
         :min="minval"
         :max="maxval"
         :disabled="disabled"

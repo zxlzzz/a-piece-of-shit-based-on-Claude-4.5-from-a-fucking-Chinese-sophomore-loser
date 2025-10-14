@@ -1,11 +1,9 @@
 <script setup>
-import { usePlayerStore } from '@/stores/player'
 import { disconnect } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, onUnmounted } from 'vue'
 
 const toast = useToast()
-const playerStore = usePlayerStore()
 
 // 监听 API 错误（api.js 触发的）
 const handleApiError = (event) => {

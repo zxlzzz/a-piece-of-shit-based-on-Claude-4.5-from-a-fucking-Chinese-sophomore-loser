@@ -1,6 +1,7 @@
 package org.example.service.QuestionScoringStrategyImpl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Map;
  * - 出资低者基础分4分
  * - 出资相同均为4分
  */
+@Component
 @Slf4j
 public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
 

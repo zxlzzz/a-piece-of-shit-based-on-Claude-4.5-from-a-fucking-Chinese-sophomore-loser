@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.example.config.WebSocketConfig.WebSocketChannelInterceptor.log;
+
 @Service
 @Slf4j
 public class QuestionSelectorService {
@@ -66,6 +68,7 @@ public class QuestionSelectorService {
                 pool.addNormal(q);
             }
         }
+        pool.validateSequences();
         return pool;
     }
 
@@ -76,37 +79,67 @@ public class QuestionSelectorService {
         while (selected.size() < totalCount) {
             int remaining = totalCount - selected.size();
 
-            // 1. 优先处理序列题目
+            // 🔥 构建可用选项列表
+            List<PoolOption> availableOptions = new ArrayList<>();
+
+            // 1. 检查序列题
             if (pool.hasAvailableSequence(remaining)) {
-                List<QuestionEntity> sequence = pool.getRandomSequence(remaining);
-                if (sequence != null) {
-                    selected.addAll(sequence);
-                    continue;
-                }
+                availableOptions.add(PoolOption.SEQUENCE);
             }
 
-            // 2. 处理可重复题目
+            // 2. 检查重复题（🔥 检查是否有完整空间容纳所有轮次）
             if (pool.hasAvailableRepeatable(remaining)) {
-                QuestionEntity repeatable = pool.getRandomRepeatable(remaining);
-                if (repeatable != null) {
-                    selected.add(repeatable);
-                    continue;
-                }
+                availableOptions.add(PoolOption.REPEATABLE);
             }
 
-            // 3. 选择普通题目
+            // 3. 普通题始终可选（如果有）
             if (pool.hasNormalQuestions()) {
-                QuestionEntity normal = pool.getRandomNormal();
-                selected.add(normal);
-            } else {
-                // 没有更多题目了
-                log.warn("题目不足，实际选择了 {} 题，期望 {} 题", selected.size(), totalCount);
+                availableOptions.add(PoolOption.NORMAL);
+            }
+
+            // 没有可用选项，结束
+            if (availableOptions.isEmpty()) {
+                QuestionSelectorService.log.warn("题目不足，实际选择了 {} 题，期望 {} 题", selected.size(), totalCount);
                 break;
+            }
+
+            // 完全随机选择一个类型
+            PoolOption selectedOption = availableOptions.get(random.nextInt(availableOptions.size()));
+
+            switch (selectedOption) {
+                case SEQUENCE:
+                    List<QuestionEntity> sequence = pool.getRandomSequence(remaining);
+                    if (sequence != null) {
+                        selected.addAll(sequence);
+                    }
+                    break;
+
+                case REPEATABLE:
+                    // 🔥 一次性获取所有轮次
+                    List<QuestionEntity> repeatableRounds = pool.getRandomRepeatableAllRounds(remaining);
+                    if (repeatableRounds != null) {
+                        selected.addAll(repeatableRounds);
+                    }
+                    break;
+
+                case NORMAL:
+                    QuestionEntity normal = pool.getRandomNormal();
+                    if (normal != null) {
+                        selected.add(normal);
+                    }
+                    break;
             }
         }
 
         return selected;
     }
+
+    private enum PoolOption {
+        SEQUENCE,
+        REPEATABLE,
+        NORMAL
+    }
+
 }
 @Data
 class QuestionPool {
@@ -161,24 +194,31 @@ class QuestionPool {
 
     public boolean hasAvailableRepeatable(int remainingSlots) {
         return repeatableQuestions.values().stream()
-                .anyMatch(info -> info.getUsedCount() < info.getMaxCount());
+                .anyMatch(info -> info.getMaxCount() <= remainingSlots);
     }
 
-    public QuestionEntity getRandomRepeatable(int remainingSlots) {
+    // 🔥 新增方法：一次性返回重复题的所有轮次
+    public List<QuestionEntity> getRandomRepeatableAllRounds(int remainingSlots) {
         List<RepeatableQuestionInfo> available = repeatableQuestions.values().stream()
-                .filter(info -> info.getUsedCount() < info.getMaxCount())
+                .filter(info -> info.getMaxCount() <= remainingSlots)  // 🔥 检查总轮次是否能放下
                 .toList();
 
         if (available.isEmpty()) return null;
 
         RepeatableQuestionInfo selected = available.get(new Random().nextInt(available.size()));
-        selected.usedCount++;
 
-        if (selected.getUsedCount() >= selected.getMaxCount()) {
-            repeatableQuestions.remove(selected.getQuestion().getId());
+        // 🔥 生成 N 个相同的题目（N = maxCount）
+        List<QuestionEntity> rounds = new ArrayList<>();
+        for (int i = 0; i < selected.getMaxCount(); i++) {
+            rounds.add(selected.getQuestion());
         }
 
-        return selected.getQuestion();
+        // 🔥 用完后从池子里移除
+        repeatableQuestions.remove(selected.getQuestion().getId());
+
+        log.info("选中重复题: {} (重复{}次)", selected.getQuestion().getStrategyId(), selected.getMaxCount());
+
+        return rounds;
     }
 
     public boolean hasNormalQuestions() {
@@ -188,6 +228,67 @@ class QuestionPool {
     public QuestionEntity getRandomNormal() {
         if (normalQuestions.isEmpty()) return null;
         return normalQuestions.remove(new Random().nextInt(normalQuestions.size()));
+    }
+
+    /**
+     * 验证序列题是否完整
+     * 如果某个序列缺题，移除该序列并将题目放入普通池
+     */
+    public void validateSequences() {
+        Iterator<Map.Entry<String, SequenceInfo>> iterator = sequenceGroups.entrySet().iterator();
+
+        while (iterator.hasNext()) {
+            Map.Entry<String, SequenceInfo> entry = iterator.next();
+            String groupId = entry.getKey();
+            SequenceInfo info = entry.getValue();
+
+            List<QuestionMetadataPair> pairs = info.getQuestions();
+            if (pairs.isEmpty()) {
+                iterator.remove();
+                continue;
+            }
+
+            // 获取期望的总数
+            Integer expectedTotal = pairs.get(0).getMetadata().getTotalSequenceCount();
+            if (expectedTotal == null) {
+                log.warn("⚠️ 序列 {} 缺少 totalSequenceCount，移入普通池", groupId);
+                pairs.forEach(pair -> normalQuestions.add(pair.getQuestion()));
+                iterator.remove();
+                continue;
+            }
+
+            // 检查数量是否匹配
+            if (pairs.size() != expectedTotal) {
+                log.warn("⚠️ 序列 {} 不完整：期望{}题，实际{}题，移入普通池",
+                        groupId, expectedTotal, pairs.size());
+                pairs.forEach(pair -> normalQuestions.add(pair.getQuestion()));
+                iterator.remove();
+                continue;
+            }
+
+            // 检查 sequenceOrder 是否连续
+            List<Integer> orders = pairs.stream()
+                    .map(pair -> pair.getMetadata().getSequenceOrder())
+                    .sorted()
+                    .toList();
+
+            boolean isConsecutive = true;
+            for (int i = 0; i < orders.size(); i++) {
+                if (orders.get(i) != i + 1) {  // 假设 sequenceOrder 从 1 开始
+                    isConsecutive = false;
+                    break;
+                }
+            }
+
+            if (!isConsecutive) {
+                log.warn("⚠️ 序列 {} 的 sequenceOrder 不连续：{}，移入普通池", groupId, orders);
+                pairs.forEach(pair -> normalQuestions.add(pair.getQuestion()));
+                iterator.remove();
+                continue;
+            }
+
+            log.info("✅ 序列 {} 验证通过：{}题，顺序{}", groupId, expectedTotal, orders);
+        }
     }
 }
 // 在文件末尾添加这两个类

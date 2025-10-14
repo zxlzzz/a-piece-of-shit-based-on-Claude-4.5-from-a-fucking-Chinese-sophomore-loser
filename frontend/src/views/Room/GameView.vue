@@ -1,6 +1,5 @@
 <script setup>
 import { usePlayerStore } from '@/stores/player'
-import { generatePlayerColor } from '@/utils/player'
 import { connect, isConnected, sendSubmit, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -24,6 +23,17 @@ const questionStartTime = ref(null)
 const timeLimit = ref(30)
 const countdown = ref(30)
 const countdownTimer = ref(null)
+
+// 🔥 新增：聚焦聊天输入框
+const chatRoomRef = ref(null)
+
+const getSubmissionKey = () => {
+  // 🔥 使用 currentIndex 而不是 question.id，避免重复题冲突
+  if (!room.value || room.value.currentIndex === undefined) {
+    return `submission_${roomCode.value}_unknown`
+  }
+  return `submission_${roomCode.value}_${room.value.currentIndex}`
+}
 
 const currentQuestionIndex = computed(() => {
   if (!room.value) return 0
@@ -61,6 +71,16 @@ onMounted(() => {
   if (savedRoom) {
     room.value = savedRoom
     question.value = savedRoom.currentQuestion
+
+    // 🔥 新增：恢复提交状态
+    if (question.value) {
+      const submissionKey = getSubmissionKey()
+      const savedSubmission = localStorage.getItem(submissionKey)
+      if (savedSubmission === 'true') {
+        hasSubmitted.value = true
+        console.log('✅ 恢复提交状态: 已提交')
+      }
+    }
     
     if (savedRoom.currentQuestion && savedRoom.questionStartTime) {
       questionStartTime.value = new Date(savedRoom.questionStartTime)
@@ -69,6 +89,7 @@ onMounted(() => {
     }
   }
 
+  window.addEventListener('keydown', handleKeydown)
   connectWebSocket()
 })
 
@@ -77,6 +98,9 @@ onUnmounted(() => {
     unsubscribeAll(subscriptions.value)
   }
   clearCountdown()
+  const submissionKey = getSubmissionKey()
+  localStorage.removeItem(submissionKey)
+  window.removeEventListener('keydown', handleKeydown)
 })
 
 const connectWebSocket = async () => {
@@ -110,17 +134,35 @@ const setupRoomSubscription = () => {
     (update) => {
       console.log("房间更新:", update)
       
-      // 🔥 改这里：用 id 而不是 playerId
-      const oldQuestionId = question.value?.id
-      const newQuestionId = update.currentQuestion?.id
+      // 🔥 改用 currentIndex 判断是否切题
+      const oldIndex = room.value?.currentIndex
+      const newIndex = update.currentIndex
       
       room.value = update
       
-      if (newQuestionId && oldQuestionId !== newQuestionId) {
-        // 🔥 题目切换了，重置状态
+      if (newIndex !== undefined && oldIndex !== newIndex) {
+        // 🔥 题目切换时，清除旧题目的提交记录
+        if (oldIndex !== undefined) {
+          const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
+          localStorage.removeItem(oldSubmissionKey)
+          console.log('🧹 清除旧题目提交记录:', oldSubmissionKey)
+        }
+        
         clearCountdown()
-        hasSubmitted.value = false  // 🔥 关键：重置提交状态
+        
+        // 重置提交状态
+        hasSubmitted.value = false
         question.value = update.currentQuestion
+        
+        // 🔥 检查新题目是否已提交
+        const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
+        const savedSubmission = localStorage.getItem(newSubmissionKey)
+        if (savedSubmission === 'true') {
+          hasSubmitted.value = true
+          console.log('✅ 新题目已提交过')
+        } else {
+          console.log('🆕 新题目未提交，可以作答')
+        }
         
         if (update.questionStartTime) {
           questionStartTime.value = new Date(update.questionStartTime)
@@ -134,8 +176,11 @@ const setupRoomSubscription = () => {
       
       // 统一用 playerStore 存储
       playerStore.setRoom(update)
-      
-      if (update.finished || update.status === 'FINISHED') {
+
+      const isGameFinished = update.finished === true || update.status === 'FINISHED'
+
+      if (isGameFinished) {
+        console.log('🎮 游戏结束，准备跳转')
         clearCountdown()
         toast.add({
           severity: 'info',
@@ -144,6 +189,7 @@ const setupRoomSubscription = () => {
           life: 2000
         })
         setTimeout(() => {
+          console.log('🚀 跳转到结果页:', `/result/${roomCode.value}`)
           router.push(`/result/${roomCode.value}`)
         }, 1000)
       }
@@ -186,11 +232,10 @@ const updateCountdown = () => {
   
   countdown.value = remaining
   
-  if (remaining <= 0) {
-    clearCountdown()
-    if (!hasSubmitted.value && question.value) {
-      handleAutoSubmit()
-    }
+  // 🔥 优化：只在倒计时刚好归零时触发一次
+  if (remaining === 0 && !hasSubmitted.value && question.value) {
+    clearCountdown()  // 🔥 先清除定时器，防止再次触发
+    handleAutoSubmit()
   }
 }
 
@@ -202,6 +247,7 @@ const clearCountdown = () => {
 }
 
 const handleChoose = (choice) => {
+  // 🔥 防护1：检查是否已提交
   if (hasSubmitted.value) {
     toast.add({
       severity: 'warn',
@@ -212,25 +258,67 @@ const handleChoose = (choice) => {
     return
   }
   
-  // 🔥 改用 playerStore
-  sendSubmit({ 
-    roomCode: roomCode.value, 
-    playerId: playerStore.playerId, 
-    choice: choice.toString()
-  })
+  // 🔥 防护2：检查题目是否存在
+  if (!question.value || !question.value.id) {
+    toast.add({
+      severity: 'error',
+      summary: '错误',
+      detail: '题目数据异常，无法提交',
+      life: 3000
+    })
+    return
+  }
   
+  // 🔥 防护3：立即设置状态和保存记录（在发送前）
   hasSubmitted.value = true
+  const submissionKey = getSubmissionKey()
+  localStorage.setItem(submissionKey, 'true')
+  console.log('💾 提交前保存状态:', submissionKey)
   
-  toast.add({
-    severity: 'success',
-    summary: '提交成功',
-    detail: '已提交答案',
-    life: 2000
-  })
+  // 发送提交
+  try {
+    sendSubmit({ 
+      roomCode: roomCode.value, 
+      playerId: playerStore.playerId, 
+      choice: choice.toString()
+    })
+    
+    toast.add({
+      severity: 'success',
+      summary: '提交成功',
+      detail: '已提交答案',
+      life: 2000
+    })
+  } catch (error) {
+    console.error('❌ 提交失败:', error)
+    // 🔥 发送失败，回滚状态
+    hasSubmitted.value = false
+    localStorage.removeItem(submissionKey)
+    
+    toast.add({
+      severity: 'error',
+      summary: '提交失败',
+      detail: '网络错误，请重试',
+      life: 3000
+    })
+  }
 }
 
 const handleAutoSubmit = () => {
-  if (!question.value) return
+  // 🔥 防护1：检查是否已提交
+  if (hasSubmitted.value) {
+    console.log('⚠️ 已提交，跳过自动提交')
+    return
+  }
+  
+  // 🔥 防护2：检查题目是否存在
+  if (!question.value || !question.value.id) {
+    console.error('❌ 题目不存在，无法自动提交')
+    return
+  }
+  
+  // 🔥 防护3：立即设置状态，防止重复触发
+  hasSubmitted.value = true
   
   let defaultChoice
   if (question.value.type === 'choice') {
@@ -239,27 +327,126 @@ const handleAutoSubmit = () => {
     defaultChoice = question.value.min || 0
   }
   
-  // 🔥 改用 playerStore
-  sendSubmit({ 
-    roomCode: roomCode.value, 
-    playerId: playerStore.playerId, 
-    choice: defaultChoice.toString(),
-    force: true
-  })
+  // 🔥 保存提交状态（在发送前保存，防止竞态）
+  const submissionKey = getSubmissionKey()
+  localStorage.setItem(submissionKey, 'true')
+  console.log('💾 自动提交前保存状态:', submissionKey)
   
-  hasSubmitted.value = true
-  
-  toast.add({
-    severity: 'info',
-    summary: '自动提交',
-    detail: '时间到，已自动提交默认答案',
-    life: 3000
-  })
+  // 发送提交
+  try {
+    sendSubmit({ 
+      roomCode: roomCode.value, 
+      playerId: playerStore.playerId, 
+      choice: defaultChoice.toString(),
+      force: true
+    })
+    
+    toast.add({
+      severity: 'info',
+      summary: '自动提交',
+      detail: '时间到，已自动提交默认答案',
+      life: 3000
+    })
+  } catch (error) {
+    console.error('❌ 自动提交失败:', error)
+    // 🔥 发送失败，回滚状态
+    hasSubmitted.value = false
+    localStorage.removeItem(submissionKey)
+  }
 }
 
 const toggleChat = () => {
   showChat.value = !showChat.value
 }
+
+const handleKeydown = (e) => {
+  // 🔥 如果在输入框中，只处理 Esc，其他键都不拦截
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+    // Esc: 取消输入框焦点
+    if (e.key === 'Escape') {
+      e.target.blur()
+      showChat.value = false
+    }
+    // 🔥 其他键（包括 Enter）都让输入框自己处理
+    return
+  }
+  
+  // 🔥 Space: 聚焦聊天输入框
+  if (e.key === ' ') {
+    e.preventDefault()
+    focusChatInput()
+    return
+  }
+  
+  // 🔥 Esc: 关闭聊天
+  if (e.key === 'Escape') {
+    showChat.value = false
+    return
+  }
+  
+  // 🔥 如果已提交或没有题目，其他键不处理
+  if (hasSubmitted.value || !question.value) {
+    return
+  }
+  
+  // 🔥 Choice题: 1/2/3/4 触发选择
+  if (question.value.type === 'choice') {
+    const keyMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
+    if (keyMap[e.key]) {
+      e.preventDefault()
+      const event = new CustomEvent('select-option', { 
+        detail: { key: keyMap[e.key] } 
+      })
+      window.dispatchEvent(event)
+      return
+    }
+  }
+  
+  // 🔥 Bid题: 数字键 0-9 聚焦并输入
+  if (question.value.type === 'bid') {
+    if (/^[0-9]$/.test(e.key)) {
+      const numberInput = document.querySelector('.p-inputnumber-input')
+      if (numberInput) {
+        numberInput.focus()
+        
+        // 如果还没聚焦，手动输入
+        if (document.activeElement !== numberInput) {
+          e.preventDefault()
+          setTimeout(() => {
+            numberInput.value = e.key
+            numberInput.dispatchEvent(new Event('input', { bubbles: true }))
+          }, 0)
+        }
+      }
+      return
+    }
+  }
+  
+  // 🔥 Enter: 提交答案（只在没有焦点在输入框时）
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    const event = new CustomEvent('submit-answer')
+    window.dispatchEvent(event)
+  }
+}
+
+const focusChatInput = () => {
+  showChat.value = true
+  setTimeout(() => {
+    const chatInput = 
+      document.querySelector('.chat-input') ||
+      document.querySelector('input[placeholder*="消息"]') ||
+      document.querySelector('input[type="text"]')
+    
+    if (chatInput) {
+      chatInput.focus()
+      console.log('✅ 已聚焦到聊天输入框')
+    } else {
+      console.warn('⚠️ 未找到聊天输入框')
+    }
+  }, 100)
+}
+
 </script>
 
 <template>
@@ -311,41 +498,6 @@ const toggleChat = () => {
                   <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'" 
                      class="text-gray-600 dark:text-gray-400"></i>
                 </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 玩家状态栏 -->
-          <div v-if="room?.players" 
-               class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 overflow-x-auto">
-            <div class="flex gap-3">
-              <div
-                v-for="player in room.players"
-                :key="player.playerId"
-                class="flex flex-col items-center gap-2 p-2 rounded-lg min-w-[80px]"
-               :class="[
-                  player.ready 
-                    ? 'bg-green-50 dark:bg-green-900/10' 
-                    : 'bg-gray-50 dark:bg-gray-700/50',
-                  player.playerId === playerStore.playerId
-                    ? 'ring-1 ring-blue-500 dark:ring-blue-600'
-                    : ''
-                ]"
-              >
-                <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 
-                            flex items-center justify-center text-sm font-medium"
-                     :style="{ backgroundColor: generatePlayerColor(player.playerId) + '20', 
-                               color: generatePlayerColor(player.playerId) }">
-                  {{ player.name.charAt(0).toUpperCase() }}
-                </div>
-                <div class="text-xs font-medium text-gray-700 dark:text-gray-300 text-center truncate max-w-[70px]">
-                  {{ player.name }}
-                </div>
-                <i class="text-sm"
-                   :class="player.ready 
-                     ? 'pi pi-check-circle text-green-600 dark:text-green-400' 
-                     : 'pi pi-clock text-gray-400'">
-                </i>
               </div>
             </div>
           </div>

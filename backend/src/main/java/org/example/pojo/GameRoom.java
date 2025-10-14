@@ -17,7 +17,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GameRoom {
-
     /**
      * 房间码
      */
@@ -98,8 +97,12 @@ public class GameRoom {
      */
     private Map<String, LocalDateTime> disconnectedPlayers = new ConcurrentHashMap<>();
 
-    // ❌ 已删除：virtualPlayers（不再需要）
-    // ❌ 已删除：leftPlayers（用 disconnectedPlayers 替代）
+    /**
+     * 玩家的跨题目状态（用于重复题等需要记忆的场景）
+     * 键：playerId
+     * 值：PlayerGameState（包含 customData, activeBuffs 等）
+     */
+    private Map<String, PlayerGameState> playerGameStates = new ConcurrentHashMap<>();
 
     /**
      * 获取当前题目
@@ -130,6 +133,38 @@ public class GameRoom {
      */
     public void addScore(String playerId, int delta) {
         scores.put(playerId, scores.getOrDefault(playerId, 0) + delta);
+    }
+
+    /**
+     * 获取或创建玩家状态
+     */
+    public PlayerGameState getOrCreatePlayerState(String playerId, String playerName, int currentScore) {
+        return playerGameStates.computeIfAbsent(playerId, id ->
+                PlayerGameState.builder()
+                        .playerId(id)
+                        .name(playerName)
+                        .totalScore(currentScore)
+                        .activeBuffs(new ArrayList<>())
+                        .customData(new HashMap<>())
+                        .build()
+        );
+    }
+
+    /**
+     * 更新玩家状态的总分
+     */
+    public void updatePlayerStateTotalScore(String playerId, int newTotalScore) {
+        PlayerGameState state = playerGameStates.get(playerId);
+        if (state != null) {
+            state.setTotalScore(newTotalScore);
+        }
+    }
+
+    /**
+     * 清空所有玩家状态（游戏结束时调用）
+     */
+    public void clearPlayerStates() {
+        playerGameStates.clear();
     }
 
     /**

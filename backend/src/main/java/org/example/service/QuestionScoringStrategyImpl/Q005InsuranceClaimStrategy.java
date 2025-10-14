@@ -2,6 +2,7 @@ package org.example.service.QuestionScoringStrategyImpl;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.Map;
  * - 价格相同：都获得该分数
  * - 价格不同：高价者被怀疑欺诈，扣3分；低价者全额赔付
  */
+@Component
 @Slf4j
 public class Q005InsuranceClaimStrategy extends BaseQuestionStrategy {
 

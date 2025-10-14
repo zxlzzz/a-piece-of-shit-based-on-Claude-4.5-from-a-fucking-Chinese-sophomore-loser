@@ -2,9 +2,11 @@ package org.example.service.QuestionScoringStrategyImpl;
 
 import org.example.pojo.*;
 import org.example.service.QuestionScoringStrategy;
+import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+@Component
 public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
     /**
      * 子类只需实现这个方法来计算基础分数

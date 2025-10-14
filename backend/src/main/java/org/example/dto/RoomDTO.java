@@ -25,4 +25,19 @@ public class RoomDTO {
     private Integer currentIndex;
     private QuestionDTO currentQuestion;
     private Integer questionCount;
+
+    private String rankingMode;          // 排名模式
+    private Integer targetScore;         // 目标分数
+    private WinConditions winConditions; // 通关条件对象
+
+    // 内部类：通关条件
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    public static class WinConditions {
+        private Integer minScorePerPlayer; // 所有人最低分
+        private Integer minTotalScore;     // 团队总分
+        private Integer minAvgScore;       // 平均分
+    }
 }

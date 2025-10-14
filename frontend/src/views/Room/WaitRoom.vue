@@ -1,4 +1,5 @@
 <script setup>
+import { updateRoomSettings } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { generatePlayerColor } from '@/utils/player'
 import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
@@ -6,6 +7,7 @@ import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ChatRoom from './ChatRoom.vue'
+import CustomForm from './CustomForm.vue'
 
 const playerStore = usePlayerStore()
 const route = useRoute()
@@ -16,6 +18,8 @@ const roomCode = ref(route.params.roomId)
 const room = ref(null)
 const subscriptions = ref([])
 const loading = ref(false)
+
+const showCustomForm = ref(false)
 
 // 🔥 改用 ref 而不是 computed，手动管理连接状态
 const wsConnected = ref(false)
@@ -346,6 +350,47 @@ const copyRoomCode = async () => {
     })
   }
 }
+
+const handleCustomFormSubmit = async (formData) => {
+  loading.value = true
+  try {
+    // 🔥 调用后端 API
+    const response = await updateRoomSettings(roomCode.value, {
+      questionCount: formData.questionCount,
+      rankingMode: formData.rankingMode,
+      targetScore: formData.targetScore,
+      winConditions: formData.winConditions
+    })
+    
+    // 🔥 更新本地房间数据
+    room.value = response.data
+    playerStore.setRoom(response.data)
+    
+    toast.add({
+      severity: 'success',
+      summary: '成功',
+      detail: '游戏设置已更新',
+      life: 2000
+    })
+    
+    showCustomForm.value = false
+    
+  } catch (error) {
+    console.error('更新设置失败:', error)
+    toast.add({
+      severity: 'error',
+      summary: '失败',
+      detail: error.response?.data?.message || '更新游戏设置失败',
+      life: 3000
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleCustomFormCancel = () => {
+  showCustomForm.value = false
+}
 </script>
 
 <template>
@@ -417,6 +462,14 @@ const copyRoomCode = async () => {
                   </p>
                 </div>
               </div>
+              <i class="pi pi-chart-line text-blue-500"></i>
+                <span>
+                  目标：{{ 
+                    room.rankingMode === 'closest_to_avg' ? '接近平均分' :
+                    room.rankingMode === 'closest_to_target' ? `接近 ${room.targetScore} 分` :
+                    '标准排名'
+                  }}
+                </span>
             </div>
 
             <!-- 提示 -->
@@ -454,7 +507,6 @@ const copyRoomCode = async () => {
                 <div v-if="index === 0" 
                      class="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full 
                             flex items-center justify-center text-xs">
-                  👑
                 </div>
 
                 <div class="flex items-center gap-3">
@@ -486,6 +538,34 @@ const copyRoomCode = async () => {
               </div>
             </div>
           </div>
+          <!-- 在原有的"题目数量"和"准备状态"下方新增 -->
+          <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
+            class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <div class="text-sm space-y-2">
+              <!-- 排名模式 -->
+              <div v-if="room?.rankingMode !== 'standard'" 
+                class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+              </div>
+              <!-- 通关条件 -->
+              <div v-if="room?.winConditions" class="space-y-1">
+                <div v-if="room?.winConditions.minScorePerPlayer" 
+                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <i class="pi pi-users text-green-500"></i>
+                  <span>所有人 ≥ {{ room.winConditions.minScorePerPlayer }} 分</span>
+                </div>
+                <div v-if="room?.winConditions.minTotalScore" 
+                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <i class="pi pi-flag text-purple-500"></i>
+                  <span>总分 ≥ {{ room.winConditions.minTotalScore }} 分</span>
+                </div>
+                <div v-if="room?.winConditions.minAvgScore" 
+                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <i class="pi pi-chart-bar text-orange-500"></i>
+                  <span>平均分 ≥ {{ room.winConditions.minAvgScore }} 分</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <!-- 操作按钮 -->
           <div class="flex flex-wrap gap-3">
@@ -499,6 +579,23 @@ const copyRoomCode = async () => {
                      transition-colors"
             >
               离开
+            </button>
+
+            <!-- 🔥 新增：自定义按钮（仅房主可见） -->
+            <button 
+              v-if="isRoomOwner"
+              @click="showCustomForm = true"
+              :disabled="loading || !wsConnected"
+              class="px-5 py-2.5 rounded-lg text-sm font-medium
+                    bg-white dark:bg-gray-800 
+                    text-gray-700 dark:text-gray-300
+                    border border-gray-300 dark:border-gray-600
+                    hover:bg-gray-50 dark:hover:bg-gray-700
+                    transition-colors
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <i class="pi pi-cog mr-1"></i>
+              自定义
             </button>
 
             <button 
@@ -550,5 +647,14 @@ const copyRoomCode = async () => {
         <p class="text-sm text-gray-600 dark:text-gray-300">处理中</p>
       </div>
     </div>
+
+    <!-- 自定义表单弹窗 -->
+    <CustomForm
+      v-if="showCustomForm"
+      :maxQuestions="20"
+      :currentSettings="room"
+      @submit="handleCustomFormSubmit"
+      @cancel="handleCustomFormCancel"
+    />
   </div>
 </template>

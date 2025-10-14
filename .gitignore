@@ -18,6 +18,14 @@ backend/application-local.properties
 backend/application-local.yml
 backend/.env
 
+backend/src/main/resources/application-*.yml
+backend/src/main/resources/application-*.properties
+!backend/src/main/resources/application.yml         # 保留默认配置
+!backend/src/main/resources/application.properties  # 保留默认配置
+
+# Maven wrapper
+backend/.mvn/wrapper/maven-wrapper.jar
+
 # ===== Frontend =====
 # 依赖
 frontend/node_modules/
@@ -25,6 +33,22 @@ frontend/node_modules/
 # 构建输出
 frontend/dist/
 frontend/.vite/
+
+# 🔥 添加：前端缓存和临时文件
+frontend/.nuxt/
+frontend/.cache/
+frontend/.turbo/
+frontend/.parcel-cache/
+frontend/.temp/
+frontend/.vite-inspect/
+
+# 测试覆盖率
+backend/coverage/
+frontend/coverage/
+*.lcov
+
+frontend/yarn.lock
+frontend/pnpm-lock.yaml
 
 # IDE配置
 frontend/.vscode/

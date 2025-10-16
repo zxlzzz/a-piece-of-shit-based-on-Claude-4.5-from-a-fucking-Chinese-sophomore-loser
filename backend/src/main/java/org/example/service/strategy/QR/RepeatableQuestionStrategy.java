@@ -1,4 +1,4 @@
-package org.example.service.QuestionScoringStrategyImpl.QR;
+package org.example.service.strategy.QR;
 
 import org.example.pojo.*;
 import org.example.service.QuestionScoringStrategy;

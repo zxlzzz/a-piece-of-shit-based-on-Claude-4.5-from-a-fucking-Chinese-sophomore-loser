@@ -1,13 +1,10 @@
-package org.example.service.QuestionScoringStrategyImpl;
+package org.example.service.strategy;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.pojo.GameContext;
 import org.example.pojo.GameEvent;
-import org.example.pojo.QuestionResult;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Q0XX: 竞价购买题

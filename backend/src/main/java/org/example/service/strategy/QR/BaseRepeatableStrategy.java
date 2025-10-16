@@ -1,4 +1,4 @@
-package org.example.service.QuestionScoringStrategyImpl.QR;// ==================== 抽象基类：处理通用逻辑 ====================
+package org.example.service.strategy.QR;// ==================== 抽象基类：处理通用逻辑 ====================
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.*;

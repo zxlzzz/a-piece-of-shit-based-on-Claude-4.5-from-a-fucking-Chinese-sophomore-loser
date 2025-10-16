@@ -1,4 +1,4 @@
-package org.example.service.QuestionScoringStrategyImpl.QR;
+package org.example.service.strategy.QR;
 import lombok.extern.slf4j.Slf4j;
 import org.example.pojo.Buff;
 import org.example.pojo.GameContext;

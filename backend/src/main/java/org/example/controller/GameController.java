@@ -13,6 +13,7 @@ import org.example.entity.PlayerGameEntity;
 import org.example.exception.BusinessException;
 import org.example.repository.GameResultRepository;
 import org.example.service.GameService;
+import org.example.service.broadcast.RoomStateBroadcaster;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
@@ -28,63 +29,38 @@ import java.util.Optional;
 public class GameController {
 
     private final GameService gameService;
-    private final SimpMessagingTemplate messagingTemplate;
+    private final RoomStateBroadcaster broadcaster; // 🔥 新增
     private final ObjectMapper objectMapper;
     private final GameResultRepository gameResultRepository;
 
-    /**
-     * 创建房间（恢复原版 - 只有基础参数）
-     * POST /api/rooms?maxPlayers=4&questionCount=10
-     */
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
             @RequestParam(defaultValue = "10") Integer questionCount) {
-        System.out.println(questionCount);
         try {
             RoomDTO room = gameService.createRoom(maxPlayers, questionCount);
-            log.info("创建房间成功: {}", room.getRoomCode());
+            log.info("✅ 创建房间成功: {}", room.getRoomCode());
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("创建房间失败: {}", e.getMessage());
+            log.error("❌ 创建房间失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    /**
-     * 🔥 新增：更新房间高级设置
-     * PUT /api/rooms/{roomCode}/settings
-     * Body: {
-     *   "questionCount": 10,
-     *   "rankingMode": "closest_to_avg",
-     *   "targetScore": 100,
-     *   "winConditions": {
-     *     "minScorePerPlayer": 80,
-     *     "minTotalScore": 500,
-     *     "minAvgScore": 60
-     *   }
-     * }
-     */
     @PutMapping("/rooms/{roomCode}/settings")
     public ResponseEntity<RoomDTO> updateRoomSettings(
             @PathVariable String roomCode,
             @RequestBody UpdateRoomSettingsRequest request) {
         try {
             RoomDTO room = gameService.updateRoomSettings(roomCode, request);
-            log.info("更新房间 {} 设置成功", roomCode);
+            log.info("✅ 更新房间 {} 设置成功", roomCode);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("更新房间设置失败: {}", e.getMessage());
+            log.error("❌ 更新房间设置失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-
-
-    /**
-     * 加入房间
-     * POST /api/rooms/{roomCode}/join?playerId=123&playerName=Tom
-     */
     @PostMapping("/rooms/{roomCode}/join")
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
@@ -93,41 +69,33 @@ public class GameController {
         try {
             RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName);
 
-            // 广播房间更新
-            broadcastRoomUpdate(room);
+            // 🔥 改用 broadcaster
+            broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("玩家 {} 加入房间 {} 成功", playerName, roomCode);
+            log.info("✅ 玩家 {} 加入房间 {} 成功", playerName, roomCode);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("加入房间失败: {}", e.getMessage());
+            log.error("❌ 加入房间失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    /**
-     * 开始游戏
-     * POST /api/rooms/{roomCode}/start
-     */
     @PostMapping("/rooms/{roomCode}/start")
     public ResponseEntity<RoomDTO> startGame(@PathVariable String roomCode) {
         try {
             RoomDTO room = gameService.startGame(roomCode);
 
-            // 广播游戏开始
-            broadcastRoomUpdate(room);
+            // 🔥 改用 broadcaster
+            broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("房间 {} 开始游戏", roomCode);
+            log.info("✅ 房间 {} 开始游戏", roomCode);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("开始游戏失败: {}", e.getMessage());
+            log.error("❌ 开始游戏失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    /**
-     * 提交答案
-     * POST /api/rooms/{roomCode}/submit?playerId=123&choice=A&force=false
-     */
     @PostMapping("/rooms/{roomCode}/submit")
     public ResponseEntity<RoomDTO> submitAnswer(
             @PathVariable String roomCode,
@@ -137,21 +105,17 @@ public class GameController {
         try {
             RoomDTO room = gameService.submitAnswer(roomCode, playerId, choice, force);
 
-            // 广播房间更新
-            broadcastRoomUpdate(room);
+            // 🔥 改用 broadcaster
+            broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("玩家 {} 在房间 {} 提交答案: {}", playerId, roomCode, choice);
+            log.info("✅ 玩家 {} 在房间 {} 提交答案: {}", playerId, roomCode, choice);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("提交答案失败: {}", e.getMessage());
+            log.error("❌ 提交答案失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    /**
-     * 设置玩家准备状态
-     * PUT /api/rooms/{roomCode}/players/{playerId}/ready?ready=true
-     */
     @PutMapping("/rooms/{roomCode}/players/{playerId}/ready")
     public ResponseEntity<RoomDTO> setPlayerReady(
             @PathVariable String roomCode,
@@ -160,64 +124,29 @@ public class GameController {
         try {
             RoomDTO room = gameService.setPlayerReady(roomCode, playerId, ready);
 
-            // 广播房间更新
-            broadcastRoomUpdate(room);
+            // 🔥 改用 broadcaster
+            broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("玩家 {} 在房间 {} 设置准备状态: {}", playerId, roomCode, ready);
+            log.info("✅ 玩家 {} 在房间 {} 设置准备状态: {}", playerId, roomCode, ready);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("设置准备状态失败: {}", e.getMessage());
+            log.error("❌ 设置准备状态失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
-    /**
-     * 获取房间状态
-     * GET /api/rooms/{roomCode}
-     */
-    @GetMapping("/rooms/{roomCode}")
-    public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
-        try {
-            RoomDTO room = gameService.getRoomStatus(roomCode);
-            return ResponseEntity.ok(room);
-        } catch (BusinessException e) {
-            log.error("获取房间状态失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-
-    /**
-     * 获取游戏结果
-     * GET /api/rooms/{roomCode}/results
-     */
-    @GetMapping("/rooms/{roomCode}/results")
-    public ResponseEntity<List<PlayerGameEntity>> getGameResults(@PathVariable String roomCode) {
-        try {
-            List<PlayerGameEntity> results = gameService.getGameResults(roomCode);
-            return ResponseEntity.ok(results);
-        } catch (BusinessException e) {
-            log.error("获取游戏结果失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-
-    /**
-     * 删除房间
-     * DELETE /api/rooms/{roomCode}
-     */
     @DeleteMapping("/rooms/{roomCode}")
     public ResponseEntity<Void> deleteRoom(@PathVariable String roomCode) {
         try {
             gameService.removeRoom(roomCode);
 
-            // 广播房间删除
-            messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/deleted",
-                    Map.of("message", "房间已被删除", "roomCode", roomCode));
+            // 🔥 改用 broadcaster
+            broadcaster.sendRoomDeleted(roomCode);
 
-            log.info("删除房间: {}", roomCode);
+            log.info("✅ 删除房间: {}", roomCode);
             return ResponseEntity.ok().build();
         } catch (BusinessException e) {
-            log.error("删除房间失败: {}", e.getMessage());
+            log.error("❌ 删除房间失败: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
         }
     }
@@ -279,19 +208,6 @@ public class GameController {
                 .leaderboard(leaderboard)
                 .questionDetails(questionDetails)
                 .build();
-    }
-
-
-    /**
-     * 广播房间更新
-     */
-    private void broadcastRoomUpdate(RoomDTO room) {
-        if (room == null) return;
-        try {
-            messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode(), room);
-        } catch (Exception e) {
-            log.warn("广播房间更新失败, roomCode={}: {}", room.getRoomCode(), e.getMessage());
-        }
     }
 
     /**

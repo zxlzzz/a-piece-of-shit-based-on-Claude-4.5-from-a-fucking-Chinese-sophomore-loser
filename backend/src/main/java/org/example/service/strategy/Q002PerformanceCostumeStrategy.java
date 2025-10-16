@@ -1,4 +1,4 @@
-package org.example.service.QuestionScoringStrategyImpl;
+package org.example.service.strategy;
 
 import org.springframework.stereotype.Component;
 

@@ -51,14 +51,11 @@ public class QuesServiceImpl implements QuesService {
         return convertToDTO(entities);  // 复用已有的私有方法
     }
 
-    /**
-     * 批量导入题目（支持拆分后的结构）
-     */
     @Transactional
     @Override
-    public void batchImport(List<QuestionDTO> questionDTOs) {  // ← 改参数类型为 DTO
+    public void batchImport(List<QuestionDTO> questionDTOs) {
         for (QuestionDTO dto : questionDTOs) {
-            // 1. 保存 QuestionEntity（基础信息）
+            // 1. 保存基础 Entity
             QuestionEntity entity = QuestionEntity.builder()
                     .type(dto.getType())
                     .text(dto.getText())
@@ -72,18 +69,17 @@ public class QuesServiceImpl implements QuesService {
                     .build();
 
             QuestionEntity savedEntity = questionRepository.save(entity);
+            Long questionId = savedEntity.getId();
 
             // 2. 保存选择题配置
             if ("choice".equals(dto.getType()) && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
                 try {
                     ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
-                            .questionId(savedEntity.getId())
+                            .question(savedEntity)  // ✅ 改成关联对象（改后的Entity设计）
                             .optionsJson(objectMapper.writeValueAsString(dto.getOptions()))
                             .build();
                     choiceConfigRepository.save(config);
-
                     savedEntity.setHasChoiceConfig(true);
-                    questionRepository.save(savedEntity);
                 } catch (JsonProcessingException e) {
                     log.error("序列化选项失败: {}", e.getMessage());
                     throw new RuntimeException("保存选择题配置失败", e);
@@ -93,18 +89,16 @@ public class QuesServiceImpl implements QuesService {
             // 3. 保存竞价题配置
             if ("bid".equals(dto.getType()) && dto.getMin() != null && dto.getMax() != null) {
                 BidQuestionConfig config = BidQuestionConfig.builder()
-                        .questionId(savedEntity.getId())
+                        .question(savedEntity)  // ✅ 改成关联对象
                         .minValue(dto.getMin())
                         .maxValue(dto.getMax())
                         .step(dto.getStep())
                         .build();
                 bidConfigRepository.save(config);
-
                 savedEntity.setHasBidConfig(true);
-                questionRepository.save(savedEntity);
             }
 
-            // 4. 保存元数据（序列/重复配置）
+            // 4. 保存元数据
             if (hasMetadata(dto)) {
                 QuestionMetadata metadata = QuestionMetadata.builder()
                         .questionId(savedEntity.getId())
@@ -115,13 +109,13 @@ public class QuesServiceImpl implements QuesService {
                         .repeatTimes(dto.getRepeatTimes())
                         .repeatInterval(dto.getRepeatInterval())
                         .repeatGroupId(dto.getRepeatGroupId())
-                        .prerequisiteQuestionIds(dto.getPrerequisiteQuestionIds())
                         .build();
                 metadataRepository.save(metadata);
-
                 savedEntity.setHasMetadata(true);
-                questionRepository.save(savedEntity);
             }
+
+            // ✅ 只在最后保存一次
+            questionRepository.save(savedEntity);
         }
 
         log.info("成功导入 {} 道题目（包含配置）", questionDTOs.size());
@@ -142,35 +136,7 @@ public class QuesServiceImpl implements QuesService {
     @Override
     public List<QuestionDTO> exportAll() {
         List<QuestionEntity> all = questionRepository.findAll();
-        return all.stream()
-                .map(entity -> {
-                    QuestionDTO dto = new QuestionDTO();
-                    dto.setId(entity.getId());
-                    dto.setType(entity.getType());
-                    dto.setText(entity.getText());
-                    dto.setStrategyId(entity.getStrategyId());
-                    dto.setDefaultChoice(entity.getDefaultChoice());
-                    dto.setMinPlayers(entity.getMinPlayers());
-                    dto.setMaxPlayers(entity.getMaxPlayers());
-
-                    // 查询配置
-                    if ("choice".equals(entity.getType()) && entity.getHasChoiceConfig()) {
-                        choiceConfigRepository.findByQuestionId(entity.getId())
-                                .ifPresent(config -> {
-                                    dto.setOptions(deserializeOptions(config.getOptionsJson()));
-                                });
-                    } else if ("bid".equals(entity.getType()) && entity.getHasBidConfig()) {
-                        bidConfigRepository.findByQuestionId(entity.getId())
-                                .ifPresent(config -> {
-                                    dto.setMin(config.getMinValue());
-                                    dto.setMax(config.getMaxValue());
-                                    dto.setStep(config.getStep());
-                                });
-                    }
-
-                    return dto;
-                })
-                .collect(Collectors.toList());
+        return convertToDTO(all);
     }
 
     @Override
@@ -223,7 +189,6 @@ public class QuesServiceImpl implements QuesService {
             return Collections.emptyList();
         }
 
-        // 批量查询配置（避免 N+1 问题）
         List<Long> questionIds = entities.stream()
                 .map(QuestionEntity::getId)
                 .collect(Collectors.toList());
@@ -231,19 +196,18 @@ public class QuesServiceImpl implements QuesService {
         Map<Long, ChoiceQuestionConfig> choiceConfigMap = choiceConfigRepository
                 .findByQuestionIdIn(questionIds)
                 .stream()
-                .collect(Collectors.toMap(ChoiceQuestionConfig::getQuestionId, c -> c));
+                .collect(Collectors.toMap(c -> c.getQuestion().getId(), c -> c));
 
         Map<Long, BidQuestionConfig> bidConfigMap = bidConfigRepository
                 .findByQuestionIdIn(questionIds)
                 .stream()
-                .collect(Collectors.toMap(BidQuestionConfig::getQuestionId, b -> b));
+                .collect(Collectors.toMap(b -> b.getQuestion().getId(), b -> b));
 
         Map<Long, QuestionMetadata> metadataMap = metadataRepository
                 .findByQuestionIdIn(questionIds)
                 .stream()
                 .collect(Collectors.toMap(QuestionMetadata::getQuestionId, m -> m));
 
-        // 转换为 DTO
         return entities.stream()
                 .map(entity -> convertSingleToDTO(entity, choiceConfigMap, bidConfigMap, metadataMap))
                 .collect(Collectors.toList());
@@ -267,7 +231,6 @@ public class QuesServiceImpl implements QuesService {
         dto.setMinPlayers(entity.getMinPlayers());
         dto.setMaxPlayers(entity.getMaxPlayers());
 
-        // 处理选择题配置
         if ("choice".equals(entity.getType())) {
             ChoiceQuestionConfig config = choiceConfigMap.get(entity.getId());
             if (config != null) {
@@ -275,7 +238,6 @@ public class QuesServiceImpl implements QuesService {
             }
         }
 
-        // 处理竞价题配置
         if ("bid".equals(entity.getType())) {
             BidQuestionConfig config = bidConfigMap.get(entity.getId());
             if (config != null) {
@@ -285,7 +247,6 @@ public class QuesServiceImpl implements QuesService {
             }
         }
 
-        // 处理元数据
         QuestionMetadata metadata = metadataMap.get(entity.getId());
         if (metadata != null) {
             dto.setSequenceGroupId(metadata.getSequenceGroupId());
@@ -393,10 +354,13 @@ public class QuesServiceImpl implements QuesService {
      */
     private void updateChoiceConfig(Long questionId, QuestionDTO dto) {
         try {
+            QuestionEntity question = questionRepository.findById(questionId)
+                    .orElseThrow(() -> new BusinessException("题目不存在"));
+
             ChoiceQuestionConfig config = choiceConfigRepository
                     .findByQuestionId(questionId)
                     .orElse(ChoiceQuestionConfig.builder()
-                            .questionId(questionId)
+                            .question(question)
                             .build());
 
             if (dto.getOptions() != null) {
@@ -405,7 +369,6 @@ public class QuesServiceImpl implements QuesService {
 
             choiceConfigRepository.save(config);
 
-            // 更新标记
             QuestionEntity entity = questionRepository.findById(questionId).orElseThrow();
             entity.setHasChoiceConfig(true);
             questionRepository.save(entity);
@@ -420,13 +383,15 @@ public class QuesServiceImpl implements QuesService {
      * 更新竞价题配置
      */
     private void updateBidConfig(Long questionId, QuestionDTO dto) {
+        QuestionEntity question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new BusinessException("题目不存在"));
+
         BidQuestionConfig config = bidConfigRepository
                 .findByQuestionId(questionId)
                 .orElse(BidQuestionConfig.builder()
-                        .questionId(questionId)
+                        .question(question)
                         .build());
 
-        // 只更新非空字段
         if (dto.getMin() != null) {
             config.setMinValue(dto.getMin());
         }
@@ -439,7 +404,6 @@ public class QuesServiceImpl implements QuesService {
 
         bidConfigRepository.save(config);
 
-        // 更新标记
         QuestionEntity entity = questionRepository.findById(questionId).orElseThrow();
         entity.setHasBidConfig(true);
         questionRepository.save(entity);
@@ -477,9 +441,6 @@ public class QuesServiceImpl implements QuesService {
         if (dto.getRepeatGroupId() != null) {
             metadata.setRepeatGroupId(dto.getRepeatGroupId());
         }
-        if (dto.getPrerequisiteQuestionIds() != null) {
-            metadata.setPrerequisiteQuestionIds(dto.getPrerequisiteQuestionIds());
-        }
 
         metadataRepository.save(metadata);
 
@@ -499,8 +460,7 @@ public class QuesServiceImpl implements QuesService {
                 || dto.getIsRepeatable() != null
                 || dto.getRepeatTimes() != null
                 || dto.getRepeatInterval() != null
-                || dto.getRepeatGroupId() != null
-                || dto.getPrerequisiteQuestionIds() != null;
+                || dto.getRepeatGroupId() != null;
     }
 }
 

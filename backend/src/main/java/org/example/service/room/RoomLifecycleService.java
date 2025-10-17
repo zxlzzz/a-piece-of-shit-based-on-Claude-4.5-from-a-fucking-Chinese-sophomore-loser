@@ -47,8 +47,4 @@ public interface RoomLifecycleService {
      */
     RoomDTO toRoomDTO(String roomCode);
 
-    /**
-     * 转换为 RoomDTO（内部使用）
-     */
-    RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom);
 }

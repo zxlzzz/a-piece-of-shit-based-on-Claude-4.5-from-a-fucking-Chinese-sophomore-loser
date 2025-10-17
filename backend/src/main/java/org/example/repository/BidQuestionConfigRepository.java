@@ -12,8 +12,5 @@ public interface BidQuestionConfigRepository extends JpaRepository<BidQuestionCo
 
     // 批量查询
     List<BidQuestionConfig> findByQuestionIdIn(List<Long> questionIds);
-
-    // 删除配置
-    void deleteByQuestionId(Long questionId);
 }
 

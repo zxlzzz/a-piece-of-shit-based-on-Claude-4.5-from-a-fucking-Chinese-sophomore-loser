@@ -296,8 +296,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         return toRoomDTO(roomEntity, gameRoom);
     }
 
-    @Override
-    public RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom) {
+    private RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom) {
         RoomStatus status = RoomStatus.WAITING;
         if (gameRoom.isFinished()) {
             status = RoomStatus.FINISHED;

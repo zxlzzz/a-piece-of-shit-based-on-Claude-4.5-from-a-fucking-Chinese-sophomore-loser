@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -43,6 +44,17 @@ public class SubmissionEntity {
     @Column(nullable = false)
     private String choice;
 
+    @Column  // 这道题提交时得到的分数
+    private Integer scoreGained;
+
     @CreationTimestamp
     private LocalDateTime submittedAt;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 }

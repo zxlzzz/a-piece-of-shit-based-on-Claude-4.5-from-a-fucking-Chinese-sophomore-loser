@@ -23,12 +23,17 @@ public class RoomCache {
      * Value: GameRoom（内存中的运行时状态）
      */
     private final Map<String, GameRoom> activeRooms = new ConcurrentHashMap<>();
+    private final Map<String, Long> roomCreationTime = new ConcurrentHashMap<>();
+
+    // 房间过期时间（毫秒）：30分钟
+    private static final long ROOM_EXPIRY_MS = 30 * 60 * 1000;
 
     /**
      * 存入房间
      */
     public void put(String roomCode, GameRoom room) {
         activeRooms.put(roomCode, room);
+        roomCreationTime.put(roomCode, System.currentTimeMillis());
         log.debug("房间 {} 已加入缓存", roomCode);
     }
 
@@ -36,6 +41,11 @@ public class RoomCache {
      * 获取房间（可能为 null）
      */
     public GameRoom get(String roomCode) {
+        // ✅ 获取时检查过期
+        if (isExpired(roomCode)) {
+            remove(roomCode);
+            return null;
+        }
         return activeRooms.get(roomCode);
     }
 
@@ -58,16 +68,6 @@ public class RoomCache {
     }
 
     /**
-     * 移除房间
-     */
-    public void remove(String roomCode) {
-        GameRoom removed = activeRooms.remove(roomCode);
-        if (removed != null) {
-            log.info("房间 {} 已从缓存移除", roomCode);
-        }
-    }
-
-    /**
      * 获取所有活跃房间
      */
     public Collection<GameRoom> getAll() {
@@ -87,5 +87,18 @@ public class RoomCache {
     public void clear() {
         log.warn("清空所有房间缓存，当前房间数: {}", activeRooms.size());
         activeRooms.clear();
+    }
+
+    public void remove(String roomCode) {
+        activeRooms.remove(roomCode);
+        roomCreationTime.remove(roomCode);
+        log.info("房间 {} 已从缓存移除", roomCode);
+    }
+
+    private boolean isExpired(String roomCode) {
+        Long createdAt = roomCreationTime.get(roomCode);
+        if (createdAt == null) return false;
+
+        return System.currentTimeMillis() - createdAt > ROOM_EXPIRY_MS;
     }
 }

@@ -43,7 +43,7 @@ public class QuestionDataInitializer {
         List<QuestionDTO> dtos = mapper.readValue(is, new TypeReference<List<QuestionDTO>>() {});
 
         for (QuestionDTO dto : dtos) {
-            // 1. 保存 QuestionEntity（基础信息）
+            // 1. 保存 QuestionEntity
             QuestionEntity entity = QuestionEntity.builder()
                     .type(dto.getType())
                     .text(dto.getText())
@@ -51,41 +51,36 @@ public class QuestionDataInitializer {
                     .minPlayers(dto.getMinPlayers())
                     .maxPlayers(dto.getMaxPlayers())
                     .defaultChoice(dto.getDefaultChoice())
-                    .hasChoiceConfig(false)  // 先设为 false
+                    .hasChoiceConfig(false)
                     .hasBidConfig(false)
                     .hasMetadata(false)
                     .build();
 
             QuestionEntity savedEntity = questionRepository.save(entity);
 
-            // 2. 保存配置（根据题型）
+            // 2. 保存选择题配置
             if ("choice".equals(dto.getType()) && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
                 ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
-                        .questionId(savedEntity.getId())
+                        .question(savedEntity)  // ✅ 改成 question 对象
                         .optionsJson(mapper.writeValueAsString(dto.getOptions()))
                         .build();
                 choiceConfigRepository.save(config);
-
-                // 更新标记
                 savedEntity.setHasChoiceConfig(true);
-                questionRepository.save(savedEntity);
             }
 
+            // 3. 保存竞价题配置
             if ("bid".equals(dto.getType()) && dto.getMin() != null && dto.getMax() != null) {
                 BidQuestionConfig config = BidQuestionConfig.builder()
-                        .questionId(savedEntity.getId())
+                        .question(savedEntity)  // ✅ 改成 question 对象
                         .minValue(dto.getMin())
                         .maxValue(dto.getMax())
                         .step(dto.getStep())
                         .build();
                 bidConfigRepository.save(config);
-
-                // 更新标记
                 savedEntity.setHasBidConfig(true);
-                questionRepository.save(savedEntity);
             }
 
-            // 3. 保存元数据（序列/重复配置，如果有的话）
+            // 4. 保存元数据
             if (dto.getSequenceGroupId() != null || dto.getIsRepeatable() != null) {
                 QuestionMetadata metadata = QuestionMetadata.builder()
                         .questionId(savedEntity.getId())
@@ -96,14 +91,13 @@ public class QuestionDataInitializer {
                         .repeatTimes(dto.getRepeatTimes())
                         .repeatInterval(dto.getRepeatInterval())
                         .repeatGroupId(dto.getRepeatGroupId())
-                        .prerequisiteQuestionIds(dto.getPrerequisiteQuestionIds())
                         .build();
                 metadataRepository.save(metadata);
-
-                // 更新标记
                 savedEntity.setHasMetadata(true);
-                questionRepository.save(savedEntity);
             }
+
+            // ✅ 只在最后保存一次
+            questionRepository.save(savedEntity);
         }
 
         log.info("从 questions.json 导入了 {} 道题目到数据库", dtos.size());
@@ -112,29 +106,20 @@ public class QuestionDataInitializer {
     // ========== 内部 DTO 类 ==========
     @Data
     private static class QuestionDTO {
-        // 基础信息
         private Long id;
-        private String type;
+        private QuestionType type;
         private String text;
         private String strategyId;
         private Integer minPlayers;
         private Integer maxPlayers;
         private String defaultChoice;
-
-        // choice 题配置
-        private List<QuestionOption> options;  // ← 改类型
-
-        // bid 题配置
+        private List<QuestionOption> options;
         private Integer min;
         private Integer max;
         private Integer step;
-
-        // 序列配置
         private String sequenceGroupId;
         private Integer sequenceOrder;
         private Integer totalSequenceCount;
-
-        // 重复配置
         private Boolean isRepeatable;
         private Integer repeatTimes;
         private Integer repeatInterval;

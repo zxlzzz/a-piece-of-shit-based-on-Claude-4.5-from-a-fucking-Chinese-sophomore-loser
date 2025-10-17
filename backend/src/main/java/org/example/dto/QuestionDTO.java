@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.entity.QuestionOption;
+import org.example.entity.QuestionType;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ import java.util.List;
 @AllArgsConstructor
 public class QuestionDTO {
     private Long id;
-    private String type;           // "choice" 或 "bid"
+    private QuestionType type;           // "choice" 或 "bid"
     private String text;           // 题目描述
     private String strategyId;     // 计分策略ID
 

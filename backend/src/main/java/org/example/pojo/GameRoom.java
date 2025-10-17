@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.dto.PlayerDTO;
 import org.example.entity.QuestionEntity;
+import org.example.entity.RoomEntity;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -21,6 +22,8 @@ public class GameRoom {
      * 房间码
      */
     private String roomCode;
+
+    private RoomEntity roomEntity;
 
     /**
      * 最大玩家数

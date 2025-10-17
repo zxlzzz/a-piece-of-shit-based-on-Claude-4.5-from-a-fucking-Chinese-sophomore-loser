@@ -2,7 +2,10 @@ package org.example.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,5 +47,12 @@ public class PlayerEntity {
     @OneToMany(mappedBy = "player", fetch = FetchType.LAZY)
     private List<SubmissionEntity> submissions = new ArrayList<>();
 
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 }
 

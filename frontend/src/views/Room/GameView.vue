@@ -321,9 +321,9 @@ const handleAutoSubmit = () => {
   hasSubmitted.value = true
   
   let defaultChoice
-  if (question.value.type === 'choice') {
+  if (question.value.type === 'CHOICE') {
     defaultChoice = question.value.options?.[0]?.key || 'A'
-  } else if (question.value.type === 'bid') {
+  } else if (question.value.type === 'BID') {
     defaultChoice = question.value.min || 0
   }
   
@@ -390,7 +390,7 @@ const handleKeydown = (e) => {
   }
   
   // 🔥 Choice题: 1/2/3/4 触发选择
-  if (question.value.type === 'choice') {
+  if (question.value.type === 'CHOICE') {
     const keyMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
     if (keyMap[e.key]) {
       e.preventDefault()
@@ -403,7 +403,7 @@ const handleKeydown = (e) => {
   }
   
   // 🔥 Bid题: 数字键 0-9 聚焦并输入
-  if (question.value.type === 'bid') {
+  if (question.value.type === 'BID') {
     if (/^[0-9]$/.test(e.key)) {
       const numberInput = document.querySelector('.p-inputnumber-input')
       if (numberInput) {

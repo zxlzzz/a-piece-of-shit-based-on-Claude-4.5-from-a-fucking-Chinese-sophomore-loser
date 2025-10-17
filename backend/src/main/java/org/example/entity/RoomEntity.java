@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.pojo.RoomStatus;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -59,13 +60,6 @@ public class RoomEntity {
     private String hostPlayerId;
 
     /**
-     * 房间创建时间
-     */
-    @CreationTimestamp
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    /**
      * 房间内的玩家列表
      * 删除房间时，级联删除所有玩家
      */
@@ -99,4 +93,12 @@ public class RoomEntity {
      */
     @Column(columnDefinition = "TEXT")
     private String winConditionsJson;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 }

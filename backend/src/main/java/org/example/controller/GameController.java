@@ -9,17 +9,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
 import org.example.entity.GameResultEntity;
-import org.example.entity.PlayerGameEntity;
 import org.example.exception.BusinessException;
 import org.example.repository.GameResultRepository;
 import org.example.service.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -200,7 +197,7 @@ public class GameController {
 
         return GameHistoryDTO.builder()
                 .gameId(result.getGame().getId())  // ✅ 添加
-                .roomCode(result.getGame().getRoomCode())  // ✅ 从 game 获取
+                .roomCode(result.getGame().getRoom().getRoomCode())  // ✅ 从 game 获取
                 .startTime(result.getGame().getStartTime())  // ✅ 从 game 获取
                 .endTime(result.getGame().getEndTime())  // ✅ 从 game 获取
                 .questionCount(result.getQuestionCount())

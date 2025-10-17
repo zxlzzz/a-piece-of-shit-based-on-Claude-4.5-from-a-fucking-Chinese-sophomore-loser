@@ -52,14 +52,6 @@ public class PlayerServiceImpl implements PlayerService {
     }
 
     /**
-     * 查询房间内的所有玩家
-     */
-    @Override
-    public List<PlayerEntity> getPlayersByRoom(RoomEntity room) {
-        return playerRepository.findByRoom(room);
-    }
-
-    /**
      * 更新玩家准备状态
      */
     @Override

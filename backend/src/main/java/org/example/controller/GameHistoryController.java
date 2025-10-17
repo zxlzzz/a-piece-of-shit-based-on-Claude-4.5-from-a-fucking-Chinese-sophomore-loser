@@ -4,8 +4,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
+import org.example.entity.GameEntity;
 import org.example.entity.GameResultEntity;
-import org.example.exception.BusinessException;
+import org.example.repository.GameRepository;
 import org.example.repository.GameResultRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +25,9 @@ public class GameHistoryController {
     private GameResultRepository gameResultRepository;
 
     @Autowired
+    private GameRepository gameRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     /**
@@ -32,7 +36,7 @@ public class GameHistoryController {
     @GetMapping("/history")
     public ResponseEntity<List<GameHistorySummaryDTO>> getHistoryList(
             @RequestParam(required = false) Integer days,
-            @RequestParam(required = false) String playerId) {  // ✅ 可选参数
+            @RequestParam(required = false) String playerId) {
 
         List<GameResultEntity> results;
 
@@ -45,7 +49,7 @@ public class GameHistoryController {
 
         List<GameHistorySummaryDTO> summaries = results.stream()
                 .map(result -> convertToSummary(result, playerId))
-                .filter(summary -> summary != null)  // ✅ 过滤掉用户没参加的游戏
+                .filter(summary -> summary != null)
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(summaries);
@@ -56,38 +60,54 @@ public class GameHistoryController {
      */
     @GetMapping("/history/{gameId}")
     public ResponseEntity<GameHistoryDTO> getHistoryDetail(@PathVariable Long gameId) {
-        // ✅ 修改：使用 game 关联查询
-        GameResultEntity result = gameResultRepository.findById(gameId)
-                .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-
         try {
-            List<PlayerRankDTO> leaderboard = objectMapper.readValue(
-                    result.getLeaderboardJson(),
-                    new TypeReference<List<PlayerRankDTO>>() {}
-            );
+            GameEntity game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new org.example.exception.BusinessException("游戏不存在"));
 
-            List<QuestionDetailDTO> questionDetails = objectMapper.readValue(
-                    result.getQuestionDetailsJson(),
-                    new TypeReference<List<QuestionDetailDTO>>() {}
-            );
+            GameResultEntity result = gameResultRepository.findByGame(game)
+                    .orElseThrow(() -> new org.example.exception.BusinessException("游戏结果不存在"));
 
-            return ResponseEntity.ok(GameHistoryDTO.builder()
-                    .gameId(result.getGame().getId())  // ✅ 添加 gameId
-                    .roomCode(result.getGame().getRoomCode())  // ✅ 从 game 获取
-                    .startTime(result.getGame().getStartTime())  // ✅ 从 game 获取
-                    .endTime(result.getGame().getEndTime())  // ✅ 从 game 获取
-                    .questionCount(result.getQuestionCount())
-                    .playerCount(result.getPlayerCount())
-                    .leaderboard(leaderboard)
-                    .questionDetails(questionDetails)
-                    .build());
+            GameHistoryDTO dto = parseGameResultEntity(result);
+            return ResponseEntity.ok(dto);
 
+        } catch (org.example.exception.BusinessException e) {
+            log.error("获取游戏详情失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
             log.error("解析游戏结果失败: gameId={}", gameId, e);
-            throw new BusinessException("解析游戏结果失败");
+            return ResponseEntity.badRequest().body(null);
         }
     }
 
+    /**
+     * 解析 GameResultEntity 为 DTO
+     */
+    private GameHistoryDTO parseGameResultEntity(GameResultEntity result) throws Exception {
+        List<PlayerRankDTO> leaderboard = objectMapper.readValue(
+                result.getLeaderboardJson(),
+                new TypeReference<List<PlayerRankDTO>>() {}
+        );
+
+        List<QuestionDetailDTO> questionDetails = objectMapper.readValue(
+                result.getQuestionDetailsJson(),
+                new TypeReference<List<QuestionDetailDTO>>() {}
+        );
+
+        return GameHistoryDTO.builder()
+                .gameId(result.getGame().getId())
+                .roomCode(result.getGame().getRoom().getRoomCode())
+                .startTime(result.getGame().getStartTime())
+                .endTime(result.getGame().getEndTime())
+                .questionCount(result.getQuestionCount())
+                .playerCount(result.getPlayerCount())
+                .leaderboard(leaderboard)
+                .questionDetails(questionDetails)
+                .build();
+    }
+
+    /**
+     * 转换为摘要 DTO
+     */
     private GameHistorySummaryDTO convertToSummary(GameResultEntity entity, String playerId) {
         try {
             List<PlayerRankDTO> leaderboard = objectMapper.readValue(
@@ -110,9 +130,9 @@ public class GameHistoryController {
             }
 
             return GameHistorySummaryDTO.builder()
-                    .gameId(entity.getGame().getId())  // ✅ 从 game 获取
-                    .roomCode(entity.getGame().getRoomCode())  // ✅ 从 game 获取
-                    .endTime(entity.getGame().getEndTime())  // ✅ 从 game 获取
+                    .gameId(entity.getGame().getId())
+                    .roomCode(entity.getGame().getRoom().getRoomCode())
+                    .endTime(entity.getGame().getEndTime())
                     .questionCount(entity.getQuestionCount())
                     .playerCount(entity.getPlayerCount())
                     .myScore(targetPlayer.getTotalScore())

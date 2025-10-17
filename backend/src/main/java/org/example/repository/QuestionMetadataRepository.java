@@ -12,13 +12,4 @@ public interface QuestionMetadataRepository extends JpaRepository<QuestionMetada
 
     // 批量查询（重要！用于QuestionSelector避免N+1查询）
     List<QuestionMetadata> findByQuestionIdIn(List<Long> questionIds);
-
-    // 查找序列题
-    List<QuestionMetadata> findBySequenceGroupId(String sequenceGroupId);
-
-    // 查找可重复的题目
-    List<QuestionMetadata> findByIsRepeatableTrue();
-
-    // 删除元数据
-    void deleteByQuestionId(Long questionId);
 }

@@ -21,6 +21,7 @@ import org.example.service.timer.QuestionTimerService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 /**
@@ -54,8 +55,9 @@ public class GameServiceImpl implements GameService {
     public RoomDTO createRoom(Integer maxPlayers, Integer questionCount) {
         GameRoom gameRoom = new GameRoom();
         RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom);
+        gameRoom.setRoomEntity(savedRoom);  // ✅ 新增
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
-        return roomLifecycleService.toRoomDTO(savedRoom, gameRoom);
+        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());  // ✅ 改这里
     }
 
     @Override
@@ -109,11 +111,20 @@ public class GameServiceImpl implements GameService {
         if (gameRoom == null) return;
 
         synchronized (roomCode.intern()) {
-            gameRoom.getDisconnectedPlayers().put(playerId, java.time.LocalDateTime.now());
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(player -> log.info("⚠️ 玩家 {} 从房间 {} 断开连接", player.getName(), roomCode));
+            gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
+            log.info("⚠️ 玩家 {} 从房间 {} 断开连接", playerId, roomCode);
+
+            // ✅ 新增：检查是否需要自动填充答案
+            if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
+                boolean allDisconnected = gameRoom.getPlayers().stream()
+                        .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
+
+                if (allDisconnected) {
+                    log.warn("❌ 房间 {} 所有玩家都断开连接，自动填充答案并推进", roomCode);
+                    submissionService.fillDefaultAnswers(gameRoom);
+                    gameFlowService.advanceQuestion(roomCode, "allDisconnected", true);
+                }
+            }
         }
     }
 
@@ -181,7 +192,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public List<PlayerGameEntity> getGameResults(String roomCode) {
-        GameEntity game = gameRepository.findByRoomCode(roomCode)
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+        GameEntity game = gameRepository.findByRoom(gameRoom.getRoomEntity())
                 .orElseThrow(() -> new BusinessException("游戏记录不存在"));
         return playerGameRepository.findByGameOrderByScoreDesc(game);
     }
@@ -195,7 +207,7 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameHistoryDTO getCurrentGameStatus(String roomCode) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-        GameEntity game = gameRepository.findByRoomCode(roomCode)
+        GameEntity game = gameRepository.findByRoom(gameRoom.getRoomEntity())
                 .orElseThrow(() -> new BusinessException("游戏记录不存在"));
 
         List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
@@ -208,7 +220,7 @@ public class GameServiceImpl implements GameService {
                 .questionCount(gameRoom.getQuestions().size())
                 .playerCount(gameRoom.getPlayers().size())
                 .leaderboard(leaderboard)
-                .questionDetails(new ArrayList<>()) // 详情由 persistenceService 构建
+                .questionDetails(new ArrayList<>())
                 .build();
     }
 }

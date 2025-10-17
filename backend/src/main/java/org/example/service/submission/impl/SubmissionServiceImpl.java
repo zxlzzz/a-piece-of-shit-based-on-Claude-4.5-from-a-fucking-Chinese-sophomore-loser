@@ -35,7 +35,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final SubmissionRepository submissionRepository;
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional
     public void submitAnswer(String roomCode, String playerId, String choice) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
         QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
@@ -43,66 +43,46 @@ public class SubmissionServiceImpl implements SubmissionService {
         if (currentQuestion == null) {
             throw new BusinessException("当前没有有效题目");
         }
+        // 1. 保存到数据库
+        PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
-        try {
-            // 1. 保存到数据库
-            PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                    .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+        GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                .orElseThrow(() -> new BusinessException("游戏不存在"));
 
-            GameEntity game = gameRepository.findById(gameRoom.getGameId())
-                    .orElseThrow(() -> new BusinessException("游戏不存在"));
+        SubmissionEntity submission = SubmissionEntity.builder()
+                .player(player)
+                .question(currentQuestion)
+                .game(game)
+                .choice(choice)
+                .build();
 
-            SubmissionEntity submission = SubmissionEntity.builder()
-                    .player(player)
-                    .question(currentQuestion)
-                    .game(game)
-                    .choice(choice)
-                    .build();
+        submissionRepository.save(submission);
 
-            submissionRepository.save(submission);
+        // 2. 更新内存状态
+        gameRoom.getSubmissions()
+                .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
+                .put(playerId, choice);
 
-            // 2. 更新内存状态
-            gameRoom.getSubmissions()
-                    .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                    .put(playerId, choice);
+        // 3. 标记玩家已提交
+        gameRoom.getPlayers().stream()
+                .filter(p -> p.getPlayerId().equals(playerId))
+                .findFirst()
+                .ifPresent(p -> p.setReady(true));
 
-            // 3. 标记玩家已提交
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(p -> p.setReady(true));
-
-            log.info("💾 玩家 {} 提交答案: {}", playerId, choice);
-
-        } catch (Exception e) {
-            // 🔥 混合事务策略：允许失败但记录日志
-            log.error("⚠️ 提交保存失败但允许继续: playerId={}, choice={}", playerId, choice, e);
-
-            // 依然更新内存（保证游戏流程不中断）
-            gameRoom.getSubmissions()
-                    .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                    .put(playerId, choice);
-
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(p -> p.setReady(true));
-        }
+        log.info("💾 玩家 {} 提交答案: {}", playerId, choice);
     }
 
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional  // 默认 REQUIRED
     public void fillDefaultAnswers(GameRoom gameRoom) {
         QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
             return;
         }
 
-        GameEntity game = gameRepository.findById(gameRoom.getGameId()).orElse(null);
-        if (game == null) {
-            log.error("❌ 游戏不存在: gameId={}", gameRoom.getGameId());
-            return;
-        }
+        GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                .orElseThrow(() -> new BusinessException("游戏不存在"));
 
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
@@ -113,37 +93,23 @@ public class SubmissionServiceImpl implements SubmissionService {
                         ? currentQuestion.getDefaultChoice()
                         : "4";
 
-                try {
-                    PlayerEntity playerEntity = playerRepository.findByPlayerId(player.getPlayerId()).orElse(null);
-                    if (playerEntity == null) {
-                        log.warn("⚠️ 玩家不存在，跳过填充默认答案: {}", player.getPlayerId());
-                        continue;
-                    }
+                PlayerEntity playerEntity = playerRepository.findByPlayerId(player.getPlayerId())
+                        .orElseThrow(() -> new BusinessException("玩家不存在: " + player.getPlayerId()));
 
-                    SubmissionEntity submission = SubmissionEntity.builder()
-                            .player(playerEntity)
-                            .question(currentQuestion)
-                            .game(game)
-                            .choice(defaultChoice)
-                            .build();
+                SubmissionEntity submission = SubmissionEntity.builder()
+                        .player(playerEntity)
+                        .question(currentQuestion)
+                        .game(game)
+                        .choice(defaultChoice)
+                        .build();
 
-                    submissionRepository.save(submission);
+                submissionRepository.save(submission);
 
-                    gameRoom.getSubmissions()
-                            .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                            .put(player.getPlayerId(), defaultChoice);
+                gameRoom.getSubmissions()
+                        .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
+                        .put(player.getPlayerId(), defaultChoice);
 
-                    log.info("⏰ 玩家 {} 超时，填充默认答案: {}", player.getName(), defaultChoice);
-
-                } catch (Exception e) {
-                    // 🔥 允许失败
-                    log.error("⚠️ 填充默认答案失败但继续: playerId={}", player.getPlayerId(), e);
-
-                    // 依然更新内存
-                    gameRoom.getSubmissions()
-                            .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                            .put(player.getPlayerId(), defaultChoice);
-                }
+                log.info("玩家 {} 超时，填充默认答案: {}", player.getName(), defaultChoice);
             }
         }
     }

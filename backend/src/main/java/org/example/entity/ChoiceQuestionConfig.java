@@ -5,6 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "choice_question_config")
@@ -18,11 +22,20 @@ public class ChoiceQuestionConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "question_id", nullable = false, unique = true)
-    private Long questionId; // 外键：对应 QuestionEntity.id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", nullable = false, unique = true)
+    private QuestionEntity question;
 
     @Column(name = "options_json", columnDefinition = "TEXT", nullable = false)
-    private String optionsJson; // JSON 格式存储选项
+    private String optionsJson;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 
     /*
      * optionsJson 格式：

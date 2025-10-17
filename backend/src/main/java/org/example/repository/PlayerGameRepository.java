@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PlayerGameRepository extends JpaRepository<PlayerGameEntity, Long> {
-    List<PlayerGameEntity> findByGame(GameEntity game);
 
     // 查找特定玩家在特定游戏中的记录
     Optional<PlayerGameEntity> findByPlayerAndGame(PlayerEntity player, GameEntity game);

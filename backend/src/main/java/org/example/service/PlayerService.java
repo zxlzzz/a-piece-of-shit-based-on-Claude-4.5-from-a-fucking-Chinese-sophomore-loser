@@ -12,8 +12,6 @@ public interface PlayerService {
 
     Optional<PlayerEntity> getPlayerByPlayerId(String playerId);
 
-    List<PlayerEntity> getPlayersByRoom(RoomEntity room);
-
     PlayerEntity updatePlayerReady(String playerId, boolean ready);
 
     void deletePlayer(String playerId);

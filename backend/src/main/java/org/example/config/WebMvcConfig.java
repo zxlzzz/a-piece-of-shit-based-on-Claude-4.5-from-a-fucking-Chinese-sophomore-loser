@@ -12,10 +12,6 @@ import java.io.IOException;
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
-    /**
-     * 配置静态资源处理
-     * 让所有非API请求都返回 index.html（支持 Vue Router 的 history 模式）
-     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/**")
@@ -24,20 +20,25 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        Resource requestedResource = location.createRelative(resourcePath);
+                        // ✅ 更准确的API路径检查
+                        if (isApiPath(resourcePath)) {
+                            return null;
+                        }
 
-                        // 如果请求的资源存在，直接返回
+                        Resource requestedResource = location.createRelative(resourcePath);
                         if (requestedResource.exists() && requestedResource.isReadable()) {
                             return requestedResource;
                         }
 
-                        // 如果是API请求，不处理（让Controller处理）
-                        if (resourcePath.startsWith("api/")) {
-                            return null;
-                        }
-
-                        // 其他所有请求都返回 index.html（Vue Router）
+                        // 其他所有请求返回index.html（Vue Router history模式）
                         return new ClassPathResource("/static/index.html");
+                    }
+
+                    private boolean isApiPath(String path) {
+                        return path.startsWith("api/") ||
+                                path.startsWith("/api/") ||
+                                path.startsWith("ws") ||
+                                path.startsWith("/ws");
                     }
                 });
     }

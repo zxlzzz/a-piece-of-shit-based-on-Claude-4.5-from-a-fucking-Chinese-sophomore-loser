@@ -3,10 +3,7 @@ package org.example.service.flow.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
-import org.example.entity.GameEntity;
-import org.example.entity.PlayerEntity;
-import org.example.entity.PlayerGameEntity;
-import org.example.entity.QuestionEntity;
+import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.pojo.RoomStatus;
@@ -66,18 +63,22 @@ public class GameFlowServiceImpl implements GameFlowService {
                 return;
             }
 
-            // 1. 更新数据库房间状态
-            var room = roomRepository.findByRoomCode(roomCode)
+            // 获取房间实体
+            RoomEntity room = roomRepository.findByRoomCode(roomCode)
                     .orElseThrow(() -> new BusinessException("房间不存在"));
             room.setStatus(RoomStatus.PLAYING);
             roomRepository.save(room);
 
-            // 2. 创建游戏记录
+            // ✅ 改成这样
             GameEntity game = GameEntity.builder()
-                    .roomCode(roomCode)
+                    .room(room)  // 关联 RoomEntity
                     .startTime(LocalDateTime.now())
                     .build();
             GameEntity savedGame = gameRepository.save(game);
+
+            // 也要存到 gameRoom 中
+            gameRoom.setRoomEntity(room);  // ✅ 新增
+            gameRoom.setGameId(savedGame.getId());
 
             // 3. 创建玩家游戏记录
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
@@ -209,13 +210,14 @@ public class GameFlowServiceImpl implements GameFlowService {
             gameRoom.setFinished(true);
             gameRoom.clearPlayerStates();
 
-            // 2. 更新数据库
-            var room = roomRepository.findByRoomCode(roomCode)
+            // 更新数据库
+            RoomEntity room = roomRepository.findByRoomCode(roomCode)
                     .orElseThrow(() -> new BusinessException("房间不存在"));
             room.setStatus(RoomStatus.FINISHED);
             roomRepository.save(room);
 
-            GameEntity game = gameRepository.findByRoomCode(roomCode)
+            // ✅ 改成这样
+            GameEntity game = gameRepository.findByRoom(room)  // 用 findByRoom
                     .orElseThrow(() -> new BusinessException("游戏记录不存在"));
             game.setEndTime(LocalDateTime.now());
             gameRepository.save(game);

@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
@@ -21,8 +22,9 @@ public class GameResultEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private String roomCode;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "room_id", nullable = false)
+    private RoomEntity room;
     // ✅ 一对一：结果 -> 游戏
     @OneToOne
     @JoinColumn(name = "game_id", nullable = false, unique = true)
@@ -41,5 +43,15 @@ public class GameResultEntity {
     private String questionDetailsJson;
 
     @CreationTimestamp
-    private LocalDateTime createdAt;
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
+
+    // ✅ 如果需要获取 roomCode，可以这样：
+    public String getRoomCode() {
+        return game.getRoom().getRoomCode();
+    }
 }

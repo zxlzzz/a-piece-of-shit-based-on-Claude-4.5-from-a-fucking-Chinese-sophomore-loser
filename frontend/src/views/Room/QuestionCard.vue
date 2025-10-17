@@ -31,7 +31,7 @@ const onSubmit = () => {
 
 // 🔥 监听全局选择事件（从 GameView 触发）
 const handleSelectOption = (e) => {
-  if (props.disabled || props.question?.type !== 'choice') return
+  if (props.disabled || props.question?.type !== 'CHOICE') return
   
   const selectedKey = e.detail.key
   const option = props.question.options?.find(opt => opt.key === selectedKey)
@@ -65,7 +65,7 @@ onUnmounted(() => {
     <!-- 题目类型标签 -->
     <div class="flex items-center gap-2 mb-6">
       <span class="text-sm text-gray-600 dark:text-gray-400">
-        {{ question.type === 'choice' ? '选择题' : '数字题' }}
+        {{ question.type === 'CHOICE' ? '选择题' : '数字题' }}
       </span>
     </div>
      
@@ -79,14 +79,14 @@ onUnmounted(() => {
     <!-- 选项区域 -->
     <div class="mb-8">
       <ChooseBar
-        v-if="question.type === 'choice'"
+        v-if="question.type === 'CHOICE'"
         :key="question.id"
         :options="question.options"
         v-model="choice"
         :disabled="disabled"
       />
       <NumberBar
-        v-if="question.type === 'bid'"
+        v-if="question.type === 'BID'"
         :key="question.id"
         :maxval="question.max"
         :minval="question.min"

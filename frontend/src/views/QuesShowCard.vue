@@ -44,7 +44,7 @@ defineProps({
       </p>
 
       <!-- 🔥 选择题：显示选项 -->
-      <div v-if="type === 'choice' && Array.isArray(choice) && choice.length > 0">
+      <div v-if="type === 'CHOICE' && Array.isArray(choice) && choice.length > 0">
         <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">
           选项
         </h4>
@@ -80,7 +80,7 @@ defineProps({
       </div>
 
       <!-- 🔥 竞价题：显示范围和步长 -->
-      <div v-else-if="type === 'bid'">
+      <div v-else-if="type === 'BID'">
         <div class="space-y-3">
           <!-- 范围显示 -->
           <div class="flex items-center gap-3 p-3">
@@ -104,7 +104,7 @@ defineProps({
       </div>
 
       <!-- 无选项提示（选择题但没有选项） -->
-      <div v-else-if="type === 'choice'" class="text-gray-400 dark:text-gray-500 text-sm italic">
+      <div v-else-if="type === 'CHOICE'" class="text-gray-400 dark:text-gray-500 text-sm italic">
         暂无选项
       </div>
     </div>

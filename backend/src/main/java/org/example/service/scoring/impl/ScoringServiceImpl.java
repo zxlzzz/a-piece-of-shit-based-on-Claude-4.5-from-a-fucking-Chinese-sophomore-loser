@@ -140,7 +140,7 @@ public class ScoringServiceImpl implements ScoringService {
         }
 
         // 🔥 判断：currentRound <= totalRounds 时继续
-        return result.getCurrentRound() <= result.getTotalRounds();
+        return result.getCurrentRound() < result.getTotalRounds();
     }
 
     @Override

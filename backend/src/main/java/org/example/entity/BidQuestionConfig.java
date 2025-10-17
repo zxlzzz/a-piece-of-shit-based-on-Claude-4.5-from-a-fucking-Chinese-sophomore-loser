@@ -5,6 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "bid_question_config")
@@ -18,8 +22,9 @@ public class BidQuestionConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "question_id", nullable = false, unique = true)
-    private Long questionId; // 外键：对应 QuestionEntity.id
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "question_id", nullable = false, unique = true)
+    private QuestionEntity question;
 
     @Column(nullable = false)
     private Integer minValue; // 最小竞价值
@@ -29,4 +34,12 @@ public class BidQuestionConfig {
 
     @Column
     private Integer step; // 步长（可选）
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 }

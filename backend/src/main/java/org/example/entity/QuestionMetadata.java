@@ -5,6 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "question_metadata")
@@ -44,7 +49,11 @@ public class QuestionMetadata {
     @Column
     private String repeatGroupId; // 重复组ID
 
-    // ========== 依赖关系 ==========
-    @Column(columnDefinition = "TEXT")
-    private String prerequisiteQuestionIds; // 前置题目ID（逗号分隔）
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;  // 创建时间
+
+    @UpdateTimestamp
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;  // 更新时间
 }

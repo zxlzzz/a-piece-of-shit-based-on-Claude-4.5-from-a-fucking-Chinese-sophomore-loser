@@ -12,7 +12,4 @@ public interface ChoiceQuestionConfigRepository extends JpaRepository<ChoiceQues
 
     // 批量查询（避免N+1问题）
     List<ChoiceQuestionConfig> findByQuestionIdIn(List<Long> questionIds);
-
-    // 删除配置
-    void deleteByQuestionId(Long questionId);
 }

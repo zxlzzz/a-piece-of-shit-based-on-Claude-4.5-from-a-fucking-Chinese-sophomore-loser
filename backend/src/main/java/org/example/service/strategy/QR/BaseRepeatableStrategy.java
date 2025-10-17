@@ -150,19 +150,21 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
      * @return 数组：[修改后的分数, 是否消耗了这个buff(1=消耗,0=不消耗)]
      */
     private int[] applyBuffWithConsumption(Buff buff, int score, String playerId, List<GameEvent> events) {
-        boolean consumed = false;
+        // 检查buff是否应该触发
+        boolean shouldTrigger = true;
 
-        // 检查是否需要在得分时才触发
         if (buff.getParams() != null &&
                 Boolean.TRUE.equals(buff.getParams().get("triggerOnScore"))) {
-            // 如果分数<=0，不触发buff
-            if (score <= 0) {
-                return new int[]{score, 0};
-            }
-            // 分数>0，触发buff并标记为已消耗
-            consumed = true;
+            // 这种buff只在分数>0时触发
+            shouldTrigger = (score > 0);
         }
 
+        // 如果不触发，就不消耗，直接返回
+        if (!shouldTrigger) {
+            return new int[]{score, 0};
+        }
+
+        // 触发了，应用buff并消耗
         int newScore = score;
 
         switch (buff.getType()) {
@@ -185,10 +187,11 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
                 break;
 
             default:
-                return new int[]{score, 0};
+                return new int[]{score, 0};  // 未知buff类型，不消耗
         }
 
-        return new int[]{newScore, consumed ? 1 : 0};
+        // ✅ 触发成功，返回1表示已消耗
+        return new int[]{newScore, 1};
     }
 
     /**

@@ -269,5 +269,26 @@
     "defaultChoice": "4",
     "minPlayers": 3,
     "maxPlayers": 3
+  },
+  {
+    "id": 13,
+    "type": "BID",
+    "text": "你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为",
+    "strategyId": "Q011",
+    "options": null,
+    "min": 0,
+    "max": 3,
+    "step": 1,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "4",
+    "minPlayers": 3,
+    "maxPlayers": 3
   }
 ]

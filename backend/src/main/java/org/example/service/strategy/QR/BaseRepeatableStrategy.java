@@ -218,4 +218,9 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
      * 子类实现：总轮数
      */
     public abstract int getTotalRounds();
+
+    public Map<String, Integer> test(Map<String, String> submissions) {
+        return calculateRoundBaseScores(submissions, getTotalRounds());
+    }
+
 }

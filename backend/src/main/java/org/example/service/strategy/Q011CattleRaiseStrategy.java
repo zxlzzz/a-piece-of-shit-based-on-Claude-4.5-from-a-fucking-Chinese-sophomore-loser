@@ -1,6 +1,8 @@
 package org.example.service.strategy;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +18,8 @@ import java.util.Map;
  * 2. 超过3头，每超过一头，牛的价值-1（可以减到负数）
  * 3. 三人题，范围0-3
  */
+@Component
+@Slf4j
 public class Q011CattleRaiseStrategy extends BaseQuestionStrategy {
 
     public Q011CattleRaiseStrategy(BuffApplier buffApplier) {

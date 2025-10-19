@@ -1,112 +1,93 @@
-package org.example.service.strategy.QR;// ==================== 抽象基类：处理通用逻辑 ====================
+package org.example.service.strategy.QR;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.dto.PlayerSubmissionDTO;
+import org.example.dto.QuestionDTO;
+import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.*;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
-/**
- * 重复题目的抽象基类
- * 处理buff应用、持续时间、清理等通用逻辑
- *
- * 子类只需实现：
- * 1. calculateRoundBaseScores - 计算本轮基础分数
- * 2. getTotalRounds - 返回总轮次
- * 3. getQuestionIdentifier - 返回策略ID
- *
- * 可选重写：
- * - generateRoundEvents - 生成自定义事件
- * - applyNextRoundBuffs - 添加下一轮的buff
- */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrategy {
 
-    /**
-     * 计算某一轮的结果
-     *
-     * @param context 游戏上下文
-     * @param currentRound 当前轮次（从1开始，第1轮=1，第2轮=2...）
-     * @return 本轮的计算结果
-     */
+    protected final BuffApplier buffApplier;
+
     @Override
-    public QuestionResult calculateRoundResult(GameContext context, int currentRound) {
+    public QuestionDetailDTO calculateRoundResult(GameContext context, int currentRound) {
         Map<String, String> submissions = context.getCurrentSubmissions();
 
         // 1. 计算本轮基础分数
         Map<String, Integer> baseScores = calculateRoundBaseScores(submissions, currentRound);
 
-        // 2. 生成本轮事件（如选择了什么选项）
-        List<GameEvent> events = generateRoundEvents(submissions, baseScores, currentRound);
+        // 2. 应用 Buff
+        Map<String, Integer> finalScores = applyBuffs(context, baseScores);
 
-        // 3. 应用当前生效的buff（如上一轮的翻倍/减半）
-        Map<String, Integer> finalScores = applyBuffs(context, baseScores, events);
-
-        // 4. 根据本轮选择，给玩家添加下一轮的buff
-        applyNextRoundBuffs(context, submissions, currentRound, events);
-
-        // 5. 减少所有buff的持续时间
+        // 3. 减少 Buff 持续时间
         decreaseBuffDuration(context);
 
-        // 6. 检查是否是最后一轮，清理重复题buff
+        // 4. 如果是最后一轮，清理可重复 Buff
         if (currentRound == getTotalRounds()) {
-            clearRepeatableBuffs(context, events);
+            clearRepeatableBuffs(context);
         }
 
-        return QuestionResult.builder()
+        // 5. 应用下一轮的 Buff（如果有）
+        applyNextRoundBuffs(context, submissions, currentRound);
+
+        // 6. 构建玩家提交列表
+        List<PlayerSubmissionDTO> playerSubmissions = buildPlayerSubmissions(
+                context, submissions, baseScores, finalScores
+        );
+
+        // 7. 计算选项分布
+        Map<String, Integer> choiceCounts = calculateChoiceCounts(submissions);
+
+        // 8. 获取选项文本
+        String optionText = getOptionText(context.getCurrentQuestion());
+
+        // 9. 返回 DTO
+        return QuestionDetailDTO.builder()
                 .questionIndex(context.getCurrentQuestionIndex())
-                .baseScores(baseScores)
-                .finalScores(finalScores)
-                .events(events)
-                .submissions(submissions)
+                .questionText(context.getCurrentQuestion().getText() + " (第" + currentRound + "/" + getTotalRounds() + "轮)")
+                .optionText(optionText)
+                .questionType(context.getCurrentQuestion().getType())
+                .playerSubmissions(playerSubmissions)
+                .choiceCounts(choiceCounts)
                 .build();
     }
 
     /**
-     * 子类实现：计算本轮的基础分数
-     * @param submissions 玩家提交
-     * @param currentRound 当前轮次
-     * @return playerId -> baseScore
+     * 子类实现：计算本轮基础分数
      */
     protected abstract Map<String, Integer> calculateRoundBaseScores(
-            Map<String, String> submissions, int currentRound);
-
-    /**
-     * 生成本轮事件（可选，子类可重写）
-     *
-     * @param currentRound 当前轮次（从1开始）
-     */
-    protected List<GameEvent> generateRoundEvents(
             Map<String, String> submissions,
-            Map<String, Integer> baseScores,
-            int currentRound) {
-        List<GameEvent> events = new ArrayList<>();
-        events.add(GameEvent.builder()
-                .type("ROUND_INFO")
-                .description(String.format("第 %d/%d 轮", currentRound, getTotalRounds()))
-                .build());
-        return events;
-    }
+            int currentRound
+    );
 
     /**
-     * 应用下一轮的buff（可选，子类可重写）
+     * 子类可选实现：应用下一轮的 Buff
      */
     protected void applyNextRoundBuffs(
             GameContext context,
             Map<String, String> submissions,
-            int currentRound,
-            List<GameEvent> events) {
-        // 默认不做处理，子类可重写
+            int currentRound
+    ) {
+        // 默认不做任何事，子类按需覆盖
     }
 
     /**
-     * 应用所有生效的buff
+     * 应用 Buff
      */
-    private Map<String, Integer> applyBuffs(
+    protected Map<String, Integer> applyBuffs(
             GameContext context,
-            Map<String, Integer> baseScores,
-            List<GameEvent> events) {
+            Map<String, Integer> baseScores
+    ) {
         Map<String, Integer> finalScores = new HashMap<>();
 
         for (Map.Entry<String, Integer> entry : baseScores.entrySet()) {
@@ -115,28 +96,23 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
 
             PlayerGameState state = context.getPlayerStates().get(playerId);
             if (state != null && state.getActiveBuffs() != null) {
-                // 收集需要移除的buff
                 List<Buff> buffsToRemove = new ArrayList<>();
 
                 for (Buff buff : state.getActiveBuffs()) {
-                    // duration为0表示本题生效
-                    // duration为-1且有triggerOnScore标记，也需要检查
                     boolean shouldCheck = (buff.getDuration() == 0) ||
                             (buff.getDuration() == -1 && buff.getParams() != null &&
                                     Boolean.TRUE.equals(buff.getParams().get("triggerOnScore")));
 
                     if (shouldCheck) {
-                        int[] result = applyBuffWithConsumption(buff, score, playerId, events);
+                        int[] result = buffApplier.applyBuff(buff, score, playerId);
                         score = result[0];
 
-                        // 如果buff被消耗了，标记为待移除
                         if (result[1] == 1) {
                             buffsToRemove.add(buff);
                         }
                     }
                 }
 
-                // 移除已消耗的buff
                 state.getActiveBuffs().removeAll(buffsToRemove);
             }
             finalScores.put(playerId, score);
@@ -146,65 +122,15 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
     }
 
     /**
-     * 应用单个buff
-     * @return 数组：[修改后的分数, 是否消耗了这个buff(1=消耗,0=不消耗)]
+     * 减少 Buff 持续时间
      */
-    private int[] applyBuffWithConsumption(Buff buff, int score, String playerId, List<GameEvent> events) {
-        // 检查buff是否应该触发
-        boolean shouldTrigger = true;
-
-        if (buff.getParams() != null &&
-                Boolean.TRUE.equals(buff.getParams().get("triggerOnScore"))) {
-            // 这种buff只在分数>0时触发
-            shouldTrigger = (score > 0);
-        }
-
-        // 如果不触发，就不消耗，直接返回
-        if (!shouldTrigger) {
-            return new int[]{score, 0};
-        }
-
-        // 触发了，应用buff并消耗
-        int newScore = score;
-
-        switch (buff.getType()) {
-            case "SCORE_DOUBLE":
-                newScore = score * 2;
-                events.add(GameEvent.builder()
-                        .type("BUFF_APPLIED")
-                        .targetPlayerId(playerId)
-                        .description("得分翻倍（" + score + " → " + newScore + "）")
-                        .build());
-                break;
-
-            case "SCORE_HALVED":
-                newScore = score / 2;
-                events.add(GameEvent.builder()
-                        .type("DEBUFF_APPLIED")
-                        .targetPlayerId(playerId)
-                        .description("得分减半（" + score + " → " + newScore + "）")
-                        .build());
-                break;
-
-            default:
-                return new int[]{score, 0};  // 未知buff类型，不消耗
-        }
-
-        // ✅ 触发成功，返回1表示已消耗
-        return new int[]{newScore, 1};
-    }
-
-    /**
-     * 减少buff持续时间
-     */
-    private void decreaseBuffDuration(GameContext context) {
+    protected void decreaseBuffDuration(GameContext context) {
         for (PlayerGameState state : context.getPlayerStates().values()) {
             if (state.getActiveBuffs() == null) continue;
 
             Iterator<Buff> iterator = state.getActiveBuffs().iterator();
             while (iterator.hasNext()) {
                 Buff buff = iterator.next();
-                // duration为-1的buff（如triggerOnScore类型）不自动减少
                 if (buff.getDuration() >= 0) {
                     buff.setDuration(buff.getDuration() - 1);
                     if (buff.getDuration() < 0) {
@@ -216,47 +142,80 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
     }
 
     /**
-     * 清理重复题专用的buff（最后一轮时调用）
-     * 只清理标记了 repeatableOnly 的 buff
+     * 清理可重复 Buff
      */
-    private void clearRepeatableBuffs(GameContext context, List<GameEvent> events) {
+    protected void clearRepeatableBuffs(GameContext context) {
         for (PlayerGameState state : context.getPlayerStates().values()) {
             if (state.getActiveBuffs() == null) continue;
-
-            List<Buff> clearedBuffs = new ArrayList<>();
 
             Iterator<Buff> iterator = state.getActiveBuffs().iterator();
             while (iterator.hasNext()) {
                 Buff buff = iterator.next();
-                // 清理标记为"仅在重复题中生效"的buff
                 if (buff.getParams() != null &&
                         Boolean.TRUE.equals(buff.getParams().get("repeatableOnly"))) {
                     iterator.remove();
-                    clearedBuffs.add(buff);
                 }
-            }
-
-            // 记录清理事件
-            if (!clearedBuffs.isEmpty()) {
-                events.add(GameEvent.builder()
-                        .type("BUFF_CLEARED")
-                        .targetPlayerId(state.getPlayerId())
-                        .description("重复题结束，清理 " + clearedBuffs.size() + " 个buff")
-                        .build());
-
-                log.debug("🧹 玩家 {} 清理了 {} 个重复题buff", state.getPlayerId(), clearedBuffs.size());
             }
         }
     }
 
     /**
-     * 工具方法：获取两个玩家
+     * 构建玩家提交记录
+     */
+    protected List<PlayerSubmissionDTO> buildPlayerSubmissions(
+            GameContext context,
+            Map<String, String> submissions,
+            Map<String, Integer> baseScores,
+            Map<String, Integer> finalScores
+    ) {
+        return submissions.entrySet().stream()
+                .map(entry -> {
+                    String playerId = entry.getKey();
+                    return PlayerSubmissionDTO.builder()
+                            .playerId(playerId)
+                            .playerName(context.getPlayerName(playerId))
+                            .choice(entry.getValue())
+                            .baseScore(baseScores.getOrDefault(playerId, 0))
+                            .finalScore(finalScores.getOrDefault(playerId, 0))
+                            .submittedAt(context.getSubmittedAt(playerId))
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 计算选项分布
+     */
+    protected Map<String, Integer> calculateChoiceCounts(Map<String, String> submissions) {
+        return submissions.values().stream()
+                .collect(Collectors.groupingBy(
+                        choice -> choice,
+                        Collectors.summingInt(e -> 1)
+                ));
+    }
+
+    /**
+     * 获取选项文本（子类可覆盖）
+     */
+    protected String getOptionText(QuestionDTO question) {
+        return "";
+    }
+
+    /**
+     * 辅助方法：获取两人游戏的玩家
      */
     protected Map.Entry<String, String>[] getTwoPlayers(Map<String, String> submissions) {
         if (submissions.size() != 2) {
             throw new IllegalArgumentException("需要2人游戏");
         }
         List<Map.Entry<String, String>> list = new ArrayList<>(submissions.entrySet());
-        return new Map.Entry[]{list.get(0), list.get(1)};
+        @SuppressWarnings("unchecked")
+        Map.Entry<String, String>[] array = new Map.Entry[]{list.get(0), list.get(1)};
+        return array;
     }
+
+    /**
+     * 子类实现：总轮数
+     */
+    public abstract int getTotalRounds();
 }

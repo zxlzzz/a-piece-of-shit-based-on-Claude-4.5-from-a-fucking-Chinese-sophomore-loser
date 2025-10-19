@@ -1,5 +1,6 @@
 package org.example.service.strategy;
 
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -7,6 +8,10 @@ import java.util.Map;
 
 @Component
 public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy{
+    public Q002PerformanceCostumeStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
+
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions){
         Map<String, Integer> scores = new HashMap<>();

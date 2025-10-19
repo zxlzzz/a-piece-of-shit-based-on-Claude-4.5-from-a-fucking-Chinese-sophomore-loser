@@ -3,10 +3,12 @@ package org.example.service;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
+import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
 import org.example.entity.QuestionMetadata;
 import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
+import org.example.utils.DTOConverter;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -19,31 +21,57 @@ import static org.example.config.WebSocketConfig.WebSocketChannelInterceptor.log
 public class QuestionSelectorService {
     private final QuestionRepository questionRepository;
     private final QuestionMetadataRepository metadataRepository;
+    private final DTOConverter dtoConverter;
 
-    public QuestionSelectorService(QuestionRepository questionRepository, QuestionMetadataRepository metadataRepository) {
+    public QuestionSelectorService(QuestionRepository questionRepository, QuestionMetadataRepository metadataRepository, DTOConverter dtoConverter) {
         this.questionRepository = questionRepository;
         this.metadataRepository = metadataRepository;
+        this.dtoConverter = dtoConverter;
     }
 
-    public List<QuestionEntity> selectQuestions(int totalCount, int playerCount){
-        List<QuestionEntity> allQuestions = questionRepository.findAll();
+    /**
+     * 选择题目（返回 DTO）
+     * @param totalCount 需要的题目总数
+     * @param playerCount 玩家人数
+     * @return 选中的题目列表（DTO格式，包含完整配置）
+     */
+    public List<QuestionDTO> selectQuestions(int totalCount, int playerCount) {
+        // 1. 查询所有题目（带配置）
+        List<QuestionEntity> allQuestions = questionRepository.findAllWithConfigs();
+
+        // 2. 筛选适合人数的题目
         List<QuestionEntity> suitable = allQuestions.stream()
                 .filter(q -> q.getMinPlayers() <= playerCount && q.getMaxPlayers() >= playerCount)
                 .toList();
 
-        if(suitable.isEmpty()){
+        if (suitable.isEmpty()) {
             throw new RuntimeException("No suitable questions found");
         }
 
-        // ← 新增：批量查询所有题目的 metadata（避免 N+1 问题）
-        List<Long> questionIds = suitable.stream().map(QuestionEntity::getId).toList();
+        // 3. 批量查询所有题目的 metadata
+        List<Long> questionIds = suitable.stream()
+                .map(QuestionEntity::getId)
+                .toList();
+
         Map<Long, QuestionMetadata> metadataMap = metadataRepository
                 .findByQuestionIdIn(questionIds)
                 .stream()
                 .collect(Collectors.toMap(QuestionMetadata::getQuestionId, m -> m));
 
-        QuestionPool pool = buildQuestionPool(suitable, metadataMap);  // ← 传入 metadataMap
-        return selectFromPool(pool, totalCount);
+        // 4. 构建题目池
+        QuestionPool pool = buildQuestionPool(suitable, metadataMap);
+
+        // 5. 从池中选择题目（Entity 列表）
+        List<QuestionEntity> selectedEntities = selectFromPool(pool, totalCount);
+
+        // 🔥 6. 转换成 DTO（带配置）
+        List<QuestionDTO> selectedDTOs = selectedEntities.stream()
+                .map(entity -> dtoConverter.toQuestionDTOWithConfig(entity))
+                .collect(Collectors.toList());
+
+        log.info("✅ 选题完成: 共选择 {} 道题目（玩家数: {}）", selectedDTOs.size(), playerCount);
+
+        return selectedDTOs;
     }
 
     private QuestionPool buildQuestionPool(

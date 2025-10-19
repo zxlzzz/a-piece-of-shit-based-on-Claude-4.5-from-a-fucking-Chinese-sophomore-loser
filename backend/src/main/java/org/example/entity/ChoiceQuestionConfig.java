@@ -22,7 +22,7 @@ public class ChoiceQuestionConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false, unique = true)
     private QuestionEntity question;
 

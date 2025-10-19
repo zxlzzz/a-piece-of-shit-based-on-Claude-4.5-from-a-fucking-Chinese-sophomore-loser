@@ -3,6 +3,7 @@ package org.example.service.flow.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
+import org.example.dto.QuestionDTO;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
@@ -63,24 +64,21 @@ public class GameFlowServiceImpl implements GameFlowService {
                 return;
             }
 
-            // 获取房间实体
             RoomEntity room = roomRepository.findByRoomCode(roomCode)
                     .orElseThrow(() -> new BusinessException("房间不存在"));
             room.setStatus(RoomStatus.PLAYING);
             roomRepository.save(room);
 
-            // ✅ 改成这样
             GameEntity game = GameEntity.builder()
-                    .room(room)  // 关联 RoomEntity
+                    .room(room)
                     .startTime(LocalDateTime.now())
                     .build();
             GameEntity savedGame = gameRepository.save(game);
 
-            // 也要存到 gameRoom 中
-            gameRoom.setRoomEntity(room);  // ✅ 新增
+            gameRoom.setRoomEntity(room);
             gameRoom.setGameId(savedGame.getId());
 
-            // 3. 创建玩家游戏记录
+            // 创建玩家游戏记录
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
                 PlayerEntity player = playerRepository.findByPlayerId(playerDTO.getPlayerId())
                         .orElseThrow(() -> new BusinessException("玩家不存在: " + playerDTO.getPlayerId()));
@@ -93,28 +91,28 @@ public class GameFlowServiceImpl implements GameFlowService {
                 playerGameRepository.save(playerGame);
             }
 
-            // 4. 选题
-            List<QuestionEntity> questions = questionSelector.selectQuestions(
+            // 🔥 选题（返回 DTO）
+            List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
                     gameRoom.getPlayers().size()
             );
 
-            // 5. 初始化游戏房间状态
-            gameRoom.setQuestions(questions);
+            // 初始化游戏房间状态
+            gameRoom.setQuestions(questions);  // ✅ 直接设置 DTO
             gameRoom.setGameId(savedGame.getId());
             gameRoom.setStarted(true);
             gameRoom.setCurrentIndex(0);
             gameRoom.setQuestionStartTime(LocalDateTime.now());
             gameRoom.setTimeLimit(30);
 
-            // 6. 启动第一题的定时器
+            // 启动第一题的定时器
             timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
             log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {}",
                     roomCode, questions.size(), gameRoom.getPlayers().size());
 
-            // 7. 广播
+            // 广播
             broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
         }
     }

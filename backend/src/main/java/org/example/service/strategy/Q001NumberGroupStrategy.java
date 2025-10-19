@@ -1,6 +1,7 @@
 package org.example.service.strategy;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -15,6 +16,10 @@ import java.util.*;
 @Slf4j
 public class Q001NumberGroupStrategy extends BaseQuestionStrategy {
     private static final Set<Integer> GROUP_A = Set.of(1, 2, 3);
+
+    public Q001NumberGroupStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

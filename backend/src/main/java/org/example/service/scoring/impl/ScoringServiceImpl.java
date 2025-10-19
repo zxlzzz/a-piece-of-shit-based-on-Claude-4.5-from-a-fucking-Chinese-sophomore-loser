@@ -2,12 +2,14 @@ package org.example.service.scoring.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.dto.PlayerSubmissionDTO;
+import org.example.dto.QuestionDTO;
+import org.example.dto.QuestionDetailDTO;
 import org.example.entity.QuestionEntity;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameContext;
 import org.example.pojo.GameRoom;
 import org.example.pojo.PlayerGameState;
-import org.example.pojo.QuestionResult;
 import org.example.service.QuestionFactory;
 import org.example.service.QuestionScoringStrategy;
 import org.example.service.strategy.QR.RepeatableQuestionStrategy;
@@ -19,6 +21,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 /**
  * 分数计算服务实现
@@ -41,7 +44,8 @@ public class ScoringServiceImpl implements ScoringService {
 
     @Override
     public ScoringResult calculateScores(GameRoom gameRoom) {
-        QuestionEntity currentQuestion = gameRoom.getCurrentQuestion();
+        // 🔥 改成 QuestionDTO
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         int currentIndex = gameRoom.getCurrentIndex();
         Map<String, String> submissions = gameRoom.getSubmissions().get(currentIndex);
 
@@ -57,7 +61,7 @@ public class ScoringServiceImpl implements ScoringService {
                     .build();
         }
 
-        // 1. 构建玩家状态
+        // 构建玩家状态
         Map<String, PlayerGameState> playerStates = new HashMap<>();
         gameRoom.getPlayers().forEach(player -> {
             int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
@@ -70,22 +74,22 @@ public class ScoringServiceImpl implements ScoringService {
             playerStates.put(player.getPlayerId(), state);
         });
 
-        // 2. 构建游戏上下文
+        // 构建游戏上下文（使用 DTO）
         GameContext context = GameContext.builder()
                 .roomCode(gameRoom.getRoomCode())
-                .currentQuestion(currentQuestion)
+                .currentQuestion(currentQuestion)  // ✅ 现在是 DTO
                 .currentSubmissions(submissions)
                 .playerStates(playerStates)
                 .currentQuestionIndex(currentIndex)
                 .build();
 
-        // 3. 获取策略并计算分数
+        // 获取策略并计算分数
         QuestionScoringStrategy strategy = questionFactory.getStrategy(currentQuestion.getStrategyId());
         if (strategy == null) {
             throw new BusinessException("无法获取题目策略: " + currentQuestion.getStrategyId());
         }
 
-        QuestionResult result;
+        QuestionDetailDTO detailDTO;
         boolean isRepeatable = false;
         int currentRound = 0;
         int totalRounds = 0;
@@ -98,34 +102,41 @@ public class ScoringServiceImpl implements ScoringService {
             log.info("💯 房间 {} 计算重复题分数: {} 第 {}/{} 轮",
                     gameRoom.getRoomCode(), currentQuestion.getStrategyId(), currentRound, totalRounds);
 
-            result = repeatStrategy.calculateRoundResult(context, currentRound);
-
-            // 🔥 增加轮次
+            detailDTO = repeatStrategy.calculateRoundResult(context, currentRound);
             incrementRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
 
         } else {
             log.info("💯 房间 {} 计算普通题分数: {}",
                     gameRoom.getRoomCode(), currentQuestion.getStrategyId());
 
-            result = strategy.calculateResult(context);
+            detailDTO = strategy.calculateResult(context);
         }
 
-        // 4. 构建得分详情
-        Map<String, GameRoom.QuestionScoreDetail> scoreDetails = new HashMap<>();
-        for (Map.Entry<String, Integer> entry : result.getFinalScores().entrySet()) {
-            String playerId = entry.getKey();
-            Integer finalScore = entry.getValue();
-            Integer baseScore = result.getBaseScores().getOrDefault(playerId, finalScore);
+        // 从 DTO 中提取分数信息
+        Map<String, Integer> baseScores = detailDTO.getPlayerSubmissions().stream()
+                .collect(Collectors.toMap(
+                        PlayerSubmissionDTO::getPlayerId,
+                        PlayerSubmissionDTO::getBaseScore
+                ));
 
-            scoreDetails.put(playerId, GameRoom.QuestionScoreDetail.builder()
-                    .baseScore(baseScore)
-                    .finalScore(finalScore)
+        Map<String, Integer> finalScores = detailDTO.getPlayerSubmissions().stream()
+                .collect(Collectors.toMap(
+                        PlayerSubmissionDTO::getPlayerId,
+                        PlayerSubmissionDTO::getFinalScore
+                ));
+
+        // 构建得分详情
+        Map<String, GameRoom.QuestionScoreDetail> scoreDetails = new HashMap<>();
+        for (PlayerSubmissionDTO submission : detailDTO.getPlayerSubmissions()) {
+            scoreDetails.put(submission.getPlayerId(), GameRoom.QuestionScoreDetail.builder()
+                    .baseScore(submission.getBaseScore())
+                    .finalScore(submission.getFinalScore())
                     .build());
         }
 
         return ScoringResult.builder()
-                .baseScores(result.getBaseScores())
-                .finalScores(result.getFinalScores())
+                .baseScores(baseScores)
+                .finalScores(finalScores)
                 .scoreDetails(scoreDetails)
                 .repeatableQuestion(isRepeatable)
                 .currentRound(currentRound)
@@ -139,7 +150,7 @@ public class ScoringServiceImpl implements ScoringService {
             return false;
         }
 
-        // 🔥 判断：currentRound <= totalRounds 时继续
+        // 🔥 判断：currentRound < totalRounds 时继续
         return result.getCurrentRound() < result.getTotalRounds();
     }
 

@@ -1,52 +1,72 @@
 package org.example.service.strategy;
 
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.dto.PlayerSubmissionDTO;
+import org.example.dto.QuestionDTO;
+import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.*;
 import org.example.service.QuestionScoringStrategy;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
+@Slf4j
 public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
+
+    protected final BuffApplier buffApplier;
+
     /**
-     * 子类只需实现这个方法来计算基础分数
-     * @param submissions 所有提交
-     * @return playerId -> baseScore
+     * 子类实现：计算基础分数
      */
     protected abstract Map<String, Integer> calculateBaseScores(Map<String, String> submissions);
 
-    protected List<GameEvent> generateEvents(Map<String, String> submissions, Map<String, Integer> baseScores) {
-        return new ArrayList<>();
-    }
     @Override
-    public QuestionResult calculateResult(GameContext context) {
+    public QuestionDetailDTO calculateResult(GameContext context) {
         Map<String, String> submissions = context.getCurrentSubmissions();
 
         // 1. 计算基础分数
         Map<String, Integer> baseScores = calculateBaseScores(submissions);
 
-        // 2. 生成事件
-        List<GameEvent> events = generateEvents(submissions, baseScores);
+        // 2. 应用 Buff
+        Map<String, Integer> finalScores = applyBuffs(context, baseScores);
 
-        // 3. 应用buff
-        Map<String, Integer> finalScores = applyBuffs(context, baseScores, events);
-
-        // 4. 减少buff持续时间
+        // 3. 减少 Buff 持续时间
         decreaseBuffDuration(context);
 
-        return QuestionResult.builder()
+        // 4. 构建玩家提交列表
+        List<PlayerSubmissionDTO> playerSubmissions = buildPlayerSubmissions(
+                context, submissions, baseScores, finalScores
+        );
+
+        // 5. 计算选项分布
+        Map<String, Integer> choiceCounts = calculateChoiceCounts(submissions);
+
+        // 6. 获取选项文本
+        String optionText = getOptionText(context.getCurrentQuestion());
+
+        // 7. 返回 DTO
+        return QuestionDetailDTO.builder()
                 .questionIndex(context.getCurrentQuestionIndex())
-                .baseScores(baseScores)
-                .finalScores(finalScores)
-                .events(events)
-                .submissions(submissions)
+                .questionText(context.getCurrentQuestion().getText())
+                .optionText(optionText)
+                .questionType(context.getCurrentQuestion().getType())
+                .playerSubmissions(playerSubmissions)
+                .choiceCounts(choiceCounts)
                 .build();
     }
 
     /**
-     * 应用所有生效的buff
+     * 应用 Buff
      */
-    private Map<String, Integer> applyBuffs(GameContext context, Map<String, Integer> baseScores, List<GameEvent> events) {
+    protected Map<String, Integer> applyBuffs(
+            GameContext context,
+            Map<String, Integer> baseScores
+    ) {
         Map<String, Integer> finalScores = new HashMap<>();
 
         for (Map.Entry<String, Integer> entry : baseScores.entrySet()) {
@@ -57,7 +77,8 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
             if (state != null && state.getActiveBuffs() != null) {
                 for (Buff buff : state.getActiveBuffs()) {
                     if (buff.getDuration() == 0) {
-                        score = applyBuff(buff, score, playerId, events);
+                        int[] result = buffApplier.applyBuff(buff, score, playerId);
+                        score = result[0];
                     }
                 }
             }
@@ -68,37 +89,9 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
     }
 
     /**
-     * 应用单个buff
+     * 减少 Buff 持续时间
      */
-    private int applyBuff(Buff buff, int score, String playerId, List<GameEvent> events) {
-        switch (buff.getType()) {
-            case "SCORE_DOUBLE":
-                int doubled = score * 2;
-                events.add(GameEvent.builder()
-                        .type("BUFF_APPLIED")
-                        .targetPlayerId(playerId)
-                        .description("得分翻倍")
-                        .build());
-                return doubled;
-
-            case "SCORE_HALVED":
-                int halved = score / 2;
-                events.add(GameEvent.builder()
-                        .type("DEBUFF_APPLIED")
-                        .targetPlayerId(playerId)
-                        .description("得分减半")
-                        .build());
-                return halved;
-
-            default:
-                return score;
-        }
-    }
-
-    /**
-     * 减少buff持续时间
-     */
-    private void decreaseBuffDuration(GameContext context) {
+    protected void decreaseBuffDuration(GameContext context) {
         for (PlayerGameState state : context.getPlayerStates().values()) {
             if (state.getActiveBuffs() == null) continue;
 
@@ -113,11 +106,63 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         }
     }
 
+    /**
+     * 构建玩家提交记录
+     */
+    protected List<PlayerSubmissionDTO> buildPlayerSubmissions(
+            GameContext context,
+            Map<String, String> submissions,
+            Map<String, Integer> baseScores,
+            Map<String, Integer> finalScores
+    ) {
+        return submissions.entrySet().stream()
+                .map(entry -> {
+                    String playerId = entry.getKey();
+                    return PlayerSubmissionDTO.builder()
+                            .playerId(playerId)
+                            .playerName(context.getPlayerName(playerId))
+                            .choice(entry.getValue())
+                            .baseScore(baseScores.getOrDefault(playerId, 0))
+                            .finalScore(finalScores.getOrDefault(playerId, 0))
+                            .submittedAt(context.getSubmittedAt(playerId))
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 计算选项分布（用于前端展示分布图）
+     */
+    protected Map<String, Integer> calculateChoiceCounts(Map<String, String> submissions) {
+        return submissions.values().stream()
+                .collect(Collectors.groupingBy(
+                        choice -> choice,
+                        Collectors.summingInt(e -> 1)
+                ));
+    }
+
+    /**
+     * 获取选项文本（子类可覆盖）
+     */
+    protected String getOptionText(QuestionDTO question) {
+        // 默认返回空，子类可以根据需要覆盖
+        return "";
+    }
+
+    /**
+     * 辅助方法：获取两人游戏的玩家
+     */
     protected Map.Entry<String, String>[] getTwoPlayers(Map<String, String> submissions) {
         if (submissions.size() != 2) {
             throw new IllegalArgumentException("需要2人游戏");
         }
         List<Map.Entry<String, String>> list = new ArrayList<>(submissions.entrySet());
-        return new Map.Entry[]{list.get(0), list.get(1)};
+        @SuppressWarnings("unchecked")
+        Map.Entry<String, String>[] array = new Map.Entry[]{list.get(0), list.get(1)};
+        return array;
+    }
+
+    public Map<String, Integer> test(Map<String, String> submissions) {
+        return calculateBaseScores(submissions);
     }
 }

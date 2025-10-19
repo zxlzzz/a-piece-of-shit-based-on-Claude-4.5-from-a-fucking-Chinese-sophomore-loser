@@ -1,7 +1,7 @@
 package org.example.service.strategy;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.pojo.GameEvent;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -48,6 +48,10 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
     // 房子价值（下标0不用，1-7号房对应下标1-7）
     private static final int[] HOUSE_VALUES = {0, 6, 5, 5, 4, 4, 4, 3};
 
+    public Q010HouseTheftStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
+
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
@@ -55,7 +59,8 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
         // 解析玩家选择
         Map<String, Integer> playerChoices = new HashMap<>();
         for (Map.Entry<String, String> entry : submissions.entrySet()) {
-            playerChoices.put(entry.getKey(), Integer.parseInt(entry.getValue()));
+            int choice = Integer.parseInt(entry.getValue());
+            playerChoices.put(entry.getKey(), choice);
         }
 
         // 初始化分数
@@ -87,11 +92,18 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
                     .map(Map.Entry::getKey)
                     .toList();
 
+            // 距离信息（用于日志）
+            String distanceInfo = distances.entrySet().stream()
+                    .map(e -> e.getKey() + ":距离" + e.getValue())
+                    .collect(Collectors.joining(", "));
+
             // 根据最近玩家数量分配分数
             if (closestPlayers.size() == 1) {
                 // 唯一最近：独得全部价值
                 String playerId = closestPlayers.get(0);
                 scores.put(playerId, scores.get(playerId) + value);
+                log.info("房子{}（价值{}）：{} → 玩家 {} 唯一最近，独得 {} 分",
+                        house, value, distanceInfo, playerId, value);
 
             } else if (closestPlayers.size() == 2) {
                 // 两人并列：平分（向下取整）
@@ -99,88 +111,18 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
                 for (String playerId : closestPlayers) {
                     scores.put(playerId, scores.get(playerId) + shareValue);
                 }
+                log.info("房子{}（价值{}）：{} → {} 和 {} 并列最近，各得 {} 分",
+                        house, value, distanceInfo,
+                        closestPlayers.get(0), closestPlayers.get(1), shareValue);
 
+            } else {
+                // 三人及以上一样近：价值作废
+                log.info("房子{}（价值{}）：{} → {}人距离相同，价值作废",
+                        house, value, distanceInfo, closestPlayers.size());
             }
-                // 三人一样近：价值作废，没人获得
-                // 不做处理
-
         }
 
         return scores;
-    }
-
-    @Override
-    protected List<GameEvent> generateEvents(Map<String, String> submissions, Map<String, Integer> baseScores) {
-        List<GameEvent> events = new ArrayList<>();
-
-        // 解析玩家选择
-        Map<String, Integer> playerChoices = new HashMap<>();
-        List<String> playerIds = new ArrayList<>(submissions.keySet());
-        for (Map.Entry<String, String> entry : submissions.entrySet()) {
-            playerChoices.put(entry.getKey(), Integer.parseInt(entry.getValue()));
-        }
-
-        // 记录每个玩家的选择
-        for (Map.Entry<String, Integer> entry : playerChoices.entrySet()) {
-            events.add(GameEvent.builder()
-                    .type("PLAYER_CHOICE")
-                    .targetPlayerId(entry.getKey())
-                    .description("选择了 " + entry.getValue() + " 号房作为起点")
-                    .build());
-        }
-
-        // 详细记录每个房子的分配情况
-        for (int house = 1; house <= 7; house++) {
-            int value = HOUSE_VALUES[house];
-
-            // 计算距离
-            Map<String, Integer> distances = new HashMap<>();
-            for (Map.Entry<String, Integer> entry : playerChoices.entrySet()) {
-                int distance = Math.abs(entry.getValue() - house);
-                distances.put(entry.getKey(), distance);
-            }
-
-            int minDistance = distances.values().stream().min(Integer::compareTo).orElse(0);
-            List<String> closestPlayers = distances.entrySet().stream()
-                    .filter(e -> e.getValue() == minDistance)
-                    .map(Map.Entry::getKey)
-                    .toList();
-
-            String distanceInfo = distances.entrySet().stream()
-                    .map(e -> "玩家" + (playerIds.indexOf(e.getKey()) + 1) + "距离" + e.getValue())
-                    .collect(Collectors.joining(", "));
-
-            if (closestPlayers.size() == 1) {
-                events.add(GameEvent.builder()
-                        .type("HOUSE_ALLOCATED")
-                        .targetPlayerId(closestPlayers.get(0))
-                        .description("房子" + house + "（价值" + value + "）：" + distanceInfo +
-                                " → 玩家" + (playerIds.indexOf(closestPlayers.get(0)) + 1) +
-                                "唯一最近，独得" + value + "分")
-                        .build());
-
-            } else if (closestPlayers.size() == 2) {
-                int shareValue = value / 2;
-                String players = closestPlayers.stream()
-                        .map(id -> "玩家" + (playerIds.indexOf(id) + 1))
-                        .collect(Collectors.joining("和"));
-
-                events.add(GameEvent.builder()
-                        .type("HOUSE_SHARED")
-                        .description("房子" + house + "（价值" + value + "）：" + distanceInfo +
-                                " → " + players + "并列最近，各得" + shareValue + "分")
-                        .build());
-
-            } else {
-                events.add(GameEvent.builder()
-                        .type("HOUSE_WASTED")
-                        .description("房子" + house + "（价值" + value + "）：" + distanceInfo +
-                                " → 三人距离相同，价值作废")
-                        .build());
-            }
-        }
-
-        return events;
     }
 
     @Override

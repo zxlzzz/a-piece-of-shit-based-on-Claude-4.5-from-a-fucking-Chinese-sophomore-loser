@@ -19,19 +19,16 @@ public class QuestionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ========== 基础信息 ==========
-    // 然后在Entity中
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private QuestionType type;
 
     @Column(nullable = false, columnDefinition = "TEXT")
-    private String text; // 题目描述
+    private String text;
 
     @Column(nullable = false)
-    private String strategyId; // 计分策略ID，如 "Q001"
+    private String strategyId;
 
-    // ========== 玩家数量限制 ==========
     @Column
     private Integer minPlayers;
 
@@ -39,23 +36,24 @@ public class QuestionEntity {
     private Integer maxPlayers;
 
     @Column
-    private String defaultChoice; // 默认选择
+    private String defaultChoice;
 
     // ========== 快速判断标记 ==========
     @Column
-    private Boolean hasChoiceConfig = false;
-
-    @Column
-    private Boolean hasBidConfig = false;
-
-    @Column
     private Boolean hasMetadata = false;
+
+    // ========== ✅ 新增：关联配置 ==========
+    @OneToOne(mappedBy = "question", fetch = FetchType.LAZY)
+    private ChoiceQuestionConfig choiceConfig;
+
+    @OneToOne(mappedBy = "question", fetch = FetchType.LAZY)
+    private BidQuestionConfig bidConfig;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;  // 创建时间
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(nullable = false)
-    private LocalDateTime updatedAt;  // 更新时间
+    private LocalDateTime updatedAt;
 }

@@ -22,101 +22,159 @@ import java.util.List;
 public class QuestionDataInitializer {
 
     private final QuestionRepository questionRepository;
-    private final ChoiceQuestionConfigRepository choiceConfigRepository;  // ← 新增
-    private final BidQuestionConfigRepository bidConfigRepository;        // ← 新增
-    private final QuestionMetadataRepository metadataRepository;          // ← 新增
+    private final ChoiceQuestionConfigRepository choiceConfigRepository;
+    private final BidQuestionConfigRepository bidConfigRepository;
+    private final QuestionMetadataRepository metadataRepository;
+    private final ObjectMapper objectMapper;  // ✅ 注入全局 ObjectMapper
 
     @PostConstruct
     @Transactional
-    public void init() throws IOException {
-        if (questionRepository.count() > 0) {
-            log.info("数据库中已有题目，跳过初始化");
+    public void init() {
+        try {
+            if (questionRepository.count() > 0) {
+                log.info("数据库中已有题目，跳过初始化");
+                return;
+            }
+
+            log.info("开始初始化题目数据...");
+
+            InputStream is = getClass().getResourceAsStream("/questions.json");
+            if (is == null) {
+                throw new FileNotFoundException("questions.json not found in classpath");
+            }
+
+            List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<List<QuestionDTO>>() {});
+            log.info("从 questions.json 读取到 {} 道题目", dtos.size());
+
+            int successCount = 0;
+            for (QuestionDTO dto : dtos) {
+                try {
+                    saveQuestion(dto);
+                    successCount++;
+                } catch (Exception e) {
+                    log.error("保存题目失败: id={}, text={}", dto.getId(), dto.getText(), e);
+                }
+            }
+
+            log.info("题目初始化完成! 成功导入 {}/{} 道题目", successCount, dtos.size());
+
+        } catch (IOException e) {
+            log.error("读取 questions.json 失败", e);
+            throw new RuntimeException("题目初始化失败", e);
+        }
+    }
+
+    private void saveQuestion(QuestionDTO dto) throws IOException {
+        log.debug("正在保存题目: id={}, type={}, strategyId={}", dto.getId(), dto.getType(), dto.getStrategyId());
+
+        // 1. 创建并保存 QuestionEntity
+        QuestionEntity entity = QuestionEntity.builder()
+                .type(dto.getType())
+                .text(dto.getText())
+                .strategyId(dto.getStrategyId())
+                .minPlayers(dto.getMinPlayers())
+                .maxPlayers(dto.getMaxPlayers())
+                .defaultChoice(dto.getDefaultChoice())
+                .hasMetadata(false)
+                .build();
+
+        QuestionEntity savedEntity = questionRepository.save(entity);
+        log.debug("QuestionEntity 保存成功, 数据库ID={}", savedEntity.getId());
+
+        // 2. 根据题目类型保存对应配置
+        if (dto.getType() == QuestionType.CHOICE) {
+            saveChoiceConfig(savedEntity, dto);
+        } else if (dto.getType() == QuestionType.BID) {
+            saveBidConfig(savedEntity, dto);
+        }
+
+        // 3. 保存元数据(如果有)
+        if (needsMetadata(dto)) {
+            saveMetadata(savedEntity, dto);
+        }
+    }
+
+    private void saveChoiceConfig(QuestionEntity entity, QuestionDTO dto) throws IOException {
+        if (dto.getOptions() == null || dto.getOptions().isEmpty()) {
+            log.warn("选择题 {} 没有选项数据", entity.getId());
             return;
         }
 
-        ObjectMapper mapper = new ObjectMapper();
-        InputStream is = getClass().getResourceAsStream("/questions.json");
-        if (is == null) {
-            throw new FileNotFoundException("questions.json not found");
+        String optionsJson = objectMapper.writeValueAsString(dto.getOptions());
+        ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
+                .question(entity)
+                .optionsJson(optionsJson)
+                .build();
+
+        choiceConfigRepository.save(config);
+        log.debug("ChoiceQuestionConfig 保存成功: questionId={}, options={}", entity.getId(), optionsJson);
+    }
+
+    private void saveBidConfig(QuestionEntity entity, QuestionDTO dto) {
+        if (dto.getMin() == null || dto.getMax() == null) {
+            log.warn("竞价题 {} 缺少 min/max 配置", entity.getId());
+            return;
         }
 
-        List<QuestionDTO> dtos = mapper.readValue(is, new TypeReference<List<QuestionDTO>>() {});
+        BidQuestionConfig config = BidQuestionConfig.builder()
+                .question(entity)
+                .minValue(dto.getMin())
+                .maxValue(dto.getMax())
+                .step(dto.getStep() != null ? dto.getStep() : 1)  // 默认步长为1
+                .build();
 
-        for (QuestionDTO dto : dtos) {
-            // 1. 保存 QuestionEntity
-            QuestionEntity entity = QuestionEntity.builder()
-                    .type(dto.getType())
-                    .text(dto.getText())
-                    .strategyId(dto.getStrategyId())
-                    .minPlayers(dto.getMinPlayers())
-                    .maxPlayers(dto.getMaxPlayers())
-                    .defaultChoice(dto.getDefaultChoice())
-                    .hasChoiceConfig(false)
-                    .hasBidConfig(false)
-                    .hasMetadata(false)
-                    .build();
+        bidConfigRepository.save(config);
+        log.debug("BidQuestionConfig 保存成功: questionId={}, min={}, max={}, step={}",
+                entity.getId(), dto.getMin(), dto.getMax(), config.getStep());
+    }
 
-            QuestionEntity savedEntity = questionRepository.save(entity);
+    private boolean needsMetadata(QuestionDTO dto) {
+        return dto.getSequenceGroupId() != null
+                || dto.getIsRepeatable() != null
+                || dto.getRepeatGroupId() != null;
+    }
 
-            // 2. 保存选择题配置
-            if ("choice".equals(dto.getType()) && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
-                ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
-                        .question(savedEntity)  // ✅ 改成 question 对象
-                        .optionsJson(mapper.writeValueAsString(dto.getOptions()))
-                        .build();
-                choiceConfigRepository.save(config);
-                savedEntity.setHasChoiceConfig(true);
-            }
+    private void saveMetadata(QuestionEntity entity, QuestionDTO dto) {
+        QuestionMetadata metadata = QuestionMetadata.builder()
+                .questionId(entity.getId())
+                .sequenceGroupId(dto.getSequenceGroupId())
+                .sequenceOrder(dto.getSequenceOrder())
+                .totalSequenceCount(dto.getTotalSequenceCount())
+                .isRepeatable(dto.getIsRepeatable())
+                .repeatTimes(dto.getRepeatTimes())
+                .repeatInterval(dto.getRepeatInterval())
+                .repeatGroupId(dto.getRepeatGroupId())
+                .build();
 
-            // 3. 保存竞价题配置
-            if ("bid".equals(dto.getType()) && dto.getMin() != null && dto.getMax() != null) {
-                BidQuestionConfig config = BidQuestionConfig.builder()
-                        .question(savedEntity)  // ✅ 改成 question 对象
-                        .minValue(dto.getMin())
-                        .maxValue(dto.getMax())
-                        .step(dto.getStep())
-                        .build();
-                bidConfigRepository.save(config);
-                savedEntity.setHasBidConfig(true);
-            }
+        metadataRepository.save(metadata);
 
-            // 4. 保存元数据
-            if (dto.getSequenceGroupId() != null || dto.getIsRepeatable() != null) {
-                QuestionMetadata metadata = QuestionMetadata.builder()
-                        .questionId(savedEntity.getId())
-                        .sequenceGroupId(dto.getSequenceGroupId())
-                        .sequenceOrder(dto.getSequenceOrder())
-                        .totalSequenceCount(dto.getTotalSequenceCount())
-                        .isRepeatable(dto.getIsRepeatable())
-                        .repeatTimes(dto.getRepeatTimes())
-                        .repeatInterval(dto.getRepeatInterval())
-                        .repeatGroupId(dto.getRepeatGroupId())
-                        .build();
-                metadataRepository.save(metadata);
-                savedEntity.setHasMetadata(true);
-            }
+        // 更新 hasMetadata 标记
+        entity.setHasMetadata(true);
+        questionRepository.save(entity);
 
-            // ✅ 只在最后保存一次
-            questionRepository.save(savedEntity);
-        }
-
-        log.info("从 questions.json 导入了 {} 道题目到数据库", dtos.size());
+        log.debug("QuestionMetadata 保存成功: questionId={}", entity.getId());
     }
 
     // ========== 内部 DTO 类 ==========
     @Data
     private static class QuestionDTO {
         private Long id;
-        private QuestionType type;
+        private QuestionType type;           // ✅ 直接用枚举类型
         private String text;
         private String strategyId;
         private Integer minPlayers;
         private Integer maxPlayers;
         private String defaultChoice;
+
+        // Choice 题专用
         private List<QuestionOption> options;
+
+        // Bid 题专用
         private Integer min;
         private Integer max;
         private Integer step;
+
+        // 元数据
         private String sequenceGroupId;
         private Integer sequenceOrder;
         private Integer totalSequenceCount;

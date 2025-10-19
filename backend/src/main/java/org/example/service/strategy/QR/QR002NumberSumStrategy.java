@@ -1,10 +1,11 @@
 package org.example.service.strategy.QR;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.dto.PlayerSubmissionDTO;
+import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.GameContext;
-import org.example.pojo.GameEvent;
 import org.example.pojo.PlayerGameState;
-import org.example.pojo.QuestionResult;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -61,26 +62,28 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
     private static final int TOTAL_ROUNDS = 3;
     private static final String CHOICES_KEY = "QR002_choices";
 
+    public QR002NumberSumStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
+
     @Override
     public int getTotalRounds() {
         return TOTAL_ROUNDS;
     }
 
     /**
-     * 重写顶层方法，直接处理所有逻辑
-     * 这样就能访问到 GameContext 了
+     * ✅ 重写顶层方法，处理所有逻辑
      */
     @Override
-    public QuestionResult calculateRoundResult(GameContext context, int currentRound) {
+    public QuestionDetailDTO calculateRoundResult(GameContext context, int currentRound) {
         Map<String, String> submissions = context.getCurrentSubmissions();
 
         // 1. 记录本轮选择
         recordChoices(context, submissions);
 
-        // 2. 计算分数（前两轮返回0，第3轮统一计算）
+        // 2. 计算分数
         Map<String, Integer> baseScores;
         Map<String, Integer> finalScores;
-        List<GameEvent> events = new ArrayList<>();
 
         if (currentRound < TOTAL_ROUNDS) {
             // 前两轮：不计分，只记录
@@ -88,28 +91,36 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
                     .collect(Collectors.toMap(id -> id, id -> 0));
             finalScores = new HashMap<>(baseScores);
 
-            events.add(GameEvent.builder()
-                    .type("ROUND_INFO")
-                    .description("第 " + currentRound + "/" + TOTAL_ROUNDS + " 轮选择（暂不计分）")
-                    .build());
+            log.info("第 {}/{} 轮，暂不计分", currentRound, TOTAL_ROUNDS);
 
         } else {
             // 第3轮：统一计算
-            baseScores = calculateFinalScores(context, events);
-            finalScores = new HashMap<>(baseScores);  // 本题无buff，直接复制
+            baseScores = calculateFinalScores(context);
+            finalScores = new HashMap<>(baseScores);  // 本题无buff
 
-            events.add(GameEvent.builder()
-                    .type("ROUND_INFO")
-                    .description("第 " + TOTAL_ROUNDS + " 轮完成，开始计分")
-                    .build());
+            log.info("第 {} 轮完成，开始计分", TOTAL_ROUNDS);
         }
 
-        return QuestionResult.builder()
+        // 3. 构建玩家提交列表
+        List<PlayerSubmissionDTO> playerSubmissions = buildPlayerSubmissions(
+                context, submissions, baseScores, finalScores
+        );
+
+        // 4. 计算选项分布
+        Map<String, Integer> choiceCounts = calculateChoiceCounts(submissions);
+
+        // 5. 获取选项文本
+        String optionText = getOptionText(context.getCurrentQuestion());
+
+        // 6. 返回 DTO
+        return QuestionDetailDTO.builder()
                 .questionIndex(context.getCurrentQuestionIndex())
-                .baseScores(baseScores)
-                .finalScores(finalScores)
-                .events(events)
-                .submissions(submissions)
+                .questionText(context.getCurrentQuestion().getText() +
+                        " (第" + currentRound + "/" + TOTAL_ROUNDS + "轮)")
+                .optionText(optionText)
+                .questionType(context.getCurrentQuestion().getType())
+                .playerSubmissions(playerSubmissions)
+                .choiceCounts(choiceCounts)
                 .build();
     }
 
@@ -127,10 +138,8 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
                 continue;
             }
 
-            // 🔥 确保 customData 不为 null
             if (state.getCustomData() == null) {
                 state.setCustomData(new HashMap<>());
-                log.debug("🆕 初始化玩家 {} 的 customData", playerId);
             }
 
             @SuppressWarnings("unchecked")
@@ -138,15 +147,14 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
                     .computeIfAbsent(CHOICES_KEY, k -> new ArrayList<>());
             choices.add(choice);
 
-            log.info("💾 玩家 {} 第 {} 次选择: {} (累计: {})",
-                    playerId, choices.size(), choice, choices);
+            log.info("💾 玩家 {} 第 {} 次选择: {}", playerId, choices.size(), choice);
         }
     }
 
     /**
      * 计算最终得分（第3轮调用）
      */
-    private Map<String, Integer> calculateFinalScores(GameContext context, List<GameEvent> events) {
+    private Map<String, Integer> calculateFinalScores(GameContext context) {
         Map<String, Integer> scores = new HashMap<>();
         Map<String, List<Integer>> allChoices = new HashMap<>();
 
@@ -163,14 +171,8 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
             @SuppressWarnings("unchecked")
             List<Integer> choices = (List<Integer>) state.getCustomData().get(CHOICES_KEY);
 
-            if (choices == null) {
-                log.error("❌ 玩家 {} 没有选择记录 ({})", playerId, CHOICES_KEY);
-                continue;
-            }
-
-            if (choices.size() != TOTAL_ROUNDS) {
-                log.warn("⚠️ 玩家 {} 选择次数不正确: {} (期望 {})",
-                        playerId, choices.size(), TOTAL_ROUNDS);
+            if (choices == null || choices.size() != TOTAL_ROUNDS) {
+                log.warn("⚠️ 玩家 {} 选择记录异常", playerId);
                 continue;
             }
 
@@ -178,7 +180,6 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
             log.info("✅ 玩家 {} 的3次选择: {}", playerId, choices);
         }
 
-        // 🔥 如果没有收集到任何选择，返回全0
         if (allChoices.isEmpty()) {
             log.error("❌ 没有收集到任何玩家的选择记录！");
             return context.getPlayerStates().keySet().stream()
@@ -190,15 +191,10 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
         for (Map.Entry<String, List<Integer>> entry : allChoices.entrySet()) {
             int sum = entry.getValue().stream().mapToInt(Integer::intValue).sum();
             sums.put(entry.getKey(), sum);
-
-            events.add(GameEvent.builder()
-                    .type("PLAYER_SUM")
-                    .targetPlayerId(entry.getKey())
-                    .description("选择了 " + entry.getValue() + "，和为 " + sum)
-                    .build());
+            log.info("玩家 {} 选择 {}，和为 {}", entry.getKey(), entry.getValue(), sum);
         }
 
-        // 3. 找出最小和，给对应玩家+5分
+        // 3. 找出最小和，+5分
         int minSum = sums.values().stream().min(Integer::compareTo).orElse(0);
         for (Map.Entry<String, Integer> entry : sums.entrySet()) {
             String playerId = entry.getKey();
@@ -206,11 +202,7 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
 
             if (sum == minSum) {
                 scores.put(playerId, sum + 5);
-                events.add(GameEvent.builder()
-                        .type("MIN_SUM_BONUS")
-                        .targetPlayerId(playerId)
-                        .description("和最小（" + sum + "），额外获得5分")
-                        .build());
+                log.info("玩家 {} 和最小（{}），额外+5分", playerId, sum);
             } else {
                 scores.put(playerId, sum);
             }
@@ -231,11 +223,7 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
         // 6. 如果有唯一众数，扣除对应分数
         if (modes.size() == 1) {
             int mode = modes.get(0);
-
-            events.add(GameEvent.builder()
-                    .type("UNIQUE_MODE_FOUND")
-                    .description("唯一众数为 " + mode + "（出现 " + maxCount + " 次），开始扣分")
-                    .build());
+            log.info("唯一众数: {}（出现{}次），开始扣分", mode, maxCount);
 
             for (Map.Entry<String, List<Integer>> entry : allChoices.entrySet()) {
                 String playerId = entry.getKey();
@@ -244,19 +232,11 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
                 if (count > 0) {
                     int penalty = mode * (int) count;
                     scores.put(playerId, scores.get(playerId) - penalty);
-
-                    events.add(GameEvent.builder()
-                            .type("MODE_PENALTY")
-                            .targetPlayerId(playerId)
-                            .description("选了 " + count + " 次众数 " + mode + "，扣除 " + penalty + " 分")
-                            .build());
+                    log.info("玩家 {} 选了{}次众数{}，扣除{}分", playerId, count, mode, penalty);
                 }
             }
         } else {
-            events.add(GameEvent.builder()
-                    .type("NO_UNIQUE_MODE")
-                    .description("没有唯一众数（" + modes + " 并列），不扣分")
-                    .build());
+            log.info("没有唯一众数（{}并列），不扣分", modes);
         }
 
         return scores;
@@ -265,7 +245,6 @@ public class QR002NumberSumStrategy extends BaseRepeatableStrategy {
     @Override
     protected Map<String, Integer> calculateRoundBaseScores(
             Map<String, String> submissions, int currentRound) {
-        // 这个方法不会被调用，因为重写了 calculateRoundResult
         throw new UnsupportedOperationException("请使用 calculateRoundResult");
     }
 

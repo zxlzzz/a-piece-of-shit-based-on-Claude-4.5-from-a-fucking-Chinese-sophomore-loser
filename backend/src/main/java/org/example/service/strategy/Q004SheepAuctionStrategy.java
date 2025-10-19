@@ -1,6 +1,7 @@
 package org.example.service.strategy;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -19,6 +20,10 @@ import java.util.Map;
 @Component
 @Slf4j
 public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
+
+    public Q004SheepAuctionStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

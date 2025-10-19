@@ -41,6 +41,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     private final ObjectMapper objectMapper;
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
+    private final DTOConverter dtoConverter;
 
     @Override
     @Transactional
@@ -304,14 +305,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             status = RoomStatus.PLAYING;
         }
 
-        QuestionDTO currentQuestionDTO = null;
-        if (gameRoom.getCurrentQuestion() != null) {
-            currentQuestionDTO = DTOConverter.toQuestionDTOWithConfig(
-                    gameRoom.getCurrentQuestion(),
-                    choiceConfigRepository,
-                    bidConfigRepository
-            );
-        }
+        // 🔥 直接使用 DTO（无需转换）
+        QuestionDTO currentQuestionDTO = gameRoom.getCurrentQuestion();
 
         Integer questionCount = null;
         if (gameRoom.getQuestions() != null && !gameRoom.getQuestions().isEmpty()) {
@@ -345,7 +340,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .questionStartTime(gameRoom.getQuestionStartTime())
                 .timeLimit(gameRoom.getTimeLimit())
                 .currentIndex(gameRoom.getCurrentIndex())
-                .currentQuestion(currentQuestionDTO)
+                .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)

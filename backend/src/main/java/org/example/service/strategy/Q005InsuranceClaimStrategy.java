@@ -2,6 +2,7 @@ package org.example.service.strategy;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -21,6 +22,10 @@ import java.util.Map;
 @Component
 @Slf4j
 public class Q005InsuranceClaimStrategy extends BaseQuestionStrategy {
+
+    public Q005InsuranceClaimStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

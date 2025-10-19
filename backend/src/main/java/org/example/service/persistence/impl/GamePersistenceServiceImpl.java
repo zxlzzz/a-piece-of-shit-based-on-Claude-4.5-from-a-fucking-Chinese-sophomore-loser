@@ -6,10 +6,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerRankDTO;
 import org.example.dto.PlayerSubmissionDTO;
+import org.example.dto.QuestionDTO;
 import org.example.dto.QuestionDetailDTO;
 import org.example.entity.GameEntity;
 import org.example.entity.GameResultEntity;
-import org.example.entity.QuestionEntity;
+import org.example.entity.QuestionType;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.entity.QuestionOption;
@@ -81,7 +82,7 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
         List<QuestionDetailDTO> details = new ArrayList<>();
 
         for (int i = 0; i < gameRoom.getQuestions().size(); i++) {
-            QuestionEntity question = gameRoom.getQuestions().get(i);
+            QuestionDTO question = gameRoom.getQuestions().get(i);
             Map<String, String> submissions = gameRoom.getSubmissions().get(i);
 
             if (submissions == null) {
@@ -135,19 +136,23 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
         return details;
     }
 
-    private String formatOptions(QuestionEntity question) {
+    private String formatOptions(QuestionDTO question) {
         if (question == null) {
             return "题目数据错误";
         }
 
-        if ("bid".equals(question.getType())) {
-            return bidConfigRepository.findByQuestionId(question.getId())
+        // ✅ 修复1: 使用枚举比较,而不是字符串
+        if (question.getType() == QuestionType.BID) {
+            // ✅ 修复2: 使用正确的 Repository 方法
+            return bidConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
                     .orElse("自由出价");
         }
 
-        if ("choice".equals(question.getType())) {
-            return choiceConfigRepository.findByQuestionId(question.getId())
+        // ✅ 修复3: 使用枚举比较
+        if (question.getType() == QuestionType.CHOICE) {
+            // ✅ 修复4: 使用正确的 Repository 方法
+            return choiceConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> {
                         try {
                             List<QuestionOption> options = objectMapper.readValue(
@@ -161,13 +166,14 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
                                     .collect(Collectors.joining(" | "));
 
                         } catch (Exception e) {
-                            log.error("解析选项 JSON 失败: {}", e.getMessage());
+                            log.error("解析选项 JSON 失败: questionId={}, error={}",
+                                    question.getId(), e.getMessage());
                             return "选项格式错误";
                         }
                     })
                     .orElse("无选项");
         }
 
-        return "无选项";
+        return "未知题型";
     }
 }

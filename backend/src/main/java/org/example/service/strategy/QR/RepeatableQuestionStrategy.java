@@ -1,9 +1,8 @@
 package org.example.service.strategy.QR;
 
-import org.example.pojo.*;
+import org.example.dto.QuestionDetailDTO;
+import org.example.pojo.GameContext;
 import org.example.service.QuestionScoringStrategy;
-
-// ==================== 重复题目专用接口 ====================
 
 /**
  * 重复题目计分策略接口
@@ -30,16 +29,16 @@ public interface RepeatableQuestionStrategy extends QuestionScoringStrategy {
      * 计算当前轮次的结果
      * @param context 游戏上下文
      * @param currentRound 当前轮次（1-based，第1次、第2次...）由调用方传入
-     * @return 本轮结果
+     * @return 本轮结果 DTO
      */
-    QuestionResult calculateRoundResult(GameContext context, int currentRound);
+    QuestionDetailDTO calculateRoundResult(GameContext context, int currentRound);
 
     /**
      * 禁止使用此方法
      * 重复题必须使用 calculateRoundResult(context, currentRound) 方法
      */
     @Override
-    default QuestionResult calculateResult(GameContext context) {
+    default QuestionDetailDTO calculateResult(GameContext context) {
         throw new UnsupportedOperationException(
                 "重复题策略请使用 calculateRoundResult(context, currentRound) 方法，" +
                         "轮次由调用方（Service层）维护并传入"

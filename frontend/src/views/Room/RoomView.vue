@@ -92,10 +92,6 @@ const handleCreate = async ({ questionCount, maxPlayers }) => {
       life: 2000
     })
 
-    // 🔥 删除：不再等待 WebSocket
-    // ❌ if (!isConnected()) { ... }
-    
-    // ✅ 立即跳转
     router.push(`/wait/${roomData.roomCode}`)
     
   } catch (error) {

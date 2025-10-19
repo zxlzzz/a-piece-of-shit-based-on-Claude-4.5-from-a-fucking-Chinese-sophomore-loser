@@ -63,8 +63,6 @@ public class QuesServiceImpl implements QuesService {
                     .minPlayers(dto.getMinPlayers())
                     .maxPlayers(dto.getMaxPlayers())
                     .defaultChoice(dto.getDefaultChoice())
-                    .hasChoiceConfig(false)
-                    .hasBidConfig(false)
                     .hasMetadata(false)
                     .build();
 
@@ -72,30 +70,27 @@ public class QuesServiceImpl implements QuesService {
             Long questionId = savedEntity.getId();
 
             // 2. 保存选择题配置
-            if ("choice".equals(dto.getType()) && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
+            if (dto.getType() == QuestionType.CHOICE && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
                 try {
                     ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
-                            .question(savedEntity)  // ✅ 改成关联对象（改后的Entity设计）
+                            .question(savedEntity)
                             .optionsJson(objectMapper.writeValueAsString(dto.getOptions()))
                             .build();
                     choiceConfigRepository.save(config);
-                    savedEntity.setHasChoiceConfig(true);
                 } catch (JsonProcessingException e) {
                     log.error("序列化选项失败: {}", e.getMessage());
                     throw new RuntimeException("保存选择题配置失败", e);
                 }
             }
 
-            // 3. 保存竞价题配置
-            if ("bid".equals(dto.getType()) && dto.getMin() != null && dto.getMax() != null) {
+            if (dto.getType() == QuestionType.BID && dto.getMin() != null && dto.getMax() != null) {
                 BidQuestionConfig config = BidQuestionConfig.builder()
-                        .question(savedEntity)  // ✅ 改成关联对象
+                        .question(savedEntity)
                         .minValue(dto.getMin())
                         .maxValue(dto.getMax())
                         .step(dto.getStep())
                         .build();
                 bidConfigRepository.save(config);
-                savedEntity.setHasBidConfig(true);
             }
 
             // 4. 保存元数据
@@ -194,12 +189,12 @@ public class QuesServiceImpl implements QuesService {
                 .collect(Collectors.toList());
 
         Map<Long, ChoiceQuestionConfig> choiceConfigMap = choiceConfigRepository
-                .findByQuestionIdIn(questionIds)
+                .findByQuestionIds(questionIds)  // 改这里
                 .stream()
                 .collect(Collectors.toMap(c -> c.getQuestion().getId(), c -> c));
 
         Map<Long, BidQuestionConfig> bidConfigMap = bidConfigRepository
-                .findByQuestionIdIn(questionIds)
+                .findByQuestionIds(questionIds)  // 改这里
                 .stream()
                 .collect(Collectors.toMap(b -> b.getQuestion().getId(), b -> b));
 
@@ -231,14 +226,14 @@ public class QuesServiceImpl implements QuesService {
         dto.setMinPlayers(entity.getMinPlayers());
         dto.setMaxPlayers(entity.getMaxPlayers());
 
-        if ("choice".equals(entity.getType())) {
+        if (entity.getType() == QuestionType.CHOICE) {
             ChoiceQuestionConfig config = choiceConfigMap.get(entity.getId());
             if (config != null) {
                 dto.setOptions(deserializeOptions(config.getOptionsJson()));
             }
         }
 
-        if ("bid".equals(entity.getType())) {
+        if (entity.getType() == QuestionType.BID) {
             BidQuestionConfig config = bidConfigMap.get(entity.getId());
             if (config != null) {
                 dto.setMin(config.getMinValue());
@@ -330,13 +325,11 @@ public class QuesServiceImpl implements QuesService {
 
         questionRepository.save(existingEntity);
 
-        // 3. 更新选择题配置
-        if ("choice".equals(existingEntity.getType()) && dto.getOptions() != null) {
+        if (existingEntity.getType() == QuestionType.CHOICE && dto.getOptions() != null) {
             updateChoiceConfig(id, dto);
         }
 
-        // 4. 更新竞价题配置
-        if ("bid".equals(existingEntity.getType()) &&
+        if (existingEntity.getType() == QuestionType.BID &&
                 (dto.getMin() != null || dto.getMax() != null || dto.getStep() != null)) {
             updateBidConfig(id, dto);
         }
@@ -358,7 +351,7 @@ public class QuesServiceImpl implements QuesService {
                     .orElseThrow(() -> new BusinessException("题目不存在"));
 
             ChoiceQuestionConfig config = choiceConfigRepository
-                    .findByQuestionId(questionId)
+                    .findByQuestion_Id(questionId)  // 改这里
                     .orElse(ChoiceQuestionConfig.builder()
                             .question(question)
                             .build());
@@ -370,7 +363,6 @@ public class QuesServiceImpl implements QuesService {
             choiceConfigRepository.save(config);
 
             QuestionEntity entity = questionRepository.findById(questionId).orElseThrow();
-            entity.setHasChoiceConfig(true);
             questionRepository.save(entity);
 
         } catch (JsonProcessingException e) {
@@ -387,7 +379,7 @@ public class QuesServiceImpl implements QuesService {
                 .orElseThrow(() -> new BusinessException("题目不存在"));
 
         BidQuestionConfig config = bidConfigRepository
-                .findByQuestionId(questionId)
+                .findByQuestion_Id(questionId)  // 改这里
                 .orElse(BidQuestionConfig.builder()
                         .question(question)
                         .build());
@@ -405,7 +397,6 @@ public class QuesServiceImpl implements QuesService {
         bidConfigRepository.save(config);
 
         QuestionEntity entity = questionRepository.findById(questionId).orElseThrow();
-        entity.setHasBidConfig(true);
         questionRepository.save(entity);
     }
 

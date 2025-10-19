@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.example.dto.PlayerDTO;
+import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
 import org.example.entity.RoomEntity;
 
@@ -30,6 +31,8 @@ public class GameRoom {
      */
     private Integer maxPlayers;
 
+    private GameContext currentContext;
+
     /**
      * 房间内的玩家列表
      */
@@ -38,7 +41,7 @@ public class GameRoom {
     /**
      * 题目列表
      */
-    private List<QuestionEntity> questions;
+    private List<QuestionDTO> questions;
 
     /**
      * 当前题目索引（-1 表示未开始）
@@ -110,8 +113,8 @@ public class GameRoom {
     /**
      * 获取当前题目
      */
-    public QuestionEntity getCurrentQuestion() {
-        if (questions == null || questions.isEmpty() || currentIndex < 0 || currentIndex >= questions.size()) {
+    public QuestionDTO getCurrentQuestion() {
+        if (currentIndex < 0 || currentIndex >= questions.size()) {
             return null;
         }
         return questions.get(currentIndex);

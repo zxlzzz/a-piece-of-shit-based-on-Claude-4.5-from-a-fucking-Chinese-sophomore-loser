@@ -1,9 +1,7 @@
 package org.example.service.strategy.QR;
 import lombok.extern.slf4j.Slf4j;
-import org.example.pojo.Buff;
-import org.example.pojo.GameContext;
-import org.example.pojo.GameEvent;
-import org.example.pojo.PlayerGameState;
+import org.example.pojo.*;
+import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -36,6 +34,10 @@ import java.util.Map;
 public class QR001StrategyChoiceStrategy extends BaseRepeatableStrategy {
 
     private static final int TOTAL_ROUNDS = 4;
+
+    public QR001StrategyChoiceStrategy(BuffApplier buffApplier) {
+        super(buffApplier);
+    }
 
     @Override
     public int getTotalRounds() {
@@ -73,8 +75,7 @@ public class QR001StrategyChoiceStrategy extends BaseRepeatableStrategy {
     protected void applyNextRoundBuffs(
             GameContext context,
             Map<String, String> submissions,
-            int currentRound,
-            List<GameEvent> events) {
+            int currentRound) {  // ❌ 删除 List<GameEvent> events 参数
 
         List<String> playerIds = new ArrayList<>(submissions.keySet());
 
@@ -91,29 +92,22 @@ public class QR001StrategyChoiceStrategy extends BaseRepeatableStrategy {
 
             switch (choice) {
                 case "B":
-                    // 选B：给自己添加"下次得分翻倍"buff
-                    // 这个buff会一直存在，直到玩家得分>0时触发并消耗
                     Map<String, Object> params = new HashMap<>();
-                    params.put("repeatableOnly", true);      // 标记为重复题专用
-                    params.put("triggerOnScore", true);      // 只在得分>0时触发
+                    params.put("repeatableOnly", true);
+                    params.put("triggerOnScore", true);
 
                     Buff doubleBuff = Buff.builder()
-                            .type("SCORE_DOUBLE")
-                            .duration(-1)  // 永久持续，直到触发
+                            .type(BuffType.MULTIPLIER)
+                            .value(2.0)
+                            .duration(-1)
                             .params(params)
                             .build();
                     state.getActiveBuffs().add(doubleBuff);
 
-                    events.add(GameEvent.builder()
-                            .type("BUFF_GAINED")
-                            .targetPlayerId(playerId)
-                            .description("获得下次得分翻倍buff（可叠加）")
-                            .build());
+                    log.info("玩家 {} 选择B，获得翻倍buff", playerId);
                     break;
 
                 case "C":
-                    // 选C：给对手添加"下一题减半"debuff
-                    // 这个buff会在下一题自动生效并消耗（不管得分多少）
                     String opponentId = playerIds.stream()
                             .filter(id -> !id.equals(playerId))
                             .findFirst()
@@ -127,18 +121,14 @@ public class QR001StrategyChoiceStrategy extends BaseRepeatableStrategy {
                             }
 
                             Buff halvedBuff = Buff.builder()
-                                    .type("SCORE_HALVED")
-                                    .duration(1)  // 下一题生效（duration=0时）
+                                    .type(BuffType.MULTIPLIER)
+                                    .value(0.5)
+                                    .duration(1)
                                     .params(Map.of("repeatableOnly", true))
                                     .build();
                             opponentState.getActiveBuffs().add(halvedBuff);
 
-                            events.add(GameEvent.builder()
-                                    .type("DEBUFF_GIVEN")
-                                    .sourcePlayerId(playerId)
-                                    .targetPlayerId(opponentId)
-                                    .description("对手下一题得分减半")
-                                    .build());
+                            log.info("玩家 {} 选择C，给对手 {} 添加减半buff", playerId, opponentId);
                         }
                     }
                     break;

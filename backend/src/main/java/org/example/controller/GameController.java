@@ -10,9 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
 import org.example.entity.GameResultEntity;
 import org.example.exception.BusinessException;
+import org.example.pojo.GameRoom;
 import org.example.repository.GameResultRepository;
 import org.example.service.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
+import org.example.service.cache.RoomCache;
+import org.example.service.room.RoomLifecycleService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,9 +29,11 @@ import java.util.Optional;
 public class GameController {
 
     private final GameService gameService;
-    private final RoomStateBroadcaster broadcaster; // 🔥 新增
+    private final RoomStateBroadcaster broadcaster;
     private final ObjectMapper objectMapper;
     private final GameResultRepository gameResultRepository;
+    private final RoomCache roomCache;  // ✅ 新增
+    private final RoomLifecycleService roomLifecycleService;  // ✅ 新增
 
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
@@ -40,6 +45,27 @@ public class GameController {
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
             log.error("❌ 创建房间失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    // ✅ 新增：获取房间状态
+    @GetMapping("/rooms/{roomCode}")
+    public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
+        try {
+            log.info("🔍 获取房间状态: {}", roomCode);
+
+            GameRoom gameRoom = roomCache.get(roomCode);
+            if (gameRoom == null) {
+                log.warn("⚠️ 房间不存在: {}", roomCode);
+                return ResponseEntity.notFound().build();
+            }
+
+            RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
+            return ResponseEntity.ok(roomDTO);
+
+        } catch (BusinessException e) {
+            log.error("❌ 获取房间状态失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
@@ -65,10 +91,7 @@ public class GameController {
             @RequestParam String playerName) {
         try {
             RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName);
-
-            // 🔥 改用 broadcaster
             broadcaster.sendRoomUpdate(roomCode, room);
-
             log.info("✅ 玩家 {} 加入房间 {} 成功", playerName, roomCode);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
@@ -81,10 +104,7 @@ public class GameController {
     public ResponseEntity<RoomDTO> startGame(@PathVariable String roomCode) {
         try {
             RoomDTO room = gameService.startGame(roomCode);
-
-            // 🔥 改用 broadcaster
             broadcaster.sendRoomUpdate(roomCode, room);
-
             log.info("✅ 房间 {} 开始游戏", roomCode);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
@@ -101,10 +121,7 @@ public class GameController {
             @RequestParam(defaultValue = "false") boolean force) {
         try {
             RoomDTO room = gameService.submitAnswer(roomCode, playerId, choice, force);
-
-            // 🔥 改用 broadcaster
             broadcaster.sendRoomUpdate(roomCode, room);
-
             log.info("✅ 玩家 {} 在房间 {} 提交答案: {}", playerId, roomCode, choice);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
@@ -120,10 +137,7 @@ public class GameController {
             @RequestParam boolean ready) {
         try {
             RoomDTO room = gameService.setPlayerReady(roomCode, playerId, ready);
-
-            // 🔥 改用 broadcaster
             broadcaster.sendRoomUpdate(roomCode, room);
-
             log.info("✅ 玩家 {} 在房间 {} 设置准备状态: {}", playerId, roomCode, ready);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
@@ -136,10 +150,7 @@ public class GameController {
     public ResponseEntity<Void> deleteRoom(@PathVariable String roomCode) {
         try {
             gameService.removeRoom(roomCode);
-
-            // 🔥 改用 broadcaster
             broadcaster.sendRoomDeleted(roomCode);
-
             log.info("✅ 删除房间: {}", roomCode);
             return ResponseEntity.ok().build();
         } catch (BusinessException e) {
@@ -162,16 +173,13 @@ public class GameController {
     @GetMapping("/rooms/{roomCode}/history")
     public ResponseEntity<GameHistoryDTO> getGameHistory(@PathVariable String roomCode) {
         try {
-            // 先尝试从数据库查询
             Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCode(roomCode);
 
             if (resultOpt.isPresent()) {
-                // ✅ 从数据库读取
                 GameResultEntity result = resultOpt.get();
                 GameHistoryDTO history = parseGameResultEntity(result);
                 return ResponseEntity.ok(history);
             } else {
-                // ✅ 从内存读取
                 GameHistoryDTO history = gameService.getCurrentGameStatus(roomCode);
                 return ResponseEntity.ok(history);
             }
@@ -196,10 +204,10 @@ public class GameController {
         );
 
         return GameHistoryDTO.builder()
-                .gameId(result.getGame().getId())  // ✅ 添加
-                .roomCode(result.getGame().getRoom().getRoomCode())  // ✅ 从 game 获取
-                .startTime(result.getGame().getStartTime())  // ✅ 从 game 获取
-                .endTime(result.getGame().getEndTime())  // ✅ 从 game 获取
+                .gameId(result.getGame().getId())
+                .roomCode(result.getGame().getRoom().getRoomCode())
+                .startTime(result.getGame().getStartTime())
+                .endTime(result.getGame().getEndTime())
                 .questionCount(result.getQuestionCount())
                 .playerCount(result.getPlayerCount())
                 .leaderboard(leaderboard)
@@ -207,18 +215,13 @@ public class GameController {
                 .build();
     }
 
-    /**
-     * 更新房间设置请求体
-     */
     @Data
     @AllArgsConstructor
     @NoArgsConstructor
     public static class UpdateRoomSettingsRequest {
-        private Integer questionCount;      // 题目数量（可选）
-        private String rankingMode;         // 排名模式
-        private Integer targetScore;        // 目标分数
-        private RoomDTO.WinConditions winConditions;  // 通关条件
+        private Integer questionCount;
+        private String rankingMode;
+        private Integer targetScore;
+        private RoomDTO.WinConditions winConditions;
     }
 }
-
-

@@ -41,9 +41,9 @@ api.interceptors.response.use(
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayer, questionCount) =>
+export const createRoom = (maxPlayers, questionCount) =>
   api.post('/rooms', null, {
-    params: {maxPlayer, questionCount}
+    params: {maxPlayers, questionCount}
   });
 
 export const joinRoom = (roomCode, playerId, playerName) =>

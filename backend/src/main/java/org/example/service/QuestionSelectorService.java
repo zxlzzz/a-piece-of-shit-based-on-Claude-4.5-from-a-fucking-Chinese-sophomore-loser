@@ -2,6 +2,7 @@ package org.example.service;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
@@ -66,7 +67,7 @@ public class QuestionSelectorService {
 
         // 🔥 6. 转换成 DTO（带配置）
         List<QuestionDTO> selectedDTOs = selectedEntities.stream()
-                .map(entity -> dtoConverter.toQuestionDTOWithConfig(entity))
+                .map(dtoConverter::toQuestionDTOWithConfig)
                 .collect(Collectors.toList());
 
         log.info("✅ 选题完成: 共选择 {} 道题目（玩家数: {}）", selectedDTOs.size(), playerCount);
@@ -321,6 +322,7 @@ class QuestionPool {
 }
 // 在文件末尾添加这两个类
 
+@Getter
 @Data
 class SequenceInfo {
     private List<QuestionMetadataPair> questions = new ArrayList<>();
@@ -329,9 +331,6 @@ class SequenceInfo {
         questions.add(new QuestionMetadataPair(question, metadata));
     }
 
-    public List<QuestionMetadataPair> getQuestions() {
-        return questions;
-    }
 }
 
 @Data

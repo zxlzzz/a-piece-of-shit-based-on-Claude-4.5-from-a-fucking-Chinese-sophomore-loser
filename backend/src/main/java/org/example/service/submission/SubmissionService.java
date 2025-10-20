@@ -1,6 +1,5 @@
 package org.example.service.submission;
 
-import org.example.entity.QuestionEntity;
 import org.example.pojo.GameRoom;
 
 /**

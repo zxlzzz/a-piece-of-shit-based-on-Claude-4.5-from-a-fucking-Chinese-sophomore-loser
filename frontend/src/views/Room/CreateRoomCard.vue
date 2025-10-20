@@ -15,8 +15,8 @@ const maxPlayers = ref(4)
 
 const handleCreate = () => {
   emit('create', {
-    questionCount: questionCount.value,
-    maxPlayers: maxPlayers.value
+    maxPlayers: maxPlayers.value,
+    questionCount: questionCount.value
   })
 }
 </script>

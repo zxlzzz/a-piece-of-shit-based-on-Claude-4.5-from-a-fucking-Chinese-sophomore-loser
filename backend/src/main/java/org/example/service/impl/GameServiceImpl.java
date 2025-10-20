@@ -1,5 +1,6 @@
 package org.example.service.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.example.service.*;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;
+import org.example.service.history.GameHistoryService;
 import org.example.service.leaderboard.LeaderboardService;
 import org.example.service.persistence.GamePersistenceService;
 import org.example.service.room.RoomLifecycleService;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 游戏服务实现（重构后 - 协调者模式）
@@ -41,6 +44,7 @@ public class GameServiceImpl implements GameService {
     private final RoomStateBroadcaster broadcaster;
     private final LeaderboardService leaderboardService;
     private final GamePersistenceService persistenceService;
+    private final GameHistoryService gameHistoryService;
 
     // 数据库依赖
     private final GameRepository gameRepository;
@@ -191,11 +195,8 @@ public class GameServiceImpl implements GameService {
     // ==================== 游戏结果 ====================
 
     @Override
-    public List<PlayerGameEntity> getGameResults(String roomCode) {
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-        GameEntity game = gameRepository.findByRoom(gameRoom.getRoomEntity())
-                .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-        return playerGameRepository.findByGameOrderByScoreDesc(game);
+    public GameHistoryDTO getGameHistoryByRoomCode(String roomCode) {
+        return gameHistoryService.getGameHistoryByRoomCode(roomCode);
     }
 
     @Override
@@ -222,5 +223,15 @@ public class GameServiceImpl implements GameService {
                 .leaderboard(leaderboard)
                 .questionDetails(new ArrayList<>())
                 .build();
+    }
+
+    @Override
+    public List<GameHistorySummaryDTO> getHistoryList(Integer days, String playerId) {
+        return gameHistoryService.getHistoryList(days, playerId);
+    }
+
+    @Override
+    public GameHistoryDTO getHistoryDetail(Long gameId) {
+        return gameHistoryService.getHistoryDetail(gameId);
     }
 }

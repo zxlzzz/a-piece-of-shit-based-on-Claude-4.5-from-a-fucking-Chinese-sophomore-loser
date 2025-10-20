@@ -13,6 +13,8 @@ import org.example.service.QuestionSelectorService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;
+import org.example.service.impl.GameServiceImpl;
+import org.example.service.persistence.GamePersistenceService;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.scoring.ScoringResult;
 import org.example.service.scoring.ScoringService;
@@ -52,6 +54,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final Map<String, AtomicBoolean> advancing = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final long defaultQuestionTimeoutSeconds = 30L;
+    private final GameServiceImpl gameServiceImpl;
 
     @Override
     @Transactional
@@ -239,6 +242,14 @@ public class GameFlowServiceImpl implements GameFlowService {
 
             // 5. 取消定时器
             timerService.cancelTimeout(roomCode);
+
+            try {
+                gameServiceImpl.saveGameResult(roomCode);
+                log.info("✅ 游戏结果已保存到历史记录: roomCode={}", roomCode);
+            } catch (Exception e) {
+                log.error("❌ 保存游戏结果失败: roomCode={}", roomCode, e);
+                // 不抛出异常，避免影响游戏正常结束流程
+            }
 
             // 6. 广播结束
             broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));

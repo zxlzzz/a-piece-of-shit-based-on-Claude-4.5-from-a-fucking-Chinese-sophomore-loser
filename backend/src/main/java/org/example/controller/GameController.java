@@ -1,17 +1,13 @@
 package org.example.controller;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
-import org.example.entity.GameResultEntity;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
-import org.example.repository.GameResultRepository;
 import org.example.service.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
@@ -20,7 +16,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api")
@@ -30,10 +25,8 @@ public class GameController {
 
     private final GameService gameService;
     private final RoomStateBroadcaster broadcaster;
-    private final ObjectMapper objectMapper;
-    private final GameResultRepository gameResultRepository;
-    private final RoomCache roomCache;  // ✅ 新增
-    private final RoomLifecycleService roomLifecycleService;  // ✅ 新增
+    private final RoomCache roomCache;
+    private final RoomLifecycleService roomLifecycleService;
 
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
@@ -49,7 +42,6 @@ public class GameController {
         }
     }
 
-    // ✅ 新增：获取房间状态
     @GetMapping("/rooms/{roomCode}")
     public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
         try {
@@ -161,58 +153,31 @@ public class GameController {
 
     @GetMapping("/rooms")
     public ResponseEntity<List<RoomDTO>> getActiveRooms() {
-        try{
+        try {
             List<RoomDTO> rooms = gameService.getAllActiveRoom();
             return ResponseEntity.ok(rooms);
-        }catch (BusinessException e){
+        } catch (BusinessException e) {
             log.error(e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }
 
+    /**
+     * 获取房间的游戏历史/结果
+     * 优先返回已保存的结果，否则返回当前游戏状态
+     */
     @GetMapping("/rooms/{roomCode}/history")
     public ResponseEntity<GameHistoryDTO> getGameHistory(@PathVariable String roomCode) {
         try {
-            Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCode(roomCode);
-
-            if (resultOpt.isPresent()) {
-                GameResultEntity result = resultOpt.get();
-                GameHistoryDTO history = parseGameResultEntity(result);
-                return ResponseEntity.ok(history);
-            } else {
-                GameHistoryDTO history = gameService.getCurrentGameStatus(roomCode);
-                return ResponseEntity.ok(history);
-            }
+            GameHistoryDTO history = gameService.getGameHistoryByRoomCode(roomCode);
+            return ResponseEntity.ok(history);
         } catch (BusinessException e) {
             log.error("获取游戏历史失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         } catch (Exception e) {
-            log.error("解析游戏历史失败", e);
-            return ResponseEntity.badRequest().body(null);
+            log.error("获取游戏历史失败", e);
+            return ResponseEntity.internalServerError().body(null);
         }
-    }
-
-    private GameHistoryDTO parseGameResultEntity(GameResultEntity result) throws Exception {
-        List<PlayerRankDTO> leaderboard = objectMapper.readValue(
-                result.getLeaderboardJson(),
-                new TypeReference<List<PlayerRankDTO>>() {}
-        );
-
-        List<QuestionDetailDTO> questionDetails = objectMapper.readValue(
-                result.getQuestionDetailsJson(),
-                new TypeReference<List<QuestionDetailDTO>>() {}
-        );
-
-        return GameHistoryDTO.builder()
-                .gameId(result.getGame().getId())
-                .roomCode(result.getGame().getRoom().getRoomCode())
-                .startTime(result.getGame().getStartTime())
-                .endTime(result.getGame().getEndTime())
-                .questionCount(result.getQuestionCount())
-                .playerCount(result.getPlayerCount())
-                .leaderboard(leaderboard)
-                .questionDetails(questionDetails)
-                .build();
     }
 
     @Data

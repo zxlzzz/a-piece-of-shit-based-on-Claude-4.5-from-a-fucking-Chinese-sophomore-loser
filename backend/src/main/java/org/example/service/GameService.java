@@ -1,6 +1,9 @@
 package org.example.service;
 
 import org.example.controller.GameController;
+import org.example.dto.GameHistorySummaryDTO;
+import org.example.entity.GameEntity;
+import org.example.entity.GameResultEntity;
 import org.example.entity.PlayerGameEntity;
 import org.example.dto.GameHistoryDTO;
 import org.example.dto.RoomDTO;
@@ -46,10 +49,7 @@ public interface GameService {
      */
     RoomDTO getRoomStatus(String roomCode);
 
-    /**
-     * 获取游戏结果
-     */
-    List<PlayerGameEntity> getGameResults(String roomCode);
+    GameHistoryDTO getGameHistoryByRoomCode(String roomCode);
 
     /**
      * 移除房间
@@ -77,5 +77,16 @@ public interface GameService {
      * 结束保存
      */
     void saveGameResult(String roomCode);
+
+    /**
+     * 获取历史记录列表（委托给 GameHistoryService）
+     */
+    List<GameHistorySummaryDTO> getHistoryList(Integer days, String playerId);
+
+    /**
+     * 获取单场游戏的详细历史（委托给 GameHistoryService）
+     */
+    GameHistoryDTO getHistoryDetail(Long gameId);
+
 }
 

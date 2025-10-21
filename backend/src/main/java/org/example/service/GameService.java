@@ -21,9 +21,6 @@ public interface GameService {
      * 加入房间
      */
     RoomDTO joinRoom(String roomCode, String playerId, String playerName);
-
-    GameHistoryDTO getCurrentGameStatus(String roomCode);
-
     /**
      * 开始游戏
      */
@@ -72,11 +69,6 @@ public interface GameService {
      * 处理玩家断线
      */
     void handlePlayerDisconnect(String roomCode, String playerId);
-
-    /**
-     * 结束保存
-     */
-    void saveGameResult(String roomCode);
 
     /**
      * 获取历史记录列表（委托给 GameHistoryService）

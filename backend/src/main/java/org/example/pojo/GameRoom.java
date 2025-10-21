@@ -129,7 +129,6 @@ public class GameRoom {
             currentIndex++;
             return true;
         } else {
-            finished = true;
             return false;
         }
     }

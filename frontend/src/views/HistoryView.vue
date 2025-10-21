@@ -221,12 +221,14 @@ onMounted(() => {
       @hide="closeDetail"
     >
       <template #header>
-        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">游戏详情</h3>
+        <div class="border-b border-gray-200 dark:border-gray-700 pb-3">
+          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">游戏详情</h3>
+        </div>
       </template>
 
       <div v-if="detailLoading" class="text-center py-12">
-        <i class="pi pi-spin pi-spinner text-4xl text-gray-400 mb-3"></i>
-        <p class="text-gray-500 dark:text-gray-400">加载中</p>
+        <i class="pi pi-spin pi-spinner text-3xl text-gray-400 mb-3"></i>
+        <p class="text-sm text-gray-500 dark:text-gray-400">加载中...</p>
       </div>
 
       <ResultContent 
@@ -234,8 +236,9 @@ onMounted(() => {
         :game-history="selectedGame" 
       />
 
-      <div v-else class="text-center py-12 text-gray-400">
-        <p>加载失败，请重试</p>
+      <div v-else class="text-center py-12">
+        <i class="pi pi-exclamation-circle text-3xl text-gray-400 mb-3"></i>
+        <p class="text-sm text-gray-500 dark:text-gray-400">加载失败，请重试</p>
       </div>
     </Dialog>
   </div>

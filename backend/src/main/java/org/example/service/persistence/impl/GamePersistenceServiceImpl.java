@@ -61,6 +61,7 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
 
             GameResultEntity entity = GameResultEntity.builder()
                     .game(game)
+                    .room(game.getRoom())
                     .questionCount(gameRoom.getQuestions().size())
                     .playerCount(gameRoom.getPlayers().size())
                     .leaderboardJson(leaderboardJson)

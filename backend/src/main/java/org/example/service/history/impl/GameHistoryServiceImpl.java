@@ -11,14 +11,16 @@ import org.example.dto.QuestionDetailDTO;
 import org.example.entity.GameEntity;
 import org.example.entity.GameResultEntity;
 import org.example.exception.BusinessException;
+import org.example.pojo.GameRoom;
 import org.example.repository.GameRepository;
 import org.example.repository.GameResultRepository;
-import org.example.service.GameService;
+import org.example.service.cache.RoomCache;
 import org.example.service.history.GameHistoryService;
-import org.springframework.context.annotation.Lazy;
+import org.example.service.leaderboard.LeaderboardService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -35,10 +37,9 @@ public class GameHistoryServiceImpl implements GameHistoryService {
     private final GameResultRepository gameResultRepository;
     private final GameRepository gameRepository;
     private final ObjectMapper objectMapper;
+    private final RoomCache roomCache;
+    private final LeaderboardService leaderboardService;
 
-    // ✅ 使用 @Lazy 避免循环依赖
-    @Lazy
-    private final GameService gameService;
 
     @Override
     public List<GameHistorySummaryDTO> getHistoryList(Integer days, String playerId) {
@@ -76,7 +77,7 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                     .orElseThrow(() -> new BusinessException("游戏不存在"));
 
             // 查询游戏结果
-            GameResultEntity result = gameResultRepository.findByGame(game)
+            GameResultEntity result = gameResultRepository.findByGameIdWithDetails(gameId)
                     .orElseThrow(() -> new BusinessException("游戏结果不存在"));
 
             // 解析JSON并构建DTO
@@ -97,8 +98,8 @@ public class GameHistoryServiceImpl implements GameHistoryService {
         log.info("roomCode: {}", roomCode);
 
         try {
-            // 优先查找已保存的游戏结果
-            Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCode(roomCode);
+            // ✅ 改：使用新方法
+            Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCodeWithDetails(roomCode);
 
             if (resultOpt.isPresent()) {
                 log.info("✅ 找到已保存的游戏结果");
@@ -106,7 +107,7 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                 return parseGameResultEntity(result);
             } else {
                 log.info("⚠️ 未找到已保存的游戏结果，返回当前游戏状态");
-                return gameService.getCurrentGameStatus(roomCode);
+                return getCurrentGameStatus(roomCode);
             }
         } catch (Exception e) {
             log.error("获取游戏历史失败: roomCode={}", roomCode, e);
@@ -200,6 +201,25 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                 .playerCount(result.getPlayerCount())
                 .leaderboard(leaderboard)
                 .questionDetails(questionDetails)
+                .build();
+    }
+
+    private GameHistoryDTO getCurrentGameStatus(String roomCode){
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+        GameEntity game = gameRepository.findByRoomCodeWithRoom(roomCode)
+                .orElseThrow(() -> new BusinessException("游戏记录不存在"));
+
+        List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
+
+        return GameHistoryDTO.builder()
+                .gameId(game.getId())
+                .roomCode(roomCode)
+                .startTime(game.getStartTime())
+                .endTime(game.getEndTime())
+                .questionCount(gameRoom.getQuestions().size())
+                .playerCount(gameRoom.getPlayers().size())
+                .leaderboard(leaderboard)
+                .questionDetails(new ArrayList<>())
                 .build();
     }
 }

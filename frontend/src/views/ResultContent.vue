@@ -47,36 +47,44 @@ const getMyChoice = (questionDetail) => {
 
 <template>
   <div class="space-y-6">
-    <!-- 在最前面，"我的成绩"之前 -->
+    <!-- 顶部状态卡片 - 简化版 -->
     <div v-if="currentPlayerRank" 
-        class="rounded-xl p-6 text-center"
+        class="rounded-lg p-5 border"
         :class="isPassed 
-          ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-          : 'bg-gradient-to-r from-red-500 to-pink-600 text-white'">
-      <i class="text-5xl mb-3" 
-        :class="isPassed ? 'pi pi-check-circle' : 'pi pi-times-circle'">
-      </i>
-      <h1 class="text-3xl font-bold mb-2">
-        {{ isPassed ? '已结束' : '未达成条件' }}
-      </h1>
+          ? 'bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-800'
+          : 'bg-red-50 dark:bg-red-900/10 border-red-200 dark:border-red-800'">
+      <div class="flex items-center gap-3">
+        <i class="text-2xl" 
+          :class="isPassed 
+            ? 'pi pi-check-circle text-green-600 dark:text-green-400' 
+            : 'pi pi-times-circle text-red-600 dark:text-red-400'">
+        </i>
+        <div>
+          <h1 class="text-xl font-semibold"
+              :class="isPassed 
+                ? 'text-green-900 dark:text-green-100' 
+                : 'text-red-900 dark:text-red-100'">
+            {{ isPassed ? '游戏已结束' : '未达成条件' }}
+          </h1>
+        </div>
+      </div>
     </div>
+
     <!-- 我的成绩 -->
     <div v-if="currentPlayerRank" 
-         class="bg-white dark:bg-gray-800 rounded-xl border-2 dark:border-gray-700 p-8"
-          :class="isPassed ? 'border-green-200' : 'border-red-200'">
+         class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
       <div class="flex justify-between items-center">
         <div>
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">排名</p>
           <div class="flex items-baseline gap-2">
-            <span class="text-5xl font-semibold text-gray-900 dark:text-white">
+            <span class="text-3xl font-semibold text-gray-900 dark:text-white">
               #{{ currentPlayerRank.rank }}
             </span>
-            <span v-if="currentPlayerRank.rank === 1" class="text-2xl"></span>
           </div>
         </div>
         <div class="text-right">
           <p class="text-sm text-gray-500 dark:text-gray-400 mb-1">总分</p>
-          <p class="text-5xl font-semibold text-gray-900 dark:text-white">
+          <p class="text-3xl font-semibold text-gray-900 dark:text-white">
             {{ currentPlayerRank.totalScore }}
           </p>
         </div>
@@ -84,7 +92,7 @@ const getMyChoice = (questionDetail) => {
     </div>
     
     <!-- 排行榜 -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">排行榜</h2>
       <div class="space-y-2">
         <div
@@ -94,18 +102,14 @@ const getMyChoice = (questionDetail) => {
           :class="player.rank <= 3 ? 'bg-gray-50 dark:bg-gray-700/50' : ''"
         >
           <div class="flex items-center gap-3">
-            <span class="text-xl font-semibold w-8 text-center"
-                  :class="player.rank === 1 ? 'text-yellow-600' 
-                    : player.rank === 2 ? 'text-gray-400' 
-                    : player.rank === 3 ? 'text-orange-600'
-                    : 'text-gray-600 dark:text-gray-400'">
-              {{ player.rank === 1 ? '1' : player.rank === 2 ? '2' : player.rank === 3 ? '3' : player.rank }}
+            <span class="text-base font-medium w-8 text-center text-gray-600 dark:text-gray-400">
+              {{ player.rank }}
             </span>
             <span class="font-medium text-gray-900 dark:text-white">
               {{ player.playerName }}
             </span>
           </div>
-          <span class="text-lg font-semibold text-gray-900 dark:text-white">
+          <span class="text-base font-semibold text-gray-900 dark:text-white">
             {{ player.totalScore }}
           </span>
         </div>
@@ -113,7 +117,7 @@ const getMyChoice = (questionDetail) => {
     </div>
     
     <!-- 题目详情 -->
-    <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">题目详情</h2>
       
       <div class="space-y-3">
@@ -129,7 +133,7 @@ const getMyChoice = (questionDetail) => {
           >
             <div class="flex justify-between items-center gap-4">
               <div class="flex-1 min-w-0">
-                <span class="text-xs font-medium text-blue-600 dark:text-blue-400">
+                <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
                   第 {{ index + 1 }} 题
                 </span>
                 <p class="font-medium text-gray-900 dark:text-white mt-1 truncate">
@@ -145,7 +149,7 @@ const getMyChoice = (questionDetail) => {
                 </div>
                 <div class="text-center">
                   <p class="text-xs text-gray-500 dark:text-gray-400">得分</p>
-                  <p class="font-semibold text-green-600 dark:text-green-400">
+                  <p class="font-semibold text-gray-600 dark:text-gray-300">
                     {{ getMyScore(detail) }}
                   </p>
                 </div>
@@ -160,13 +164,14 @@ const getMyChoice = (questionDetail) => {
           <div v-if="expandedQuestion === index" 
                class="p-5 bg-gray-50 dark:bg-gray-700/30 border-t border-gray-200 dark:border-gray-700">
             
-
+            <!-- 题目选项 -->
             <div class="mb-5 pb-4 border-b border-gray-200 dark:border-gray-700">
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-2">题目选项</h3>
               <p class="text-sm text-gray-700 dark:text-gray-300">
                 {{ detail.optionText }}
               </p>
             </div>
+
             <!-- 选项分布 -->
             <div class="mb-5">
               <h3 class="text-sm font-semibold text-gray-900 dark:text-white mb-3">选项分布</h3>
@@ -176,7 +181,7 @@ const getMyChoice = (questionDetail) => {
                   :key="choice"
                   class="bg-white dark:bg-gray-800 p-3 rounded-lg text-center border border-gray-200 dark:border-gray-700"
                 >
-                  <p class="text-2xl font-semibold text-gray-900 dark:text-white">{{ choice }}</p>
+                  <p class="text-xl font-semibold text-gray-900 dark:text-white">{{ choice }}</p>
                   <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">{{ count }} 人</p>
                 </div>
               </div>
@@ -198,7 +203,7 @@ const getMyChoice = (questionDetail) => {
                     <span class="text-sm text-gray-600 dark:text-gray-400">
                       {{ submission.choice }}
                     </span>
-                    <span class="font-semibold text-green-600 dark:text-green-400 min-w-[50px] text-right text-sm">
+                    <span class="font-semibold text-gray-600 dark:text-gray-300 min-w-[50px] text-right text-sm">
                       +{{ submission.finalScore }}
                     </span>
                   </div>

@@ -13,7 +13,6 @@ import org.example.service.QuestionSelectorService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;
-import org.example.service.impl.GameServiceImpl;
 import org.example.service.persistence.GamePersistenceService;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.scoring.ScoringResult;
@@ -47,6 +46,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final QuestionTimerService timerService;
     private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
+    private final GamePersistenceService gamePersistenceService;
 
     /**
      * 推进锁（防止并发推进）
@@ -54,7 +54,6 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final Map<String, AtomicBoolean> advancing = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final long defaultQuestionTimeoutSeconds = 30L;
-    private final GameServiceImpl gameServiceImpl;
 
     @Override
     @Transactional
@@ -199,62 +198,73 @@ public class GameFlowServiceImpl implements GameFlowService {
     @Override
     @Transactional
     public void finishGame(String roomCode) {
+        log.info("🏁 finishGame 被调用: {}", roomCode);
+
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (getInternedRoomCode(roomCode)) {
+            // ✅ 使用 CAS 模式：先检查，通过后立即设置
             if (gameRoom.isFinished()) {
-                log.warn("⚠️ 房间 {} 已经结束", roomCode);
+                log.warn("⚠️ 房间 {} 已经结束，跳过重复调用", roomCode);
                 return;
             }
 
-            // 1. 标记游戏结束
+            // ✅ 唯一设置 finished 的地方
             gameRoom.setFinished(true);
-            gameRoom.clearPlayerStates();
 
-            // 更新数据库
-            RoomEntity room = roomRepository.findByRoomCode(roomCode)
-                    .orElseThrow(() -> new BusinessException("房间不存在"));
-            room.setStatus(RoomStatus.FINISHED);
-            roomRepository.save(room);
-
-            // ✅ 改成这样
-            GameEntity game = gameRepository.findByRoom(room)  // 用 findByRoom
-                    .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-            game.setEndTime(LocalDateTime.now());
-            gameRepository.save(game);
-
-            // 3. 保存玩家最终分数
-            for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
-                String playerId = entry.getKey();
-                PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                        .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
-
-                PlayerGameEntity playerGame = playerGameRepository
-                        .findByPlayerAndGame(player, game)
-                        .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-
-                playerGame.setScore(entry.getValue());
-                playerGameRepository.save(playerGame);
-            }
-
-            // 4. 清理轮次记录
-            scoringService.clearRounds(roomCode);
-
-            // 5. 取消定时器
-            timerService.cancelTimeout(roomCode);
+            log.info("✅ 开始执行游戏结束流程: {}", roomCode);
 
             try {
-                gameServiceImpl.saveGameResult(roomCode);
-                log.info("✅ 游戏结果已保存到历史记录: roomCode={}", roomCode);
+                // 1. 更新房间状态
+                RoomEntity room = roomRepository.findByRoomCode(roomCode)
+                        .orElseThrow(() -> new BusinessException("房间不存在"));
+                room.setStatus(RoomStatus.FINISHED);
+                roomRepository.save(room);
+
+                // 2. 更新游戏结束时间
+                GameEntity game = gameRepository.findByRoom(room)
+                        .orElseThrow(() -> new BusinessException("游戏记录不存在"));
+                game.setEndTime(LocalDateTime.now());
+                gameRepository.save(game);
+
+                // 3. 保存玩家最终分数
+                for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
+                    String playerId = entry.getKey();
+                    PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                            .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+
+                    PlayerGameEntity playerGame = playerGameRepository
+                            .findByPlayerAndGame(player, game)
+                            .orElseThrow(() -> new BusinessException("游戏记录不存在"));
+
+                    playerGame.setScore(entry.getValue());
+                    playerGameRepository.save(playerGame);
+                }
+
+                // 4. 清理轮次记录
+                scoringService.clearRounds(roomCode);
+
+                // 5. 取消定时器
+                timerService.cancelTimeout(roomCode);
+
+                // 6. 保存游戏结果
+                log.info("📝 开始保存游戏结果到历史记录: {}", roomCode);
+                gamePersistenceService.saveGameResult(roomCode);
+                log.info("✅ 游戏结果已成功保存到历史记录: roomCode={}", roomCode);
+
             } catch (Exception e) {
-                log.error("❌ 保存游戏结果失败: roomCode={}", roomCode, e);
-                // 不抛出异常，避免影响游戏正常结束流程
+                log.error("❌ 游戏结束流程失败: roomCode={}", roomCode, e);
+                // 不回滚 finished 状态，避免重复执行
+                throw e;
+            } finally {
+                // 7. 清理玩家状态
+                gameRoom.clearPlayerStates();
+
+                // 8. 广播结束
+                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
+
+                log.info("🎉 房间 {} 游戏结束流程完成", roomCode);
             }
-
-            // 6. 广播结束
-            broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
-
-            log.info("🎉 房间 {} 游戏结束", roomCode);
         }
     }
 

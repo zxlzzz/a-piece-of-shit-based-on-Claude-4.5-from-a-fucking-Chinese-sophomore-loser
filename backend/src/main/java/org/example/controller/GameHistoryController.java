@@ -1,23 +1,14 @@
 package org.example.controller;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
-import org.example.entity.GameEntity;
-import org.example.entity.GameResultEntity;
 import org.example.exception.BusinessException;
-import org.example.repository.GameRepository;
-import org.example.repository.GameResultRepository;
 import org.example.service.GameService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/games")

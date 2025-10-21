@@ -48,9 +48,6 @@ public class GameServiceImpl implements GameService {
 
     // 数据库依赖
     private final GameRepository gameRepository;
-    private final PlayerGameRepository playerGameRepository;
-    private final GameResultRepository gameResultRepository;
-    private final ObjectMapper objectMapper;
 
     // ==================== 房间生命周期（委托给 RoomLifecycleService） ====================
 
@@ -197,32 +194,6 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameHistoryDTO getGameHistoryByRoomCode(String roomCode) {
         return gameHistoryService.getGameHistoryByRoomCode(roomCode);
-    }
-
-    @Override
-    @Transactional
-    public void saveGameResult(String roomCode) {
-        persistenceService.saveGameResult(roomCode);
-    }
-
-    @Override
-    public GameHistoryDTO getCurrentGameStatus(String roomCode) {
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-        GameEntity game = gameRepository.findByRoom(gameRoom.getRoomEntity())
-                .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-
-        List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
-
-        return GameHistoryDTO.builder()
-                .gameId(game.getId())
-                .roomCode(roomCode)
-                .startTime(game.getStartTime())
-                .endTime(game.getEndTime())
-                .questionCount(gameRoom.getQuestions().size())
-                .playerCount(gameRoom.getPlayers().size())
-                .leaderboard(leaderboard)
-                .questionDetails(new ArrayList<>())
-                .build();
     }
 
     @Override

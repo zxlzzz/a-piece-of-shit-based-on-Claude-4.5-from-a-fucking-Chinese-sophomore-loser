@@ -6,10 +6,19 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import ChatRoom from './ChatRoom.vue'
 import QuestionCard from './QuestionCard.vue'
+import { getRoomStatus } from '@/api'
+import { useBreakpoints } from '@vueuse/core'
 
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+
+const breakpoints = useBreakpoints({
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+})
+const isMobile = breakpoints.smaller('tablet')
 
 const roomCode = ref(route.params.roomId)
 const playerStore = usePlayerStore()
@@ -89,6 +98,8 @@ onMounted(() => {
     }
   }
 
+  window.addEventListener('websocket-reconnecting', handleReconnecting)
+  window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
   window.addEventListener('keydown', handleKeydown)
   connectWebSocket()
 })
@@ -100,6 +111,8 @@ onUnmounted(() => {
   clearCountdown()
   const submissionKey = getSubmissionKey()
   localStorage.removeItem(submissionKey)
+  window.removeEventListener('websocket-reconnecting', handleReconnecting)
+  window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
   window.removeEventListener('keydown', handleKeydown)
 })
 
@@ -126,6 +139,8 @@ const connectWebSocket = async () => {
   
   // 🔥 连接成功后，开始订阅
   setupRoomSubscription()
+
+  await refreshRoomState()
 }
 
 const setupRoomSubscription = () => {
@@ -195,15 +210,34 @@ const setupRoomSubscription = () => {
       }
     },
     (error) => {
-      console.error('房间错误:', error)
-      toast.add({
-        severity: 'error',
-        summary: '房间错误',
-        detail: error.error || '房间出现错误',
-        life: 3000
-      })
-    }
-  )
+        console.error('🔥 房间错误:', error)
+        
+        // 🔥 添加：房间不存在的处理
+        if (error.error?.includes('房间不存在') || error.error?.includes('不存在')) {
+          toast.add({
+            severity: 'warn',
+            summary: '房间已关闭',
+            detail: '房间已被删除或游戏已结束',
+            life: 3000
+          })
+          
+          // 清理房间信息
+          playerStore.clearRoom()
+          
+          // 3秒后跳转
+          setTimeout(() => {
+            router.push('/find')
+          }, 3000)
+        } else {
+          toast.add({
+            severity: 'error',
+            summary: '房间错误',
+            detail: error.error || '房间出现错误',
+            life: 3000
+          })
+        }
+      }
+    )
   
   subscriptions.value = subs
 }
@@ -447,36 +481,124 @@ const focusChatInput = () => {
   }, 100)
 }
 
+// 🔥 新增：处理重连中
+const handleReconnecting = (event) => {
+  console.log('🔄 GameView: WebSocket 重连中...', event.detail)
+  
+  toast.add({
+    severity: 'warn',
+    summary: '连接中断',
+    detail: `正在尝试重连... (${event.detail.attempts}/5)`,
+    life: 3000
+  })
+}
+
+// 🔥 新增：处理重连失败
+const handleMaxReconnectFailed = () => {
+  console.error('❌ GameView: WebSocket 重连失败')
+  
+  toast.add({
+    severity: 'error',
+    summary: '连接失败',
+    detail: '连接已断开，请刷新页面',
+    life: 0
+  })
+  
+  // 清除倒计时，避免误操作
+  clearCountdown()
+  
+  setTimeout(() => {
+    if (confirm('连接已断开，是否重新连接？')) {
+      window.location.reload()
+    } else {
+      router.push('/find')
+    }
+  }, 2000)
+}
+
+// 🔥 新增：刷新房间状态（重连后使用）
+const refreshRoomState = async () => {
+  try {
+    console.log('🔄 GameView: 刷新房间状态...')
+    const response = await getRoomStatus(roomCode.value)
+    const updatedRoom = response.data
+    
+    console.log('✅ GameView: 房间状态已刷新:', updatedRoom)
+    
+    // 更新房间数据
+    room.value = updatedRoom
+    question.value = updatedRoom.currentQuestion
+    playerStore.setRoom(updatedRoom)
+    
+    // 🔥 恢复倒计时
+    if (updatedRoom.questionStartTime) {
+      questionStartTime.value = new Date(updatedRoom.questionStartTime)
+      timeLimit.value = updatedRoom.timeLimit || 30
+      resetCountdown()
+    }
+    
+    // 🔥 检查游戏状态
+    if (updatedRoom.status === 'FINISHED' || updatedRoom.finished) {
+      toast.add({
+        severity: 'info',
+        summary: '游戏已结束',
+        detail: '正在跳转到结果页面...',
+        life: 2000
+      })
+      setTimeout(() => {
+        router.push(`/result/${roomCode.value}`)
+      }, 1000)
+    } else if (updatedRoom.status === 'WAITING') {
+      toast.add({
+        severity: 'info',
+        summary: '游戏未开始',
+        detail: '正在返回等待房间...',
+        life: 2000
+      })
+      setTimeout(() => {
+        router.push(`/wait/${roomCode.value}`)
+      }, 1000)
+    }
+    
+  } catch (error) {
+    console.error('❌ GameView: 刷新房间状态失败:', error)
+    // 不提示错误，因为订阅会自动更新
+  }
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
     
     <div class="max-w-7xl mx-auto">
-      <div class="grid gap-6"
-           :class="showChat ? 'lg:grid-cols-[1fr_400px]' : 'lg:grid-cols-1'">
+      <!-- 🔥 移动端：聊天改成底部弹出，不占用网格 -->
+      <div class="grid gap-4 sm:gap-6"
+           :class="showChat && !isMobile ? 'lg:grid-cols-[1fr_400px]' : 'lg:grid-cols-1'">
         
         <!-- 游戏主区域 -->
-        <div class="space-y-6">
+        <div class="space-y-4 sm:space-y-6">
           
           <!-- 顶部信息栏 -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-            <div class="flex items-center justify-between flex-wrap gap-4">
+          <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl 
+                      border border-gray-200 dark:border-gray-700 p-3 sm:p-5">
+            <div class="flex items-center justify-between flex-wrap gap-2 sm:gap-4">
               <!-- 左侧 -->
-              <div class="flex items-center gap-4 flex-wrap">
-                <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
+              <div class="flex items-center gap-2 sm:gap-4 flex-wrap">
+                <h1 class="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                   {{ roomCode }}
                 </h1>
-                <div class="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 
-                            text-blue-700 dark:text-blue-300 rounded-md text-sm font-medium">
+                <div class="px-2 sm:px-3 py-0.5 sm:py-1 
+                            bg-blue-50 dark:bg-blue-900/20 
+                            text-blue-700 dark:text-blue-300 
+                            rounded-md text-xs sm:text-sm font-medium">
                   {{ currentQuestionIndex }}/{{ totalQuestions }}
                 </div>
               </div>
               
               <!-- 右侧 -->
-              <div class="flex items-center gap-3 flex-wrap">
+              <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
                 <!-- 倒计时 -->
-                <div class="px-3 py-1 rounded-md font-semibold text-sm"
+                <div class="px-2 sm:px-3 py-0.5 sm:py-1 rounded-md font-semibold text-xs sm:text-sm"
                      :class="countdown <= 10 
                        ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400' 
                        : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'">
@@ -484,19 +606,21 @@ const focusChatInput = () => {
                 </div>
                 
                 <!-- 提交状态 -->
-                <div class="px-3 py-1 bg-gray-100 dark:bg-gray-700 
-                            text-gray-700 dark:text-gray-300 rounded-md text-sm">
+                <div class="px-2 sm:px-3 py-0.5 sm:py-1 
+                            bg-gray-100 dark:bg-gray-700 
+                            text-gray-700 dark:text-gray-300 
+                            rounded-md text-xs sm:text-sm">
                   {{ submittedPlayers }}/{{ totalPlayers }}
                 </div>
                 
                 <!-- 聊天切换 -->
                 <button 
                   @click="toggleChat"
-                  class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
                          rounded-lg transition-colors"
                 >
                   <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'" 
-                     class="text-gray-600 dark:text-gray-400"></i>
+                     class="text-sm sm:text-base text-gray-600 dark:text-gray-400"></i>
                 </button>
               </div>
             </div>
@@ -509,28 +633,32 @@ const focusChatInput = () => {
               :question="question"
               :disabled="hasSubmitted"
               @choose="handleChoose"
+              class="w-full"
             />
             
             <div v-else 
-                 class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
-              <i class="pi pi-spin pi-spinner text-4xl text-gray-400 mb-3"></i>
-              <p class="text-gray-600 dark:text-gray-400">等待下一题</p>
+                 class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl 
+                        border border-gray-200 dark:border-gray-700 
+                        p-8 sm:p-12 text-center w-full">
+              <i class="pi pi-spin pi-spinner text-3xl sm:text-4xl text-gray-400 mb-3"></i>
+              <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">等待下一题</p>
             </div>
           </div>
 
           <!-- 已提交提示 -->
           <transition name="fade">
             <div v-if="hasSubmitted" 
-                 class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50
-                        bg-green-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium">
+                 class="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50
+                        bg-green-600 text-white px-4 sm:px-5 py-2 sm:py-2.5 
+                        rounded-lg text-xs sm:text-sm font-medium shadow-lg">
                 已提交
             </div>
           </transition>
         </div>
 
-        <!-- 聊天区域 -->
+        <!-- 🔥 PC端聊天区域（大屏幕显示在右侧） -->
         <transition name="slide">
-          <div v-if="showChat">
+          <div v-if="showChat && !isMobile" class="hidden lg:block">
             <ChatRoom
               v-if="roomCode"
               :roomCode="roomCode"
@@ -541,6 +669,36 @@ const focusChatInput = () => {
         </transition>
       </div>
     </div>
+
+    <!-- 🔥 移动端聊天弹窗（底部弹出） -->
+    <transition name="slide-up">
+      <div v-if="showChat && isMobile"
+           class="fixed inset-x-0 bottom-0 z-50 lg:hidden
+                  bg-white dark:bg-gray-800 
+                  border-t border-gray-200 dark:border-gray-700
+                  rounded-t-2xl shadow-2xl
+                  max-h-[70vh] flex flex-col">
+        <!-- 拖动条 -->
+        <div class="flex justify-center py-2 border-b border-gray-200 dark:border-gray-700">
+          <div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+        </div>
+        
+        <ChatRoom
+          v-if="roomCode"
+          :roomCode="roomCode"
+          :playerId="playerStore.playerId"
+          :playerName="playerStore.playerName"
+          class="flex-1 overflow-hidden"
+        />
+      </div>
+    </transition>
+
+    <!-- 🔥 移动端遮罩层 -->
+    <transition name="fade">
+      <div v-if="showChat && isMobile"
+           @click="toggleChat"
+           class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
+    </transition>
   </div>
 </template>
 
@@ -558,5 +716,13 @@ const focusChatInput = () => {
 .slide-enter-from, .slide-leave-to {
   transform: translateX(100%);
   opacity: 0;
+}
+
+/* 🔥 新增：底部弹出动画 */
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
 }
 </style>

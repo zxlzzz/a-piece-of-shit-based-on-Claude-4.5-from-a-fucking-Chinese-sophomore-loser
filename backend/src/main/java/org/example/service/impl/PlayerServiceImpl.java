@@ -21,29 +21,6 @@ public class PlayerServiceImpl implements PlayerService {
     private final PlayerRepository playerRepository;
 
     /**
-     * 创建玩家
-     * @param playerId 玩家唯一标识（UUID）
-     * @param playerName 玩家昵称
-     */
-    @Override
-    @Transactional
-    public PlayerEntity createPlayer(String playerId, String playerName) {
-        // 检查 playerId 是否已存在
-        if (playerRepository.findByPlayerId(playerId).isPresent()) {
-            throw new BusinessException("玩家ID已存在");
-        }
-
-        PlayerEntity player = PlayerEntity.builder()
-                .playerId(playerId)
-                .name(playerName)
-                .ready(false)
-                .build();
-
-        log.info("创建玩家: playerId={}, name={}", playerId, playerName);
-        return playerRepository.save(player);
-    }
-
-    /**
      * 按 playerId 查询玩家
      */
     @Override

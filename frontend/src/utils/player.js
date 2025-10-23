@@ -1,24 +1,75 @@
 /**
- * 验证玩家名称
- * @param {string} name - 玩家名称
+ * 验证用户名（登录用）
+ * @param {string} username - 用户名
+ * @returns {Object} { valid: boolean, message: string }
+ */
+export function validateUsername(username) {
+  if (!username || typeof username !== 'string') {
+    return { valid: false, message: '请输入用户名' }
+  }
+  
+  const trimmed = username.trim()
+  
+  if (trimmed.length < 2) {
+    return { valid: false, message: '用户名至少需要2个字符' }
+  }
+  
+  if (trimmed.length > 20) {
+    return { valid: false, message: '用户名不能超过20个字符' }
+  }
+  
+  const validPattern = /^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/
+  if (!validPattern.test(trimmed)) {
+    return { valid: false, message: '用户名只能包含字母、数字、中文、下划线和连字符' }
+  }
+  
+  return { valid: true, message: '' }
+}
+
+/**
+ * 验证密码
+ * @param {string} password - 密码
+ * @returns {Object} { valid: boolean, message: string }
+ */
+export function validatePassword(password) {
+  if (!password || typeof password !== 'string') {
+    return { valid: false, message: '请输入密码' }
+  }
+  
+  if (password.length < 6) {
+    return { valid: false, message: '密码至少需要6位' }
+  }
+  
+  if (password.length > 20) {
+    return { valid: false, message: '密码不能超过20个字符' }
+  }
+  
+  return { valid: true, message: '' }
+}
+
+/**
+ * 验证玩家昵称（游戏内显示）
+ * @param {string} name - 玩家昵称
  * @returns {Object} { valid: boolean, message: string }
  */
 export function validatePlayerName(name) {
   if (!name || typeof name !== 'string') {
-    return { valid: false, message: '请输入玩家名称' }
+    return { valid: false, message: '请输入昵称' }
   }
   
-  if (name.length < 2) {
-    return { valid: false, message: '玩家名称至少需要2个字符' }
+  const trimmed = name.trim()
+  
+  if (trimmed.length < 2) {
+    return { valid: false, message: '昵称至少需要2个字符' }
   }
   
-  if (name.length > 20) {
-    return { valid: false, message: '玩家名称不能超过20个字符' }
+  if (trimmed.length > 20) {
+    return { valid: false, message: '昵称不能超过20个字符' }
   }
   
   const validPattern = /^[a-zA-Z0-9\u4e00-\u9fa5_-]+$/
-  if (!validPattern.test(name)) {
-    return { valid: false, message: '玩家名称只能包含字母、数字、中文、下划线和连字符' }
+  if (!validPattern.test(trimmed)) {
+    return { valid: false, message: '昵称只能包含字母、数字、中文、下划线和连字符' }
   }
   
   return { valid: true, message: '' }
@@ -53,10 +104,9 @@ export function generatePlayerColor(seed) {
     '#BB8FCE', '#85C1E9', '#F8C471', '#82E0AA'
   ]
   
-  // 🔥 防御性检查
   if (!seed || typeof seed !== 'string') {
     console.warn('⚠️ generatePlayerColor: seed 无效，使用默认颜色', seed)
-    return colors[0] // 返回默认颜色
+    return colors[0]
   }
   
   let hash = 0
@@ -68,23 +118,12 @@ export function generatePlayerColor(seed) {
   return colors[index]
 }
 
-
-/**
- * 生成唯一的玩家 ID（UUID v4 简化版）
- * @returns {string} 格式：xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
- */
-export function generatePlayerId() {
-  // 简化版 UUID v4
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0
-    const v = c === 'x' ? r : (r & 0x3) | 0x8
-    return v.toString(16)
-  })
-}
+// ❌ 删除 generatePlayerId（后端自动生成UUID）
 
 export default {
+  validateUsername,
+  validatePassword,
   validatePlayerName,
   validateRoomCode,
-  generatePlayerColor,
-  generatePlayerId
+  generatePlayerColor
 }

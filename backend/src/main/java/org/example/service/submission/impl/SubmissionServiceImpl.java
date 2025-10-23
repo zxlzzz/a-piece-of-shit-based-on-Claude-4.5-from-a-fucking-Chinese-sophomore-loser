@@ -88,12 +88,13 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Override
     @Transactional
     public void fillDefaultAnswers(GameRoom gameRoom) {
-        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();  // ✅ DTO
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
+            log.warn("⚠️ 当前题目为空，无法填充默认答案");
             return;
         }
 
-        // 🔥 查询 Entity
+        // 查询 Entity
         QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
                 .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
 
@@ -103,30 +104,49 @@ public class SubmissionServiceImpl implements SubmissionService {
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
 
+        // 🔥 修改：遍历所有玩家（包括断线的）
         for (PlayerDTO player : gameRoom.getPlayers()) {
-            if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(player.getPlayerId())) {
+            String playerId = player.getPlayerId();
+
+            // 🔥 检查是否已提交
+            if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(playerId)) {
+
+                // 获取默认答案
                 String defaultChoice = currentQuestion.getDefaultChoice() != null
                         ? currentQuestion.getDefaultChoice()
                         : "4";
 
-                PlayerEntity playerEntity = playerRepository.findByPlayerId(player.getPlayerId())
-                        .orElseThrow(() -> new BusinessException("玩家不存在: " + player.getPlayerId()));
+                PlayerEntity playerEntity = playerRepository.findByPlayerId(playerId)
+                        .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
+                // 保存到数据库
                 SubmissionEntity submission = SubmissionEntity.builder()
                         .player(playerEntity)
-                        .question(questionEntity)  // ✅ 使用 Entity
+                        .question(questionEntity)
                         .game(game)
                         .choice(defaultChoice)
                         .build();
 
                 submissionRepository.save(submission);
 
+                // 保存到内存
                 gameRoom.getSubmissions()
                         .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
-                        .put(player.getPlayerId(), defaultChoice);
+                        .put(playerId, defaultChoice);
 
-                log.info("玩家 {} 超时，填充默认答案: {}", player.getName(), defaultChoice);
+                // 🔥 添加：标记玩家状态
+                boolean isDisconnected = gameRoom.getDisconnectedPlayers().containsKey(playerId);
+                log.info("📝 为玩家 {} 填充默认答案: {} {}",
+                        player.getName(),
+                        defaultChoice,
+                        isDisconnected ? "(断线)" : "(超时)");
             }
+        }
+
+        // 🔥 添加：日志统计
+        int filledCount = gameRoom.getPlayers().size() - (currentRoundSubmissions != null ? currentRoundSubmissions.size() : 0);
+        if (filledCount > 0) {
+            log.info("✅ 已为 {} 个玩家填充默认答案", filledCount);
         }
     }
 

@@ -18,7 +18,7 @@ const refreshing = ref(false)
 
 // 初始化
 onMounted(async () => {
-  // 🔥 改用 Pinia
+  // 检查登录状态
   if (!playerStore.isLoggedIn) {
     toast.add({
       severity: 'warn',
@@ -32,16 +32,22 @@ onMounted(async () => {
 
   await loadActiveRooms()
   
-  // 🔥 统一用 playerStore 加载房间
+  // 🔥 改进：尝试恢复房间，失败则自动清理
   const savedRoom = playerStore.loadRoom()
   if (savedRoom) {
     try {
       const response = await getRoomStatus(savedRoom.roomCode)
       currentRoom.value = response.data
-      // 🔥 更新到 playerStore
       playerStore.setRoom(response.data)
     } catch (error) {
-      console.log('房间已失效，清除本地存储')
+      // 🔥 静默处理404错误，不显示弹窗
+      if (error.response?.status === 404) {
+        console.log('房间已失效，自动清除缓存')
+      } else {
+        // 其他错误才提示
+        console.error('获取房间状态失败:', error)
+      }
+      // 清理失效的房间数据
       playerStore.clearRoom()
       currentRoom.value = null
     }
@@ -168,28 +174,28 @@ const handleLogout = () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-4 sm:py-8 px-3 sm:px-4">
     <div class="max-w-6xl mx-auto">
       
       <!-- 用户信息卡片 -->
       <div v-if="playerStore.isLoggedIn" 
-          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-8
+          class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-8
                   border border-gray-100 dark:border-gray-700">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-4">
+        <div class="flex items-center justify-between flex-wrap gap-3 sm:gap-0">
+          <div class="flex items-center gap-3 sm:gap-4">
             <!-- 用户头像 -->
-            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 
-                        flex items-center justify-center text-white font-bold text-xl">
+            <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-full text-lg sm:text-xl bg-gradient-to-br from-blue-500 to-purple-600 
+                        flex items-center justify-center text-white font-bold">
               {{ playerStore.playerName?.charAt(0).toUpperCase() || '?' }}
             </div>
             
             <!-- 用户信息 -->
             <div>
-              <p class="text-lg font-semibold text-gray-800 dark:text-white">
+              <p class="text-base sm:text-lg font-semibold text-gray-800 dark:text-white">
                 {{ playerStore.playerName || '未知用户' }}
               </p>
-              <p class="text-sm text-gray-500 dark:text-gray-400">
-                ID: {{ playerStore.playerId || '-' }}
+              <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                ID: {{ playerStore.userId || '-' }}
               </p>
             </div>
           </div>
@@ -197,23 +203,24 @@ const handleLogout = () => {
           <!-- 退出按钮 -->
           <button 
             @click="handleLogout"
-            class="px-4 py-2 text-sm font-medium
+            class="px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium
                   text-gray-700 dark:text-gray-300
                   hover:bg-gray-100 dark:hover:bg-gray-700
                   rounded-lg transition-colors
                   flex items-center gap-2"
           >
             <i class="pi pi-sign-out"></i>
-            退出登录
+            <span class="hidden sm:inline">退出登录</span>
+            <span class="sm:hidden">退出</span>
           </button>
         </div>
       </div>
 
       <!-- 主要内容区 -->
-      <div class="grid lg:grid-cols-3 gap-6">
+      <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
         
         <!-- 左侧：创建房间 + 当前房间 -->
-        <div class="lg:col-span-1 space-y-6">
+        <div class="lg:col-span-1 space-y-4 sm:space-y-6">
           <!-- 创建房间卡片 -->
           <CreateRoomCard @create="handleCreate" :loading="loading" />
 
@@ -230,7 +237,7 @@ const handleLogout = () => {
         <!-- 右侧：活跃房间列表 -->
         <div class="lg:col-span-2">
           <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm 
-                      border border-gray-100 dark:border-gray-700 p-6">
+                      border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             
             <!-- 标题栏 -->
             <div class="flex items-center justify-between mb-6">
@@ -256,19 +263,19 @@ const handleLogout = () => {
 
             <!-- 房间列表 -->
             <div v-if="activeRooms.length > 0" 
-                 class="grid md:grid-cols-2 gap-4">
+                 class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div
                 v-for="room in activeRooms"
                 :key="room.roomCode"
-                class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4
+                class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 sm:p-4
                        border border-gray-200 dark:border-gray-600
                        hover:border-blue-300 dark:hover:border-blue-600
                        transition-all duration-200 group"
               >
                 <!-- 房间头部 -->
-                <div class="flex justify-between items-start mb-3">
+                <div class="flex justify-between items-start mb-2 sm:mb-3">
                   <div>
-                    <h3 class="font-bold text-lg text-gray-800 dark:text-white">
+                    <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white">
                       {{ room.roomCode }}
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
@@ -300,7 +307,7 @@ const handleLogout = () => {
                   :disabled="room.status !== 'WAITING' || 
                             room.currentPlayers >= room.maxPlayers || 
                             loading"
-                  class="w-full px-4 py-2.5 rounded-lg font-medium
+                  class="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium
                          bg-blue-500 hover:bg-blue-600 
                          text-white transition-colors
                          disabled:opacity-50 disabled:cursor-not-allowed
@@ -315,9 +322,9 @@ const handleLogout = () => {
             </div>
 
             <!-- 空状态 -->
-            <div v-else class="text-center py-12">
-              <i class="pi pi-inbox text-6xl text-gray-300 dark:text-gray-600 mb-4"></i>
-              <p class="text-gray-500 dark:text-gray-400">
+            <div v-else class="text-center py-8 sm:py-12">
+              <i class="pi pi-inbox text-4xl sm:text-6xl text-gray-300 dark:text-gray-600 mb-3 sm:mb-4"></i>
+              <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400">
                 暂无活跃房间，创建一个开始游戏吧！
               </p>
             </div>

@@ -12,13 +12,10 @@ import org.example.entity.RoomEntity;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.pojo.RoomStatus;
-import org.example.repository.BidQuestionConfigRepository;
-import org.example.repository.ChoiceQuestionConfigRepository;
 import org.example.repository.PlayerRepository;
 import org.example.repository.RoomRepository;
 import org.example.service.cache.RoomCache;
 import org.example.service.room.RoomLifecycleService;
-import org.example.utils.DTOConverter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,9 +36,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     private final PlayerRepository playerRepository;
     private final RoomCache roomCache;
     private final ObjectMapper objectMapper;
-    private final ChoiceQuestionConfigRepository choiceConfigRepository;
-    private final BidQuestionConfigRepository bidConfigRepository;
-    private final DTOConverter dtoConverter;
 
     @Override
     @Transactional
@@ -103,20 +97,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     .anyMatch(p -> p.getPlayerId().equals(playerId));
 
             if (!playerExists) {
+                // 🔥 修改：必须从数据库查找已登录的玩家
                 PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                        .orElse(null);
+                        .orElseThrow(() -> new BusinessException("玩家不存在，请先登录"));
 
-                if (player == null) {
-                    player = PlayerEntity.builder()
-                            .playerId(playerId)
-                            .name(playerName)
-                            .ready(false)
-                            .room(room)
-                            .build();
-                } else {
-                    player.setRoom(room);
-                    player.setReady(false);
-                }
+                // 🔥 改：直接设置房间和准备状态
+                player.setRoom(room);
+                player.setReady(false);
+
                 playerRepository.save(player);
 
                 PlayerDTO playerDTO = PlayerDTO.builder()
@@ -187,12 +175,19 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         .count();
 
                 if (connectedCount == 0) {
-                    // 所有人都离开，解散房间
-                    roomCache.remove(roomCode);
-                    room.setStatus(RoomStatus.FINISHED);
-                    roomRepository.save(room);
-                    log.info("🏠 所有玩家离开，房间 {} 已解散", roomCode);
-                    return false; // 房间已解散
+                    // 🔥 改：游戏进行中时不立即删除，给重连时间
+                    if (gameRoom.isStarted() && !gameRoom.isFinished()) {
+                        log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
+                        // 不删除房间，保留5分钟
+                        return true; // 房间仍存在
+                    } else {
+                        // 游戏未开始或已结束，可以删除
+                        roomCache.remove(roomCode);
+                        room.setStatus(RoomStatus.FINISHED);
+                        roomRepository.save(room);
+                        log.info("🏠 所有玩家离开，房间 {} 已解散", roomCode);
+                        return false; // 房间已解散
+                    }
                 }
             }
 
@@ -201,17 +196,32 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     }
 
     @Override
+    @Transactional
     public void handleReconnect(String roomCode, String playerId) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (getInternedRoomCode(roomCode)) {
-            if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
-                gameRoom.getDisconnectedPlayers().remove(playerId);
+            LocalDateTime disconnectTime = gameRoom.getDisconnectedPlayers().remove(playerId);
+
+            if (disconnectTime != null) {
+                long offlineSeconds = java.time.Duration.between(disconnectTime, LocalDateTime.now()).getSeconds();
 
                 gameRoom.getPlayers().stream()
                         .filter(p -> p.getPlayerId().equals(playerId))
                         .findFirst()
-                        .ifPresent(player -> log.info("🔄 玩家 {} 重新连接到房间 {}", player.getName(), roomCode));
+                        .ifPresent(player ->
+                                log.info("✅ 玩家 {} 重连房间 {}，离线时长: {}秒",
+                                        player.getName(), roomCode, offlineSeconds)
+                        );
+
+                // 🔥 添加：如果游戏已结束，重连时重置房间过期时间
+                if (gameRoom.isFinished()) {
+                    // 给房间续期（重新计时5分钟）
+                    log.info("🔄 玩家重连，房间 {} 延长存活时间", roomCode);
+                    // 这里可以通过 RoomCache 添加续期机制
+                }
+            } else {
+                log.warn("⚠️ 玩家 {} 重连房间 {}，但未找到断线记录", playerId, roomCode);
             }
         }
     }
@@ -295,6 +305,100 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .orElseThrow(() -> new BusinessException("房间不存在"));
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
         return toRoomDTO(roomEntity, gameRoom);
+    }
+
+    @Transactional
+    @Override
+    public void handlePlayerDisconnect(String roomCode, String playerId) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            log.warn("⚠️ 房间 {} 不存在，跳过断线处理", roomCode);
+            return;
+        }
+
+        synchronized (getInternedRoomCode(roomCode)) {
+            // 🔥 标记断线时间
+            gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
+
+            String playerName = gameRoom.getPlayers().stream()
+                    .filter(p -> p.getPlayerId().equals(playerId))
+                    .map(PlayerDTO::getName)
+                    .findFirst()
+                    .orElse("未知玩家");
+
+            log.info("⚠️ 玩家 {} ({}) 从房间 {} 断开连接", playerName, playerId, roomCode);
+
+            // 🔥 如果游戏进行中且所有玩家都断线，自动推进
+            if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
+                boolean allDisconnected = gameRoom.getPlayers().stream()
+                        .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
+
+                if (allDisconnected) {
+                    log.warn("❌ 房间 {} 所有玩家都断开连接", roomCode);
+                    // 注意：不在这里调用 advanceQuestion，由 GameFlowService 处理
+                }
+            }
+        }
+    }
+
+    @Override
+    @Transactional
+    public void removeDisconnectedPlayer(String roomCode, String playerId) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            log.warn("⚠️ 房间 {} 不存在，跳过移除操作", roomCode);
+            return;
+        }
+
+        synchronized (getInternedRoomCode(roomCode)) {
+            // 🔥 添加：如果游戏进行中，不移除玩家，只保持断线状态
+            if (gameRoom.isStarted() && !gameRoom.isFinished()) {
+                log.info("⚠️ 玩家 {} 在游戏中断线，保留玩家数据，游戏结束后再移除", playerId);
+                // 不执行移除操作，保持在 disconnectedPlayers 列表中
+                return;
+            }
+
+            // 🔥 只有在游戏未开始或已结束时才真正移除
+
+            // 从断线列表移除
+            gameRoom.getDisconnectedPlayers().remove(playerId);
+
+            // 从玩家列表移除
+            PlayerDTO removedPlayer = gameRoom.getPlayers().stream()
+                    .filter(p -> p.getPlayerId().equals(playerId))
+                    .findFirst()
+                    .orElse(null);
+
+            if (removedPlayer != null) {
+                gameRoom.getPlayers().remove(removedPlayer);
+                log.info("👋 玩家 {} 超时未重连，已从房间 {} 移除", removedPlayer.getName(), roomCode);
+            }
+
+            // 清理分数
+            gameRoom.getScores().remove(playerId);
+
+            // 清理玩家状态
+            gameRoom.getPlayerGameStates().remove(playerId);
+
+            // 更新数据库
+            PlayerEntity player = playerRepository.findByPlayerId(playerId).orElse(null);
+            if (player != null) {
+                player.setRoom(null);
+                player.setReady(false);
+                playerRepository.save(player);
+            }
+
+            // 检查是否房间为空
+            if (gameRoom.getPlayers().isEmpty()) {
+                log.warn("🏠 房间 {} 所有玩家都已离开，准备解散", roomCode);
+                RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
+                if (room != null) {
+                    room.setStatus(RoomStatus.FINISHED);
+                    roomRepository.save(room);
+                }
+                roomCache.remove(roomCode);
+            }
+        }
     }
 
     private RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom) {

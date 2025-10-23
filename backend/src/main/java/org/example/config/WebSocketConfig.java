@@ -3,6 +3,7 @@ package org.example.config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -10,6 +11,8 @@ import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.config.annotation.*;
 
@@ -43,16 +46,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // 配置客户端入站通道，可以添加拦截器
         registration.interceptors(new WebSocketChannelInterceptor());
+
+        // 🔥 添加线程池配置
+        registration.taskExecutor()
+                .corePoolSize(8)
+                .maxPoolSize(16)
+                .queueCapacity(1000);
     }
 
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
-        // 配置客户端出站通道
         registration.taskExecutor()
-                .corePoolSize(4)
-                .maxPoolSize(8);
+                .corePoolSize(8)      // 🔥 增加到8
+                .maxPoolSize(16)      // 🔥 增加到16
+                .queueCapacity(1000); // 🔥 添加队列容量
     }
 
     // WebSocket通道拦截器，用于处理连接和断开事件
@@ -90,6 +98,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
             return message;
         }
+    }
+
+    @Bean
+    public TaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(2);
+        scheduler.setThreadNamePrefix("websocket-heartbeat-");
+        scheduler.initialize();
+        return scheduler;
     }
 
     // 简单的Principal实现，用于标识WebSocket用户

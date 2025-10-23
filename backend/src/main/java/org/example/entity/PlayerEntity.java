@@ -21,38 +21,39 @@ public class PlayerEntity {
     private Long id;
 
     @Column(unique = true, nullable = false)
-    private String playerId;  // ✅ 你新加的
+    private String playerId;  // UUID，游戏逻辑用
+
+    // ========== 新增字段 ==========
+    @Column(unique = true, nullable = false)
+    private String username;  // 用户名（登录用，唯一）
 
     @Column(nullable = false)
-    private String name;
+    private String password;  // 密码（BCrypt加密）
+    // =============================
+
+    @Column(nullable = false)
+    private String name;  // 游戏昵称（可重复）
 
     private Boolean ready;
 
-    // ✅ 多对一：玩家 -> 房间
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
-    private RoomEntity room;  // ❌ 不加cascade，防止删除玩家时误删房间
+    private RoomEntity room;
 
-    // ✅ 一对多：玩家 -> 参与的游戏
     @OneToMany(mappedBy = "player",
-            cascade = CascadeType.ALL,   // 删除玩家时删除参与记录
+            cascade = CascadeType.ALL,
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     private List<PlayerGameEntity> playerGames = new ArrayList<>();
 
-    // ✅ 一对多：玩家 -> 提交记录
-    // 这里有两种选择：
-
-    //删除玩家时保留历史提交（推荐）
     @OneToMany(mappedBy = "player", fetch = FetchType.LAZY)
     private List<SubmissionEntity> submissions = new ArrayList<>();
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;  // 创建时间
+    private LocalDateTime createdAt;
 
     @UpdateTimestamp
     @Column(nullable = false)
-    private LocalDateTime updatedAt;  // 更新时间
+    private LocalDateTime updatedAt;
 }
-

@@ -8,8 +8,6 @@ import java.util.Optional;
 
 public interface PlayerService {
 
-    PlayerEntity createPlayer(String playerId, String playerName);
-
     Optional<PlayerEntity> getPlayerByPlayerId(String playerId);
 
     PlayerEntity updatePlayerReady(String playerId, boolean ready);

@@ -19,10 +19,13 @@ import org.example.service.scoring.ScoringResult;
 import org.example.service.scoring.ScoringService;
 import org.example.service.submission.SubmissionService;
 import org.example.service.timer.QuestionTimerService;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;

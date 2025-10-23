@@ -10,5 +10,6 @@ declare module 'vue' {
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Toast: typeof import('primevue/toast')['default']
+    WebSocketStatus: typeof import('./src/components/WebSocketStatus.vue')['default']
   }
 }

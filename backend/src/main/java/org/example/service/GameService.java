@@ -7,6 +7,7 @@ import org.example.entity.GameResultEntity;
 import org.example.entity.PlayerGameEntity;
 import org.example.dto.GameHistoryDTO;
 import org.example.dto.RoomDTO;
+import org.example.pojo.GameRoom;
 
 import java.util.List;
 
@@ -48,6 +49,10 @@ public interface GameService {
 
     GameHistoryDTO getGameHistoryByRoomCode(String roomCode);
 
+    void removeDisconnectedPlayer(String roomCode, String playerId);
+
+    GameRoom getGameRoom(String roomCode);
+
     /**
      * 移除房间
      */
@@ -59,12 +64,6 @@ public interface GameService {
      * 玩家主动离开房间
      */
     RoomDTO leaveRoom(String roomCode, String playerId);
-
-    /**
-     * 玩家重连
-     */
-    RoomDTO reconnectRoom(String roomCode, String playerId);
-
     /**
      * 处理玩家断线
      */
@@ -79,6 +78,7 @@ public interface GameService {
      * 获取单场游戏的详细历史（委托给 GameHistoryService）
      */
     GameHistoryDTO getHistoryDetail(Long gameId);
+
 
 }
 

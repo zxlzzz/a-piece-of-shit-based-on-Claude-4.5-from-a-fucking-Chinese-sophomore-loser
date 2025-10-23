@@ -14,11 +14,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create
-    show-sql: false  # ✅ 关闭SQL日志
+    show-sql: false
     properties:
       hibernate.format_sql: false
-      hibernate.dialect: org.hibernate.dialect.MySQLDialect  # ✅ 用新的方言
-    open-in-view: false  # ✅ 关闭懒加载警告
+      hibernate.dialect: org.hibernate.dialect.MySQLDialect
+    open-in-view: false
 
   # Redis配置
   data:
@@ -59,8 +59,13 @@ server:
 logging:
   level:
     root: INFO
-    org.example: INFO  # ✅ 你的应用日志
+    org.example: INFO
     org.hibernate: WARN
     org.springframework: WARN
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+
+# JWT配置
+jwt:
+  secret: my-super-secret-jwt-key-for-game-application-2024
+  expiration: 86400000

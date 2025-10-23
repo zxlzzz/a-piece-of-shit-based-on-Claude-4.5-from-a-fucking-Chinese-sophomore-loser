@@ -4,6 +4,10 @@ let stompClient = null;
 let connected = false;
 let currentPlayerId = null;
 let connectPromise = null;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const BASE_RECONNECT_DELAY = 1000; // 1秒
+let reconnectTimer = null;
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -68,18 +72,15 @@ export function connect(playerId, onConnect, onError) {
         'playerId': playerId
       },
       
-      reconnectDelay: 5000,
-      heartbeatIncoming: 4000,
-      heartbeatOutgoing: 4000,
-      
-      debug: (str) => {
-        console.log('🔍 STOMP Debug:', str);
-      },
+      reconnectDelay: 3000,
+      heartbeatIncoming: 0,  // 🔥 30秒（与后端一致）
+      heartbeatOutgoing: 0,  // 🔥 30秒（与后端一致）
       
       onConnect: (frame) => {
         clearTimeout(timeoutId); // 🔥 清除超时
         connected = true;
         connectPromise = null;
+        reconnectAttempts = 0;
         console.log("✅ STOMP connected for playerId:", playerId);
         console.log("📋 Connection frame:", frame);
         
@@ -94,6 +95,20 @@ export function connect(playerId, onConnect, onError) {
         connected = false;
         connectPromise = null;
         console.warn("⚠️ STOMP disconnected");
+        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
+          reconnectAttempts++;
+          console.log(`🔄 将在 ${delay}ms 后重连 (尝试 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
+          
+          reconnectTimer = setTimeout(() => {
+            reconnect().catch(err => {
+              console.error('重连失败:', err);
+            });
+          }, delay);
+        } else {
+          console.error('❌ 已达到最大重连次数，停止重连');
+          window.dispatchEvent(new CustomEvent('websocket-max-reconnect-failed'));
+        }
       },
       
       onStompError: (frame) => {
@@ -159,6 +174,10 @@ function subscribeToPersonalMessages(playerId) {
  * @param {boolean} force - 是否强制清理所有状态
  */
 export function disconnect(force = false) {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (stompClient) {
     try {
       stompClient.deactivate();
@@ -371,6 +390,9 @@ export function getCurrentPlayerId() {
 export function reconnect() {
   if (currentPlayerId) {
     console.log("🔄 尝试重新连接...");
+    window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
+      detail: { attempts: reconnectAttempts }
+    }));
     return connect(currentPlayerId);
   } else {
     console.error("❌ 无法重新连接：没有保存的玩家ID");
@@ -392,6 +414,15 @@ export function sendMessage(destination, message) {
   });
 }
 
+export function getConnectionState() {
+  return {
+    connected,
+    reconnectAttempts,
+    maxAttempts: MAX_RECONNECT_ATTEMPTS,
+    playerId: currentPlayerId
+  };
+}
+
 export default {
   connect,
   disconnect,
@@ -407,5 +438,6 @@ export default {
   isConnected,
   getCurrentPlayerId,
   getStompClient,
-  sendMessage
+  sendMessage,
+  getConnectionState
 };

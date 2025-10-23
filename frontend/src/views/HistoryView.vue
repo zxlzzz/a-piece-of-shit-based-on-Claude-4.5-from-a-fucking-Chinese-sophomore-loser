@@ -219,6 +219,9 @@ onMounted(() => {
       :dismissableMask="true"
       class="w-full max-w-5xl m-4"
       @hide="closeDetail"
+      :pt="{
+        content: { class: 'bg-gray-50 dark:bg-gray-900' }
+      }"
     >
       <template #header>
         <div class="border-b border-gray-200 dark:border-gray-700 pb-3">

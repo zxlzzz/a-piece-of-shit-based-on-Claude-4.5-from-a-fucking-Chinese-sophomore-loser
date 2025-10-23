@@ -1,8 +1,7 @@
 <script setup>
-import { disconnect } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, onUnmounted } from 'vue'
-
+import WebSocketStatus from './components/WebSocketStatus.vue'
 const toast = useToast()
 
 // 监听 API 错误（api.js 触发的）
@@ -59,10 +58,6 @@ const handleWelcome = (event) => {
 }
 
 onMounted(() => {
-  const handleBeforeUnload = () => {
-    console.log('🔄 页面即将刷新/关闭，断开 WebSocket')
-    disconnect()
-  }
   // 注册全局事件监听
   window.addEventListener('api-error', handleApiError)
   window.addEventListener('websocket-error', handleWebSocketError)
@@ -101,6 +96,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <WebSocketStatus />
   <Toast />
   <router-view />
 </template>

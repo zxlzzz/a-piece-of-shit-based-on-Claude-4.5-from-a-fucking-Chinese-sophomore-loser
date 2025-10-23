@@ -2,35 +2,51 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 export const usePlayerStore = defineStore('player', () => {
+  
+  const userId = ref(localStorage.getItem('userId') || null)
+  const token = ref(localStorage.getItem('token') || null)
   const playerId = ref(localStorage.getItem('playerId') || null)
   const playerName = ref(localStorage.getItem('playerName') || null)
+  const username = ref(localStorage.getItem('username') || null) // 🔥 新增用户名
   const currentRoomCode = ref(null)
-  const currentRoom = ref(null) // 🔥 新增：完整房间数据
+  const currentRoom = ref(null)
   
-  const isLoggedIn = computed(() => !!playerId.value)
+  const isLoggedIn = computed(() => !!token.value && !!playerId.value)
   
-  function setPlayer(id, name) {
-    playerId.value = String(id)
-    playerName.value = name
-    localStorage.setItem('playerId', id)
-    localStorage.setItem('playerName', name)
+  // 🔥 修改：登录时保存完整信息（包括 token 和 username）
+  function setPlayer(authData) {
+    token.value = authData.token
+    playerId.value = authData.playerId  // UUID（用于API调用）
+    userId.value = authData.id          // 🔥 新增：自增ID（用于显示）
+    playerName.value = authData.name
+    username.value = authData.username
+    
+    localStorage.setItem('token', authData.token)
+    localStorage.setItem('playerId', authData.playerId)
+    localStorage.setItem('userId', authData.id)  // 🔥 新增
+    localStorage.setItem('playerName', authData.name)
+    localStorage.setItem('username', authData.username)
   }
   
   function clearPlayer() {
+    token.value = null
     playerId.value = null
     playerName.value = null
+    username.value = null
     currentRoomCode.value = null
-    currentRoom.value = null // 🔥 新增
+    currentRoom.value = null
+    
+    localStorage.removeItem('token')
     localStorage.removeItem('playerId')
     localStorage.removeItem('playerName')
-    localStorage.removeItem('currentRoom') // 🔥 新增
+    localStorage.removeItem('username')
+    localStorage.removeItem('currentRoom')
   }
   
   function setRoom(roomData) {
     currentRoomCode.value = roomData.roomCode
     currentRoom.value = roomData
     
-    // 🔥 添加保存时间戳
     const roomWithTimestamp = {
       ...roomData,
       _savedAt: Date.now()
@@ -45,29 +61,40 @@ export const usePlayerStore = defineStore('player', () => {
     localStorage.removeItem('currentRoom')
   }
   
-  // 🔥 新增：恢复房间数据
   function loadRoom() {
-    try {
-      const saved = localStorage.getItem('currentRoom')
-      if (saved) {
-        const roomData = JSON.parse(saved)
-        currentRoomCode.value = roomData.roomCode
-        currentRoom.value = roomData
-        return roomData
+  try {
+    const saved = localStorage.getItem('currentRoom')
+    if (saved) {
+      const roomData = JSON.parse(saved)
+      
+      // 🔥 检查房间是否过期（例如2小时）
+      const TWO_HOURS = 2 * 60 * 60 * 1000
+      if (roomData._savedAt && (Date.now() - roomData._savedAt > TWO_HOURS)) {
+        console.log('房间缓存已过期，自动清除')
+        clearRoom()
+        return null
       }
-    } catch (error) {
-      console.error('恢复房间数据失败:', error)
-      clearRoom()
+      
+      currentRoomCode.value = roomData.roomCode
+      currentRoom.value = roomData
+      return roomData
     }
-    return null
+  } catch (error) {
+    console.error('恢复房间数据失败:', error)
+    clearRoom()
   }
+  return null
+}
   
   return {
+    token,
     playerId,
     playerName,
+    username,
     currentRoomCode,
     currentRoom,
     isLoggedIn,
+    userId,
     setPlayer,
     clearPlayer,
     setRoom,

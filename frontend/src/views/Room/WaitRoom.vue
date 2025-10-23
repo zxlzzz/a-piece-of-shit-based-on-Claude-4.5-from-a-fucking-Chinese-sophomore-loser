@@ -1,5 +1,5 @@
 <script setup>
-import { updateRoomSettings } from '@/api'
+import { updateRoomSettings, getRoomStatus } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { generatePlayerColor } from '@/utils/player'
 import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
@@ -83,6 +83,8 @@ onMounted(async () => {
   // 🔥 监听 WebSocket 错误事件
   window.addEventListener('room-deleted', handleRoomDeleted)
   window.addEventListener('websocket-error', handleWebSocketError)
+  window.addEventListener('websocket-reconnecting', handleReconnecting)
+  window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
   
   // 开始连接
   await connectWebSocket()
@@ -91,6 +93,8 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('room-deleted', handleRoomDeleted)
   window.removeEventListener('websocket-error', handleWebSocketError)
+  window.removeEventListener('websocket-reconnecting', handleReconnecting)
+  window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
   
   if (subscriptions.value.length > 0) {
     unsubscribeAll(subscriptions.value)
@@ -114,6 +118,40 @@ const handleRoomDeleted = (event) => {
 const handleWebSocketError = (event) => {
   console.error('🔥 WaitRoom 收到 WebSocket 错误:', event.detail)
   wsConnected.value = false
+}
+
+const handleReconnecting = (event) => {
+  console.log('🔄 WebSocket 重连中...', event.detail)
+  wsConnected.value = false
+  
+  toast.add({
+    severity: 'warn',
+    summary: '连接中断',
+    detail: `正在尝试重连... (${event.detail.attempts}/5)`,
+    life: 3000
+  })
+}
+
+// 🔥 新增：处理重连失败
+const handleMaxReconnectFailed = () => {
+  console.error('❌ WebSocket 重连失败，已达到最大次数')
+  wsConnected.value = false
+  
+  toast.add({
+    severity: 'error',
+    summary: '连接失败',
+    detail: '连接已断开，请刷新页面',
+    life: 0 // 不自动消失
+  })
+  
+  // 给用户选择
+  setTimeout(() => {
+    if (confirm('连接已断开，是否重新连接？')) {
+      window.location.reload()
+    } else {
+      router.push('/find')
+    }
+  }, 2000)
 }
 
 const connectWebSocket = async () => {
@@ -186,6 +224,8 @@ const connectWebSocket = async () => {
   
   // 连接成功后，开始订阅
   setupRoomSubscription()
+
+  await refreshRoomState()
 }
 
 // 🔥 提取订阅逻辑
@@ -391,47 +431,75 @@ const handleCustomFormSubmit = async (formData) => {
 const handleCustomFormCancel = () => {
   showCustomForm.value = false
 }
+// 🔥 新增：刷新房间状态（重连后使用）
+const refreshRoomState = async () => {
+  try {
+    console.log('🔄 刷新房间状态...')
+    const response = await getRoomStatus(roomCode.value)
+    room.value = response.data
+    playerStore.setRoom(response.data)
+    
+    console.log('✅ 房间状态已刷新:', room.value)
+    
+    // 🔥 如果游戏已开始，跳转到游戏页面
+    if (room.value.status === 'PLAYING') {
+      toast.add({
+        severity: 'info',
+        summary: '游戏进行中',
+        detail: '正在进入游戏...',
+        life: 2000
+      })
+      router.push(`/game/${roomCode.value}`)
+    }
+  } catch (error) {
+    console.error('刷新房间状态失败:', error)
+    // 不提示错误，因为订阅会自动更新
+  }
+}
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
     
     <!-- 连接状态 -->
-    <div class="fixed top-6 right-6 z-50">
-      <div class="px-3 py-1.5 rounded-full text-xs font-medium border"
+    <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">
+      <div class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium border"
            :class="wsConnected 
              ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' 
              : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'">
         <i :class="wsConnected ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
-        {{ wsConnected ? '已连接' : '连接中' }}
+        <span class="hidden sm:inline ml-1">
+          {{ wsConnected ? '已连接' : '连接中' }}
+        </span>
       </div>
     </div>
 
     <!-- 主容器 -->
     <div class="max-w-7xl mx-auto">
-      <div class="grid lg:grid-cols-3 gap-6">
+      <!-- 🔥 改：移动端单列，大屏幕3列布局 -->
+      <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
         
         <!-- 左侧：房间信息 + 玩家列表 -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
           
           <!-- 房间头部 -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8">
+          <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
             <div class="text-center">
-              <div class="flex items-center justify-center gap-3 mb-3">
-                <h1 class="text-3xl font-semibold text-gray-900 dark:text-white">
+              <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
                   {{ roomCode }}
                 </h1>
                 <button 
                   @click="copyRoomCode"
-                  class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
                          rounded-lg transition-colors"
                   title="复制房间码"
                 >
-                  <i class="pi pi-copy text-gray-500 dark:text-gray-400"></i>
+                  <i class="pi pi-copy text-sm sm:text-base text-gray-500 dark:text-gray-400"></i>
                 </button>
               </div>
               
-              <div v-if="room" class="flex items-center justify-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+              <div v-if="room" class="flex items-center justify-center gap-3 sm:gap-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                 <span class="flex items-center gap-1.5">
                   <i class="pi pi-users"></i>
                   {{ room.currentPlayers }}/{{ room.maxPlayers }}
@@ -447,33 +515,62 @@ const handleCustomFormCancel = () => {
             </div>
 
             <!-- 游戏信息 -->
-            <div v-if="room" class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div class="grid grid-cols-2 gap-4 text-sm">
+            <div v-if="room" class="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-200 dark:border-gray-700">
+              <div class="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
                 <div class="text-center">
                   <p class="text-gray-500 dark:text-gray-400 mb-1">题目数量</p>
-                  <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                  <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                     {{ room.questionCount || 10 }}
                   </p>
                 </div>
                 <div class="text-center">
                   <p class="text-gray-500 dark:text-gray-400 mb-1">准备状态</p>
-                  <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                  <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                     {{ room.players?.filter(p => p.ready).length || 0 }}/{{ room.players?.length || 0 }}
                   </p>
                 </div>
               </div>
-              <i class="pi pi-chart-line text-blue-500"></i>
-                <span>
-                  目标：{{ 
-                    room.rankingMode === 'closest_to_avg' ? '接近平均分' :
-                    room.rankingMode === 'closest_to_target' ? `接近 ${room.targetScore} 分` :
-                    '标准排名'
-                  }}
-                </span>
+              
+              <!-- 排名模式和通关条件 -->
+              <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
+                   class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="text-xs sm:text-sm space-y-2">
+                  <!-- 排名模式 -->
+                  <div v-if="room?.rankingMode !== 'standard'" 
+                       class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <i class="pi pi-chart-line text-blue-500"></i>
+                    <span>
+                      目标：{{ 
+                        room.rankingMode === 'closest_to_avg' ? '接近平均分' :
+                        room.rankingMode === 'closest_to_target' ? `接近 ${room.targetScore} 分` :
+                        '标准排名'
+                      }}
+                    </span>
+                  </div>
+                  <!-- 通关条件 -->
+                  <div v-if="room?.winConditions" class="space-y-1">
+                    <div v-if="room?.winConditions.minScorePerPlayer" 
+                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <i class="pi pi-users text-green-500"></i>
+                      <span>所有人 ≥ {{ room.winConditions.minScorePerPlayer }} 分</span>
+                    </div>
+                    <div v-if="room?.winConditions.minTotalScore" 
+                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <i class="pi pi-flag text-purple-500"></i>
+                      <span>总分 ≥ {{ room.winConditions.minTotalScore }} 分</span>
+                    </div>
+                    <div v-if="room?.winConditions.minAvgScore" 
+                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <i class="pi pi-chart-bar text-orange-500"></i>
+                      <span>平均分 ≥ {{ room.winConditions.minAvgScore }} 分</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- 提示 -->
-            <div class="mt-6 space-y-2">
+            <div class="mt-4 sm:mt-6 space-y-2">
               <p v-if="isRoomOwner" class="text-center text-xs text-gray-500 dark:text-gray-400">
                 只有房主可以开始游戏
               </p>
@@ -484,16 +581,17 @@ const handleCustomFormCancel = () => {
           </div>
 
           <!-- 玩家列表 -->
-          <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h2 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+            <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">
               玩家
             </h2>
             
-            <div class="grid sm:grid-cols-2 gap-3">
+            <!-- 🔥 改：移动端单列，小屏幕双列 -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               <div 
                 v-for="(player, index) in room?.players" 
                 :key="player.playerId"
-                class="p-3 rounded-lg border transition-all relative"
+                class="p-2.5 sm:p-3 rounded-lg border transition-all relative"
                 :class="[
                   player.ready 
                     ? 'bg-green-50 border-green-200 dark:bg-green-900/10 dark:border-green-800' 
@@ -505,15 +603,16 @@ const handleCustomFormCancel = () => {
               >
                 <!-- 房主标识 -->
                 <div v-if="index === 0" 
-                     class="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full 
+                     class="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-yellow-400 rounded-full 
                             flex items-center justify-center text-xs">
+                  👑
                 </div>
 
-                <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 sm:gap-3">
                   <!-- 头像 -->
-                  <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 
+                  <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-200 dark:bg-gray-600 
                               flex items-center justify-center text-gray-700 dark:text-gray-300 
-                              font-medium text-sm"
+                              font-medium text-xs sm:text-sm"
                        :style="{ backgroundColor: generatePlayerColor(player.playerId) + '20', 
                                  color: generatePlayerColor(player.playerId) }">
                     {{ player.name.charAt(0).toUpperCase() }}
@@ -521,12 +620,12 @@ const handleCustomFormCancel = () => {
 
                   <!-- 信息 -->
                   <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2">
-                      <p class="font-medium text-gray-900 dark:text-white text-sm truncate">
+                    <div class="flex items-center gap-1.5 sm:gap-2">
+                      <p class="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
                         {{ player.name }}
                       </p>
                       <span v-if="player.playerId === playerStore.playerId" 
-                            class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded">
+                            class="text-xs px-1 py-0.5 sm:px-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded">
                         你
                       </span>
                     </div>
@@ -538,40 +637,13 @@ const handleCustomFormCancel = () => {
               </div>
             </div>
           </div>
-          <!-- 在原有的"题目数量"和"准备状态"下方新增 -->
-          <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
-            class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-            <div class="text-sm space-y-2">
-              <!-- 排名模式 -->
-              <div v-if="room?.rankingMode !== 'standard'" 
-                class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-              </div>
-              <!-- 通关条件 -->
-              <div v-if="room?.winConditions" class="space-y-1">
-                <div v-if="room?.winConditions.minScorePerPlayer" 
-                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <i class="pi pi-users text-green-500"></i>
-                  <span>所有人 ≥ {{ room.winConditions.minScorePerPlayer }} 分</span>
-                </div>
-                <div v-if="room?.winConditions.minTotalScore" 
-                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <i class="pi pi-flag text-purple-500"></i>
-                  <span>总分 ≥ {{ room.winConditions.minTotalScore }} 分</span>
-                </div>
-                <div v-if="room?.winConditions.minAvgScore" 
-                    class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <i class="pi pi-chart-bar text-orange-500"></i>
-                  <span>平均分 ≥ {{ room.winConditions.minAvgScore }} 分</span>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- 操作按钮 -->
-          <div class="flex flex-wrap gap-3">
+          <!-- 🔥 改：移动端全宽堆叠，平板横向排列 -->
+          <div class="flex flex-col sm:flex-row gap-2 sm:gap-3">
             <button 
               @click="handleLeave"
-              class="px-5 py-2.5 rounded-lg text-sm font-medium
+              class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
                      bg-white dark:bg-gray-800 
                      text-gray-700 dark:text-gray-300
                      border border-gray-300 dark:border-gray-600
@@ -581,12 +653,12 @@ const handleCustomFormCancel = () => {
               离开
             </button>
 
-            <!-- 🔥 新增：自定义按钮（仅房主可见） -->
+            <!-- 自定义按钮（仅房主可见） -->
             <button 
               v-if="isRoomOwner"
               @click="showCustomForm = true"
               :disabled="loading || !wsConnected"
-              class="px-5 py-2.5 rounded-lg text-sm font-medium
+              class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
                     bg-white dark:bg-gray-800 
                     text-gray-700 dark:text-gray-300
                     border border-gray-300 dark:border-gray-600
@@ -601,7 +673,7 @@ const handleCustomFormCancel = () => {
             <button 
               @click="handleReady"
               :disabled="currentPlayerReady || loading || !wsConnected"
-              class="px-5 py-2.5 rounded-lg text-sm font-medium
+              class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
                      transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"
               :class="currentPlayerReady 
@@ -615,7 +687,7 @@ const handleCustomFormCancel = () => {
               v-if="isRoomOwner"
               @click="handleStart"
               :disabled="!isAllReady || !wsConnected"
-              class="px-5 py-2.5 rounded-lg text-sm font-medium
+              class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
                      bg-blue-600 hover:bg-blue-700
                      text-white transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"

@@ -4,6 +4,7 @@ import org.example.controller.GameController;
 import org.example.dto.RoomDTO;
 import org.example.entity.RoomEntity;
 import org.example.pojo.GameRoom;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 房间生命周期服务
@@ -47,4 +48,9 @@ public interface RoomLifecycleService {
      */
     RoomDTO toRoomDTO(String roomCode);
 
+    @Transactional
+    void handlePlayerDisconnect(String roomCode, String playerId);
+
+    @Transactional
+    void removeDisconnectedPlayer(String roomCode, String playerId);
 }

@@ -1,7 +1,5 @@
 package org.example.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.controller.GameController;
@@ -15,17 +13,13 @@ import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;
 import org.example.service.history.GameHistoryService;
-import org.example.service.leaderboard.LeaderboardService;
-import org.example.service.persistence.GamePersistenceService;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.submission.SubmissionService;
 import org.example.service.timer.QuestionTimerService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 游戏服务实现（重构后 - 协调者模式）
@@ -42,8 +36,6 @@ public class GameServiceImpl implements GameService {
     private final SubmissionService submissionService;
     private final QuestionTimerService timerService;
     private final RoomStateBroadcaster broadcaster;
-    private final LeaderboardService leaderboardService;
-    private final GamePersistenceService persistenceService;
     private final GameHistoryService gameHistoryService;
 
     // 数据库依赖
@@ -101,32 +93,18 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public RoomDTO reconnectRoom(String roomCode, String playerId) {
-        roomLifecycleService.handleReconnect(roomCode, playerId);
-        return roomLifecycleService.toRoomDTO(roomCode);
+    public void handlePlayerDisconnect(String roomCode, String playerId) {
+        roomLifecycleService.handlePlayerDisconnect(roomCode, playerId);
     }
 
     @Override
-    public void handlePlayerDisconnect(String roomCode, String playerId) {
-        GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom == null) return;
+    public void removeDisconnectedPlayer(String roomCode, String playerId) {
+        roomLifecycleService.removeDisconnectedPlayer(roomCode, playerId);
+    }
 
-        synchronized (roomCode.intern()) {
-            gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
-            log.info("⚠️ 玩家 {} 从房间 {} 断开连接", playerId, roomCode);
-
-            // ✅ 新增：检查是否需要自动填充答案
-            if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
-                boolean allDisconnected = gameRoom.getPlayers().stream()
-                        .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
-
-                if (allDisconnected) {
-                    log.warn("❌ 房间 {} 所有玩家都断开连接，自动填充答案并推进", roomCode);
-                    submissionService.fillDefaultAnswers(gameRoom);
-                    gameFlowService.advanceQuestion(roomCode, "allDisconnected", true);
-                }
-            }
-        }
+    @Override
+    public GameRoom getGameRoom(String roomCode) {
+        return roomCache.get(roomCode);
     }
 
     @Override
@@ -182,7 +160,9 @@ public class GameServiceImpl implements GameService {
 
             if (allSubmitted || force) {
                 timerService.cancelTimeout(roomCode);
-                gameFlowService.advanceQuestion(roomCode, force ? "force" : "allSubmitted", force);
+                // 🔥 总是填充默认答案，已提交的不会被覆盖
+                String reason = force ? "force" : "allSubmitted";
+                gameFlowService.advanceQuestion(roomCode, reason, true);
             }
 
             return roomLifecycleService.toRoomDTO(roomCode);

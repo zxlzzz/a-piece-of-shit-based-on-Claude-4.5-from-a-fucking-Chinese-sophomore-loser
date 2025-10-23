@@ -19,23 +19,6 @@ public class PlayerController {
     private final PlayerService playerService;
 
     /**
-     * 创建玩家
-     * POST /api/players?playerId=xxx&name=Tom
-     */
-    @PostMapping
-    public ResponseEntity<PlayerEntity> createPlayer(
-            @RequestParam String playerId,
-            @RequestParam String name) {
-        try {
-            PlayerEntity player = playerService.createPlayer(playerId, name);
-            return ResponseEntity.ok(player);
-        } catch (BusinessException e) {
-            log.error("创建玩家失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
-
-    /**
      * 获取所有玩家
      * GET /api/players
      */

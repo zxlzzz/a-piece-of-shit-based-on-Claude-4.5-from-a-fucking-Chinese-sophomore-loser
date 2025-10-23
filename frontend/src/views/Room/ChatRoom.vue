@@ -18,6 +18,8 @@ const props = defineProps({
   }
 })
 
+const emit = defineEmits(['newMessage'])
+
 const messages = ref([])
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -114,18 +116,14 @@ const sendReadyMessage = (isReady) => {
 const addMessage = (message) => {
   messages.value.push(message)
   // 滚动到底部
+  if (message.type === 'CHAT' && message.senderId !== props.playerId) {
+    emit('newMessage', message)
+  }
   nextTick(() => {
     if (chatContainer.value) {
       chatContainer.value.scrollTop = chatContainer.value.scrollHeight
     }
   })
-}
-
-// 格式化时间
-const formatTime = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 // 判断是否是自己的消息

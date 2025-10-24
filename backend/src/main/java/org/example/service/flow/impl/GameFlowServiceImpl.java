@@ -117,6 +117,9 @@ public class GameFlowServiceImpl implements GameFlowService {
             log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {}",
                     roomCode, questions.size(), gameRoom.getPlayers().size());
 
+            // 🔥 同步到 Redis
+            roomCache.syncToRedis(roomCode);
+
             // 广播
             broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
         }
@@ -164,6 +167,9 @@ public class GameFlowServiceImpl implements GameFlowService {
                                 roomCode, gameRoom.getCurrentIndex(),
                                 result.getCurrentRound(), result.getTotalRounds());
 
+                        // 🔥 同步到 Redis
+                        roomCache.syncToRedis(roomCode);
+
                         broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
                     } else {
                         // 异常情况：重复题还没完成但无法推进
@@ -185,6 +191,10 @@ public class GameFlowServiceImpl implements GameFlowService {
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
                         log.info("➡️ 房间 {} 推进到题目索引 {}", roomCode, gameRoom.getCurrentIndex());
+
+                        // 🔥 同步到 Redis
+                        roomCache.syncToRedis(roomCode);
+
                         broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
                     } else {
                         // 没有更多题目，游戏结束
@@ -263,7 +273,10 @@ public class GameFlowServiceImpl implements GameFlowService {
                 // 7. 清理玩家状态
                 gameRoom.clearPlayerStates();
 
-                // 8. 广播结束
+                // 🔥 8. 同步最终状态到 Redis
+                roomCache.syncToRedis(roomCode);
+
+                // 9. 广播结束
                 broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
 
                 log.info("🎉 房间 {} 游戏结束流程完成", roomCode);

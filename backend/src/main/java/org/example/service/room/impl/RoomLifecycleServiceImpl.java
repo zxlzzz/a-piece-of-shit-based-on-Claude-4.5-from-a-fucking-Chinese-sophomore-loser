@@ -117,6 +117,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 gameRoom.getScores().put(playerId, 0);
 
                 log.info("✅ 玩家 {} ({}) 加入房间 {}", playerName, playerId, roomCode);
+
+                // 🔥 同步到 Redis
+                roomCache.syncToRedis(roomCode);
             }
         }
     }
@@ -164,6 +167,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     }
 
                     log.info("👋 玩家 {} 离开房间 {}（游戏未开始）", playerName, roomCode);
+
+                    // 🔥 同步到 Redis
+                    roomCache.syncToRedis(roomCode);
                 }
 
             } else {
@@ -189,6 +195,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         return false; // 房间已解散
                     }
                 }
+
+                // 🔥 游戏进行中标记断线，同步到 Redis
+                roomCache.syncToRedis(roomCode);
             }
 
             return true; // 房间仍存在
@@ -223,6 +232,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             } else {
                 log.warn("⚠️ 玩家 {} 重连房间 {}，但未找到断线记录", playerId, roomCode);
             }
+
+            // 🔥 同步到 Redis
+            roomCache.syncToRedis(roomCode);
         }
     }
 
@@ -294,6 +306,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     .filter(p -> p.getPlayerId().equals(playerId))
                     .findFirst()
                     .ifPresent(p -> p.setReady(ready));
+
+            // 🔥 同步到 Redis
+            roomCache.syncToRedis(roomCode);
         }
 
         log.info("✅ 玩家 {} 设置准备状态: {}", playerId, ready);

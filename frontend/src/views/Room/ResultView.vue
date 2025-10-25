@@ -22,9 +22,22 @@ const roomCode = ref(route.params.roomId)
 const gameHistory = ref(null)
 const loading = ref(true)
 const showChat = ref(!isMobile.value)  // 🔥 移动端默认关闭
+const unreadCount = ref(0)  // 🔥 未读消息计数
+const hasUnreadMessages = computed(() => unreadCount.value > 0)  // 🔥 是否有未读消息
 
 const toggleChat = () => {
   showChat.value = !showChat.value
+  // 🔥 打开聊天时清空未读
+  if (showChat.value) {
+    unreadCount.value = 0
+  }
+}
+
+// 🔥 处理新消息
+const handleNewMessage = () => {
+  if (!showChat.value) {
+    unreadCount.value++
+  }
 }
 
 onMounted(async () => {
@@ -51,13 +64,18 @@ onMounted(async () => {
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
             <div class="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
               <h1 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">游戏结果</h1>
-              <button 
+              <button
                 @click="toggleChat"
                 class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
                        border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700
                        rounded-lg text-sm font-medium transition-colors"
               >
                 <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'"></i>
+                <!-- 🔥 未读消息红点 -->
+                <span v-if="hasUnreadMessages && !showChat"
+                      class="absolute -top-0.5 -right-0.5
+                             w-2 h-2 bg-red-500 rounded-full
+                             animate-pulse"></span>
               </button>
             </div>
           </div>
@@ -81,6 +99,7 @@ onMounted(async () => {
               :roomCode="roomCode"
               :playerId="playerStore.playerId"
               :playerName="playerStore.playerName"
+              @newMessage="handleNewMessage"
             />
           </div>
         </transition>
@@ -93,6 +112,7 @@ onMounted(async () => {
       :roomCode="roomCode"
       :playerId="playerStore.playerId"
       :playerName="playerStore.playerName"
+      @newMessage="handleNewMessage"
       @close="toggleChat"
     />
   </div>

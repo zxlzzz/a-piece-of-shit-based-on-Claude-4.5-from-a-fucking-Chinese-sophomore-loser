@@ -172,3 +172,205 @@ A: 建议至少 256 位（32 字节），使用 Base64 编码后约 44 个字符
 
 **Q: 能否针对不同环境使用不同配置文件？**
 A: 可以！创建 `application-dev.yml`、`application-prod.yml`，然后通过 `SPRING_PROFILES_ACTIVE=prod` 切换。
+
+---
+
+## 🚀 生产环境部署检查清单
+
+### ⚠️ 安全配置（必须修改）
+
+#### 1. 生成强随机 JWT 密钥
+```bash
+# 生成新的 JWT 密钥
+openssl rand -base64 64
+
+# 设置环境变量
+export JWT_SECRET="生成的随机字符串"
+```
+
+**重要：** 绝对不要使用示例密钥！
+
+#### 2. 修改所有默认密码
+```bash
+# 数据库密码（推荐12位以上，包含大小写字母、数字、特殊字符）
+export DB_PASSWORD="YourStrong@DatabasePass123!"
+
+# Redis 密码
+export REDIS_PASSWORD="YourStrong@RedisPass456!"
+```
+
+**建议密码强度：**
+- 长度 ≥ 12 位
+- 包含大写字母（A-Z）
+- 包含小写字母（a-z）
+- 包含数字（0-9）
+- 包含特殊字符（!@#$%^&*）
+
+#### 3. 配置 CORS 允许的域名
+```bash
+# 生产环境 CORS 配置（替换为你的实际域名）
+export CORS_ALLOWED_ORIGINS="https://yourgame.com,https://www.yourgame.com"
+```
+
+**注意：**
+- 使用 HTTPS（不是 HTTP）
+- 不要包含尾部斜杠
+- 多个域名用逗号分隔
+
+#### 4. 修改 JPA 配置
+```yaml
+# 生产环境禁用自动建表！
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate  # 改为 validate 或 none
+```
+
+**风险：** `ddl-auto: create` 会在每次重启时删除所有数据！
+
+---
+
+### ✅ 上线前检查表
+
+**环境变量检查：**
+- [ ] `JWT_SECRET` 已修改为强随机密钥（至少64字符）
+- [ ] `DB_PASSWORD` 已修改为强密码
+- [ ] `REDIS_PASSWORD` 已设置
+- [ ] `CORS_ALLOWED_ORIGINS` 配置为实际域名（HTTPS）
+- [ ] `DB_URL` 指向生产数据库
+
+**配置文件检查：**
+- [ ] `application.yml` 中 `ddl-auto` 改为 `validate`
+- [ ] 日志级别设置合理（INFO 或 WARN）
+- [ ] 删除了所有测试/调试代码
+
+**安全检查：**
+- [ ] 关闭了不必要的端口
+- [ ] 数据库不对外网开放
+- [ ] Redis 不对外网开放
+- [ ] 启用了 HTTPS
+
+**功能测试：**
+- [ ] 创建房间
+- [ ] 加入房间
+- [ ] 开始游戏
+- [ ] 答题提交
+- [ ] 重启服务器后 Redis 恢复
+- [ ] 断线重连
+
+---
+
+### 🔒 额外安全建议
+
+#### 使用 Docker Secrets（推荐）
+```yaml
+# docker-compose.prod.yml
+services:
+  backend:
+    secrets:
+      - db_password
+      - jwt_secret
+    environment:
+      DB_PASSWORD_FILE: /run/secrets/db_password
+      JWT_SECRET_FILE: /run/secrets/jwt_secret
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+```
+
+#### 限制 Redis 访问
+```yaml
+# docker-compose.prod.yml
+redis:
+  command: redis-server --requirepass ${REDIS_PASSWORD}
+  networks:
+    - backend  # 不暴露到外网
+```
+
+#### 定期更换密钥
+- JWT_SECRET：每 3-6 个月更换
+- 数据库密码：每 6-12 个月更换
+- Redis 密码：每 6-12 个月更换
+
+---
+
+### 📊 生产环境配置模板
+
+```bash
+# .env.production（不要提交到 Git！）
+# 数据库
+DB_URL=jdbc:mysql://prod-db-host:3306/game_db?useSSL=true
+DB_USERNAME=gameuser
+DB_PASSWORD=你的超强数据库密码
+
+# Redis
+REDIS_HOST=prod-redis-host
+REDIS_PORT=6379
+REDIS_PASSWORD=你的超强Redis密码
+
+# JWT
+JWT_SECRET=你生成的64位随机密钥
+JWT_EXPIRATION=86400000
+
+# CORS
+CORS_ALLOWED_ORIGINS=https://yourgame.com,https://www.yourgame.com
+
+# 其他
+SERVER_PORT=8080
+```
+
+---
+
+### 🆘 常见上线问题排查
+
+**问题 1：前端无法访问后端 API**
+- 检查 CORS 配置
+- 检查 Nginx 反向代理配置
+- 检查防火墙规则
+
+**问题 2：JWT 认证失败**
+- 确认 JWT_SECRET 在所有实例上一致
+- 检查 Token 过期时间
+- 查看后端日志错误
+
+**问题 3：Redis 连接失败**
+- 检查 Redis 服务是否运行
+- 检查 REDIS_HOST 和 REDIS_PORT
+- 检查 REDIS_PASSWORD 是否正确
+- 检查网络连通性
+
+**问题 4：数据库连接失败**
+- 检查数据库服务是否运行
+- 检查 DB_URL、DB_USERNAME、DB_PASSWORD
+- 检查数据库防火墙规则
+- 查看数据库日志
+
+---
+
+### 📞 紧急回滚方案
+
+如果上线后出现严重问题：
+
+1. **立即回滚代码**
+```bash
+git revert <commit-hash>
+git push
+```
+
+2. **重启服务**
+```bash
+docker-compose restart backend
+```
+
+3. **恢复数据库备份**（如果需要）
+```bash
+mysql -u gameuser -p game_db < backup_YYYYMMDD.sql
+```
+
+4. **清空 Redis 缓存**（如果需要）
+```bash
+redis-cli -a <password> FLUSHALL
+```

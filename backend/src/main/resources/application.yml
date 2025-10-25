@@ -1,9 +1,9 @@
 spring:
   # 数据库配置
   datasource:
-    url: jdbc:mysql://localhost:3306/game_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true
-    username: gameuser
-    password: 123456
+    url: ${DB_URL:jdbc:mysql://localhost:3306/game_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:gameuser}
+    password: ${DB_PASSWORD:123456}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 10
@@ -23,8 +23,9 @@ spring:
   # Redis配置
   data:
     redis:
-      host: localhost
-      port: 6379
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       timeout: 10000ms
       jedis:
         pool:
@@ -41,9 +42,9 @@ spring:
 
 # CORS配置
 cors:
-  allowed-origins: "http://localhost:5173,http://localhost:3000"
-  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
-  max-age: 3600
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000}
+  allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
+  max-age: ${CORS_MAX_AGE:3600}
 
 # 服务器配置
 server:
@@ -67,5 +68,5 @@ logging:
 
 # JWT配置
 jwt:
-  secret: my-super-secret-jwt-key-for-game-application-2024
-  expiration: 86400000
+  secret: ${JWT_SECRET:my-super-secret-jwt-key-for-game-application-2024}
+  expiration: ${JWT_EXPIRATION:86400000}

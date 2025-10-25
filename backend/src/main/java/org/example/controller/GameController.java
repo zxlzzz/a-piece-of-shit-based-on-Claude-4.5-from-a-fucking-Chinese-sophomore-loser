@@ -80,11 +80,12 @@ public class GameController {
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
             @RequestParam String playerId,
-            @RequestParam String playerName) {
+            @RequestParam String playerName,
+            @RequestParam(defaultValue = "false") Boolean spectator) {
         try {
-            RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName);
+            RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, spectator);
             broadcaster.sendRoomUpdate(roomCode, room);
-            log.info("✅ 玩家 {} 加入房间 {} 成功", playerName, roomCode);
+            log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
             log.error("❌ 加入房间失败: {}", e.getMessage());

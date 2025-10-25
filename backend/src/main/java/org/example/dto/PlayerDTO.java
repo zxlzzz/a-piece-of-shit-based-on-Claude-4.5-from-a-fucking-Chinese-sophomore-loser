@@ -35,4 +35,10 @@ public class PlayerDTO {
      */
     @Builder.Default
     private Boolean ready = false;
+
+    /**
+     * 是否为观战者（观战者不参与答题，不计分）
+     */
+    @Builder.Default
+    private Boolean spectator = false;
 }

@@ -15,6 +15,7 @@ const currentRoom = ref(null)
 const loading = ref(false)
 const activeRooms = ref([])
 const refreshing = ref(false)
+const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 
 // 初始化
 onMounted(async () => {
@@ -83,13 +84,15 @@ const handleCreate = async ({ questionCount, maxPlayers }) => {
     console.log('房间创建成功:', roomData)
     
     const joinResponse = await joinRoom(
-      roomData.roomCode, 
-      playerStore.playerId, 
-      playerStore.playerName
+      roomData.roomCode,
+      playerStore.playerId,
+      playerStore.playerName,
+      false  // 房主不能是观战者
     )
-    
+
     currentRoom.value = joinResponse.data
     playerStore.setRoom(joinResponse.data)
+    playerStore.setSpectator(false)
     
     toast.add({
       severity: 'success',
@@ -119,26 +122,30 @@ const handleEnterRoom = () => {
   }
 }
 
-const handleJoinRoom = async (roomCode) => {
+const handleJoinRoom = async (roomCode, spectator = false) => {
   loading.value = true
   try {
     // 🔥 改用 playerStore
     const response = await joinRoom(
-      roomCode, 
-      playerStore.playerId, 
-      playerStore.playerName
+      roomCode,
+      playerStore.playerId,
+      playerStore.playerName,
+      spectator
     )
     currentRoom.value = response.data
     // 🔥 统一用 playerStore 存储
     playerStore.setRoom(response.data)
-    
+
+    // 🔥 保存观战模式到 store
+    playerStore.setSpectator(spectator)
+
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: `已加入房间 ${roomCode}`,
+      detail: spectator ? `已加入房间 ${roomCode}（观战模式）` : `已加入房间 ${roomCode}`,
       life: 3000
     })
-    
+
     router.push(`/wait/${roomCode}`)
   } catch (error) {
     console.error('加入房间失败:', error)
@@ -300,15 +307,33 @@ const handleLogout = () => {
                        room.status === 'PLAYING' ? '游戏中' : '已结束' }}
                   </span>
                 </div>
-                
+
+                <!-- 观战模式选项 -->
+                <div class="mb-2 flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    :id="`spectator-${room.roomCode}`"
+                    v-model="spectatorModes[room.roomCode]"
+                    class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded
+                           focus:ring-blue-500 dark:focus:ring-blue-600
+                           dark:bg-gray-700 dark:border-gray-600"
+                  />
+                  <label
+                    :for="`spectator-${room.roomCode}`"
+                    class="text-gray-600 dark:text-gray-400 cursor-pointer select-none"
+                  >
+                    观战模式（不参与答题）
+                  </label>
+                </div>
+
                 <!-- 加入按钮 -->
                 <button
-                  @click="handleJoinRoom(room.roomCode)"
-                  :disabled="room.status !== 'WAITING' || 
-                            room.currentPlayers >= room.maxPlayers || 
+                  @click="handleJoinRoom(room.roomCode, spectatorModes[room.roomCode] || false)"
+                  :disabled="room.status !== 'WAITING' ||
+                            room.currentPlayers >= room.maxPlayers ||
                             loading"
                   class="w-full px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg text-sm font-medium
-                         bg-blue-500 hover:bg-blue-600 
+                         bg-blue-500 hover:bg-blue-600
                          text-white transition-colors
                          disabled:opacity-50 disabled:cursor-not-allowed
                          disabled:hover:bg-blue-500

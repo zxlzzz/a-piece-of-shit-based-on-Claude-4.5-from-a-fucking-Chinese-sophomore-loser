@@ -7,10 +7,12 @@ import org.example.dto.QuestionDTO;  // 🔥 改成 DTO
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.io.Serializable;
 
 @Data
 @Builder
-public class GameContext {
+public class GameContext implements Serializable {
+    private static final long serialVersionUID = 1L;
     private String roomCode;
 
     // 🔥 改成 QuestionDTO

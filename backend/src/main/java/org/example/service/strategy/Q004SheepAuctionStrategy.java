@@ -1,25 +1,12 @@
 package org.example.service.strategy;
 
-import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
 
-/**
- * Q004: 拍卖稀有羊
- * 题目：村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数
- * 类型：bid (2-7)
- *
- * 规则：
- * - 出价低者：获得2分（安慰奖）
- * - 出价高者：获得 8-出价 分（拍到羊但要付钱）
- * - 出价相同：都按高价处理（8-出价）
- */
 @Component
-@Slf4j
 public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
-
     public Q004SheepAuctionStrategy(BuffApplier buffApplier) {
         super(buffApplier);
     }
@@ -27,28 +14,21 @@ public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
+        Iterator<Map.Entry<String, String>> it = submissions.entrySet().iterator();
+        Map.Entry<String, String> p1 = it.next(), p2 = it.next();
 
-        String p1Id = players.get(0).getKey();
-        String p2Id = players.get(1).getKey();
-        int bid1 = Integer.parseInt(players.get(0).getValue());
-        int bid2 = Integer.parseInt(players.get(1).getValue());
-
-        if (bid1 == bid2) {
-            // 出价相同：都按高价者计算
-            int score = 8 - bid1;
-            scores.put(p1Id, score);
-            scores.put(p2Id, score);
-        } else if (bid1 > bid2) {
-            // 玩家1出价高
-            scores.put(p1Id, 8 - bid1);  // 高价者：羊的价值 - 出价
-            scores.put(p2Id, 2);         // 低价者：安慰奖2分
+        int b1 = Integer.parseInt(p1.getValue()), b2 = Integer.parseInt(p2.getValue());
+        
+        if (b1 == b2) {
+            scores.put(p1.getKey(), 8 - b1);
+            scores.put(p2.getKey(), 8 - b2);
+        } else if (b1 > b2) {
+            scores.put(p1.getKey(), 8 - b1);
+            scores.put(p2.getKey(), 2);
         } else {
-            // 玩家2出价高
-            scores.put(p1Id, 2);         // 低价者：安慰奖2分
-            scores.put(p2Id, 8 - bid2);  // 高价者：羊的价值 - 出价
+            scores.put(p1.getKey(), 2);
+            scores.put(p2.getKey(), 8 - b2);
         }
-
         return scores;
     }
 
@@ -57,4 +37,3 @@ public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
         return "Q004";
     }
 }
-

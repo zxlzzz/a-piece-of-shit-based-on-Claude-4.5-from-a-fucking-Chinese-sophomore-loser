@@ -75,6 +75,23 @@ router.beforeEach(async (to, from, next) => {
 
   console.log('🛣️ 路由守卫:', from.name, '→', to.name, '登录状态:', playerStore.isLoggedIn)
 
+  // 🔥 离开房间页面时断开 WebSocket
+  const roomPages = ['wait', 'game', 'result']
+  const fromRoom = roomPages.includes(from.name)
+  const toRoom = roomPages.includes(to.name)
+
+  if (fromRoom && !toRoom) {
+    console.log('🔌 离开房间区域，断开WebSocket')
+    try {
+      const { disconnect, isConnected } = await import('@/websocket/ws')
+      if (isConnected()) {
+        disconnect()
+      }
+    } catch (error) {
+      console.error('断开WebSocket失败:', error)
+    }
+  }
+
   // 1. 检查是否需要登录
   if (to.meta.requiresAuth && !playerStore.isLoggedIn) {
     console.warn('❌ 未登录，跳转到登录页')

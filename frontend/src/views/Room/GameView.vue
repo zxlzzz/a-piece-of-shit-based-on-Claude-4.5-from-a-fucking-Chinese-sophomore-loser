@@ -26,7 +26,12 @@ const room = ref(null)
 const question = ref(null)
 const subscriptions = ref([])
 const hasSubmitted = ref(false)
-const showChat = ref(true)
+
+// 🔥 响应式布局 - PC端默认显示聊天，移动端默认隐藏
+const showChat = ref(!isMobile.value)
+
+// 🔥 未读消息计数
+const unreadCount = ref(0)
 
 const questionStartTime = ref(null)
 const timeLimit = ref(30)
@@ -103,6 +108,23 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   connectWebSocket()
 })
+
+// 🔥 切换聊天显示
+const toggleChat = () => {
+  showChat.value = !showChat.value
+  // 打开聊天室时清空未读计数
+  if (showChat.value) {
+    unreadCount.value = 0
+  }
+}
+
+// 🔥 处理新消息
+const handleNewMessage = () => {
+  // 只在聊天室关闭时增加未读计数
+  if (!showChat.value) {
+    unreadCount.value++
+  }
+}
 
 onUnmounted(() => {
   if (subscriptions.value.length > 0) {
@@ -631,13 +653,19 @@ const refreshRoomState = async () => {
                 </div>
                 
                 <!-- 聊天切换 -->
-                <button 
+                <button
                   @click="toggleChat"
-                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
-                         rounded-lg transition-colors"
+                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700
+                         rounded-lg transition-colors relative"
                 >
-                  <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'" 
+                  <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'"
                      class="text-sm sm:text-base text-gray-600 dark:text-gray-400"></i>
+                  <!-- 🔥 红点提示 -->
+                  <span v-if="unreadCount > 0 && !showChat"
+                        class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs
+                               rounded-full flex items-center justify-center font-bold">
+                    {{ unreadCount > 9 ? '9+' : unreadCount }}
+                  </span>
                 </button>
               </div>
             </div>
@@ -681,6 +709,7 @@ const refreshRoomState = async () => {
               :roomCode="roomCode"
               :playerId="playerStore.playerId"
               :playerName="playerStore.playerName"
+              @newMessage="handleNewMessage"
             />
           </div>
         </transition>
@@ -699,12 +728,13 @@ const refreshRoomState = async () => {
         <div class="flex justify-center py-2 border-b border-gray-200 dark:border-gray-700">
           <div class="w-12 h-1 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
         </div>
-        
+
         <ChatRoom
           v-if="roomCode"
           :roomCode="roomCode"
           :playerId="playerStore.playerId"
           :playerName="playerStore.playerName"
+          @newMessage="handleNewMessage"
           class="flex-1 overflow-hidden"
         />
       </div>
@@ -716,6 +746,23 @@ const refreshRoomState = async () => {
            @click="toggleChat"
            class="fixed inset-0 bg-black/50 z-40 lg:hidden"></div>
     </transition>
+
+    <!-- 🔥 移动端浮动聊天按钮 -->
+    <button
+      v-if="isMobile"
+      @click="toggleChat"
+      class="fixed bottom-20 right-6 z-50 w-14 h-14 bg-blue-600 hover:bg-blue-700
+             text-white rounded-full shadow-lg flex items-center justify-center
+             transition-colors relative lg:hidden"
+    >
+      <i :class="showChat ? 'pi pi-times text-xl' : 'pi pi-comment text-xl'"></i>
+      <!-- 🔥 移动端红点提示 -->
+      <span v-if="unreadCount > 0 && !showChat"
+            class="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs
+                   rounded-full flex items-center justify-center font-bold">
+        {{ unreadCount > 99 ? '99+' : unreadCount }}
+      </span>
+    </button>
   </div>
 </template>
 

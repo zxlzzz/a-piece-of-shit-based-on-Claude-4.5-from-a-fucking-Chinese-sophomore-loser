@@ -18,6 +18,9 @@ const props = defineProps({
   }
 })
 
+// 🔥 添加 emit 用于通知父组件有新消息
+const emit = defineEmits(['newMessage'])
+
 const messages = ref([])
 const inputMessage = ref('')
 const chatContainer = ref(null)
@@ -113,6 +116,12 @@ const sendReadyMessage = (isReady) => {
 // 添加消息到列表
 const addMessage = (message) => {
   messages.value.push(message)
+
+  // 🔥 通知父组件有新消息（只通知聊天消息，且不是自己发的）
+  if (message.type === 'CHAT' && message.senderId !== props.playerId) {
+    emit('newMessage')
+  }
+
   // 滚动到底部
   nextTick(() => {
     if (chatContainer.value) {

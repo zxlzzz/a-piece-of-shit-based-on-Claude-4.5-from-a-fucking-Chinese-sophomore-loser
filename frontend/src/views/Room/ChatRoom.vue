@@ -18,7 +18,6 @@ const props = defineProps({
   }
 })
 
-// 🔥 添加 emit 用于通知父组件有新消息
 const emit = defineEmits(['newMessage'])
 
 const messages = ref([])
@@ -116,25 +115,15 @@ const sendReadyMessage = (isReady) => {
 // 添加消息到列表
 const addMessage = (message) => {
   messages.value.push(message)
-
-  // 🔥 通知父组件有新消息（只通知聊天消息，且不是自己发的）
-  if (message.type === 'CHAT' && message.senderId !== props.playerId) {
-    emit('newMessage')
-  }
-
   // 滚动到底部
+  if (message.type === 'CHAT' && message.senderId !== props.playerId) {
+    emit('newMessage', message)
+  }
   nextTick(() => {
     if (chatContainer.value) {
       chatContainer.value.scrollTop = chatContainer.value.scrollHeight
     }
   })
-}
-
-// 格式化时间
-const formatTime = (timestamp) => {
-  if (!timestamp) return ''
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
 }
 
 // 判断是否是自己的消息

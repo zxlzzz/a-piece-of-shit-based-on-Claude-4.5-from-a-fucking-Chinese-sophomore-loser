@@ -4,8 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Q006: 共同修路
@@ -30,12 +29,12 @@ public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        String p1Id = players[0].getKey();
-        String p2Id = players[1].getKey();
-        int investment1 = Integer.parseInt(players[0].getValue());
-        int investment2 = Integer.parseInt(players[1].getValue());
+        String p1Id = players.get(0).getKey();
+        String p2Id = players.get(1).getKey();
+        int investment1 = Integer.parseInt(players.get(0).getValue());
+        int investment2 = Integer.parseInt(players.get(1).getValue());
         int p1Get=0, p2Get=0;
 
         if(investment1 + investment2 >= 6){

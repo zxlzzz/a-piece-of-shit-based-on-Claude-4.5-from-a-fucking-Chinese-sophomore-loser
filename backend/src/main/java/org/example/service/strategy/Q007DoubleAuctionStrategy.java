@@ -30,12 +30,12 @@ public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        String p1Id = players[0].getKey();
-        String p2Id = players[1].getKey();
-        int bid1_item1 = Integer.parseInt(players[0].getValue());  // 玩家1对第一件的出价
-        int bid2_item1 = Integer.parseInt(players[1].getValue());  // 玩家2对第一件的出价
+        String p1Id = players.get(0).getKey();
+        String p2Id = players.get(1).getKey();
+        int bid1_item1 = Integer.parseInt(players.get(0).getValue());  // 玩家1对第一件的出价
+        int bid2_item1 = Integer.parseInt(players.get(1).getValue());  // 玩家2对第一件的出价
 
         // 计算第二件的出价（预算10分）
         int bid1_item2 = 10 - bid1_item1;  // 玩家1对第二件的出价

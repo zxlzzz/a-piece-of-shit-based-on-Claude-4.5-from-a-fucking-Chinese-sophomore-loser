@@ -3,8 +3,8 @@ package org.example.service.strategy;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.Map.Entry;
 
 @Component
 public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy{
@@ -15,10 +15,10 @@ public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy{
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions){
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        String c1 = players[0].getValue();
-        String c2 = players[1].getValue();
+        String c1 = players.get(0).getValue();
+        String c2 = players.get(1).getValue();
 
         boolean hasGuard = c1.equals("A") || c1.equals("C") || c2.equals("A") || c2.equals("C");
         boolean hasPrince = c1.equals("B") || c2.equals("B");
@@ -27,8 +27,8 @@ public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy{
         int v1 = c1.equals("A") ? 7 : c1.equals("B") ? 5 : 3;
         int v2 = c2.equals("A") ? 7 : c2.equals("B") ? 5 : 3;
 
-        scores.put(players[0].getKey(), complete ? v1 : -v1);
-        scores.put(players[1].getKey(), complete ? v2 : -v2);
+        scores.put(players.get(0).getKey(), complete ? v1 : -v1);
+        scores.put(players.get(1).getKey(), complete ? v2 : -v2);
 
         return scores;
     }

@@ -32,12 +32,12 @@ public class Q008ShopLocationStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        String p1Id = players[0].getKey();
-        String p2Id = players[1].getKey();
-        String choice1 = players[0].getValue();
-        String choice2 = players[1].getValue();
+        String p1Id = players.get(0).getKey();
+        String p2Id = players.get(1).getKey();
+        String choice1 = players.get(0).getValue();
+        String choice2 = players.get(1).getValue();
 
         boolean highTraffic = !Objects.equals(choice1, "C") && !Objects.equals(choice2, "C");
 

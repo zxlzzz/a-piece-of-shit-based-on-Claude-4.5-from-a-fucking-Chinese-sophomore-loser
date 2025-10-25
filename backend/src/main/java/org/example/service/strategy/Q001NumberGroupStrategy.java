@@ -24,16 +24,16 @@ public class Q001NumberGroupStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        int n1 = Integer.parseInt(players[0].getValue());
-        int n2 = Integer.parseInt(players[1].getValue());
+        int n1 = Integer.parseInt(players.get(0).getValue());
+        int n2 = Integer.parseInt(players.get(1).getValue());
 
         boolean sameGroup = (GROUP_A.contains(n1) && GROUP_A.contains(n2)) ||
                 (!GROUP_A.contains(n1) && !GROUP_A.contains(n2));
 
-        scores.put(players[0].getKey(), sameGroup ? n1 : -n1);
-        scores.put(players[1].getKey(), sameGroup ? n2 : -n2);
+        scores.put(players.get(0).getKey(), sameGroup ? n1 : -n1);
+        scores.put(players.get(1).getKey(), sameGroup ? n2 : -n2);
 
         return scores;
     }

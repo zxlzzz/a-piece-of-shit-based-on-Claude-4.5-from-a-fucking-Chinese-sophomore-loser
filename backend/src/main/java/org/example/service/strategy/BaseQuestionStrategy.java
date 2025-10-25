@@ -149,19 +149,6 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         return "";
     }
 
-    /**
-     * 辅助方法：获取两人游戏的玩家
-     */
-    protected Map.Entry<String, String>[] getTwoPlayers(Map<String, String> submissions) {
-        if (submissions.size() != 2) {
-            throw new IllegalArgumentException("需要2人游戏");
-        }
-        List<Map.Entry<String, String>> list = new ArrayList<>(submissions.entrySet());
-        @SuppressWarnings("unchecked")
-        Map.Entry<String, String>[] array = new Map.Entry[]{list.get(0), list.get(1)};
-        return array;
-    }
-
     public Map<String, Integer> test(Map<String, String> submissions) {
         return calculateBaseScores(submissions);
     }

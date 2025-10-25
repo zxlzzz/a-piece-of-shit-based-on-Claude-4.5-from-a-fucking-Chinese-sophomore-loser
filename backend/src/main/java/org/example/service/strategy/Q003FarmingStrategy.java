@@ -4,8 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Q003: 共同拥有土地种植题
@@ -29,12 +28,12 @@ public class Q003FarmingStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        List<Map.Entry<String, String>> players = new ArrayList<>(submissions.entrySet());
 
-        String p1Id = players[0].getKey();
-        String p2Id = players[1].getKey();
-        String choice1 = players[0].getValue();
-        String choice2 = players[1].getValue();
+        String p1Id = players.get(0).getKey();
+        String p2Id = players.get(1).getKey();
+        String choice1 = players.get(0).getValue();
+        String choice2 = players.get(1).getValue();
 
         // 初始分数（未考虑是否相同）
         int score1 = getOriginalScore(choice1);

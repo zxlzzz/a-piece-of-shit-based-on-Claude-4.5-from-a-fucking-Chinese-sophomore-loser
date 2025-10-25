@@ -2,6 +2,8 @@
 node_modules/
 dist/
 .env
+.env.local
+.env.*.local
 *.log
 
 # === Backend ===
@@ -14,6 +16,8 @@ target/
 *.log
 /.mvn/
 .DS_Store
+application-local.yml
+application-local.properties
 
 # === System ===
 *.swp

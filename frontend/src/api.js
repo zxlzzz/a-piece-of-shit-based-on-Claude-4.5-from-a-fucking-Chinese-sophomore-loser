@@ -32,27 +32,63 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('❌ API Error:', error.response?.data || error.message);
-    
+
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('playerId');
       localStorage.removeItem('playerName');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
-    
-    // 触发全局错误事件
-    window.dispatchEvent(new CustomEvent('api-error', {
-      detail: {
-        message: error.response?.data?.message || error.message || '请求失败',
-        status: error.response?.status,
-        url: error.config?.url
-      }
-    }));
-    
+
+    // 🔥 检查是否需要静默处理（配置中设置了 silentError: true）
+    const silentError = error.config?.silentError;
+
+    // 🔥 过滤不需要全局提示的错误
+    const shouldShowToast = !silentError && !isIgnorableError(error);
+
+    // 只有需要提示的错误才触发全局事件
+    if (shouldShowToast) {
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: {
+          message: error.response?.data?.message || error.message || '请求失败',
+          status: error.response?.status,
+          url: error.config?.url
+        }
+      }));
+    }
+
     return Promise.reject(error);
   }
 );
+
+// 🔥 判断是否是可忽略的错误（不需要弹窗提示）
+function isIgnorableError(error) {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || '';
+  const url = error.config?.url || '';
+
+  // 房间不存在（404）- 静默处理
+  if (status === 404 && url.includes('/rooms/')) {
+    return true;
+  }
+
+  // 房间已结束/不存在等业务错误 - 静默处理
+  if (message.includes('房间不存在') ||
+      message.includes('房间已结束') ||
+      message.includes('房间已过期')) {
+    return true;
+  }
+
+  // 重复提交等正常业务逻辑 - 静默处理
+  if (message.includes('已经提交') ||
+      message.includes('已提交')) {
+    return true;
+  }
+
+  return false;
+}
 
 // ============ 认证相关API（新增）============
 
@@ -69,9 +105,9 @@ export const createRoom = (maxPlayers, questionCount) =>
     params: {maxPlayers, questionCount}
   });
 
-export const joinRoom = (roomCode, playerId, playerName) =>
+export const joinRoom = (roomCode, playerId, playerName, spectator = false) =>
   api.post(`/rooms/${roomCode}/join`, null, {
-    params: { playerId, playerName }
+    params: { playerId, playerName, spectator }
   });
 
 export const startGame = (roomCode) =>

@@ -20,8 +20,9 @@ public interface GameService {
 
     /**
      * 加入房间
+     * @param spectator 是否为观战者（观战者不参与答题，不计分）
      */
-    RoomDTO joinRoom(String roomCode, String playerId, String playerName);
+    RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator);
     /**
      * 开始游戏
      */

@@ -281,6 +281,17 @@ const clearCountdown = () => {
 }
 
 const handleChoose = (choice) => {
+  // 🔥 防护0：检查是否为观战者
+  if (playerStore.isSpectator) {
+    toast.add({
+      severity: 'info',
+      summary: '观战模式',
+      detail: '观战者无法提交答案',
+      life: 2000
+    })
+    return
+  }
+
   // 🔥 防护1：检查是否已提交
   if (hasSubmitted.value) {
     toast.add({
@@ -291,7 +302,7 @@ const handleChoose = (choice) => {
     })
     return
   }
-  
+
   // 🔥 防护2：检查题目是否存在
   if (!question.value || !question.value.id) {
     toast.add({
@@ -339,12 +350,18 @@ const handleChoose = (choice) => {
 }
 
 const handleAutoSubmit = () => {
+  // 🔥 防护0：检查是否为观战者
+  if (playerStore.isSpectator) {
+    console.log('⚠️ 观战模式，跳过自动提交')
+    return
+  }
+
   // 🔥 防护1：检查是否已提交
   if (hasSubmitted.value) {
     console.log('⚠️ 已提交，跳过自动提交')
     return
   }
-  
+
   // 🔥 防护2：检查题目是否存在
   if (!question.value || !question.value.id) {
     console.error('❌ 题目不存在，无法自动提交')
@@ -631,7 +648,7 @@ const refreshRoomState = async () => {
             <QuestionCard
               v-if="question"
               :question="question"
-              :disabled="hasSubmitted"
+              :disabled="hasSubmitted || playerStore.isSpectator"
               @choose="handleChoose"
               class="w-full"
             />

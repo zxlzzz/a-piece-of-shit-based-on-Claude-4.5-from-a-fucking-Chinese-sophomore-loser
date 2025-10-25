@@ -36,6 +36,9 @@ public class PlayerEntity {
 
     private Boolean ready;
 
+    @Column
+    private Boolean spectator;  // 观战模式（观战者不参与答题，不计分）
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
     private RoomEntity room;

@@ -1,5 +1,6 @@
 package org.example.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,17 +9,22 @@ import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
 import org.example.entity.RoomEntity;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 游戏房间 - 内存中的运行时状态
+ * 支持 Redis 序列化存储
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class GameRoom {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class GameRoom implements Serializable {
+
+    private static final long serialVersionUID = 1L;
     /**
      * 房间码
      */

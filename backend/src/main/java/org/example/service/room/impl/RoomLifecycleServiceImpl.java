@@ -87,9 +87,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 throw new BusinessException("房间已开始游戏或已结束");
             }
 
-            // 检查房间是否已满
-            if (gameRoom.getPlayers().size() >= room.getMaxPlayers()) {
-                throw new BusinessException("房间已满");
+            // 🔥 检查房间是否已满（观战者不计入人数）
+            if (spectator == null || !spectator) {  // 非观战者才检查容量
+                long nonSpectatorCount = gameRoom.getPlayers().stream()
+                        .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                        .count();
+                if (nonSpectatorCount >= room.getMaxPlayers()) {
+                    throw new BusinessException("房间已满");
+                }
             }
 
             // 检查玩家是否已在房间内
@@ -451,11 +456,16 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
         }
 
+        // 🔥 计算非观战者人数
+        int currentNonSpectators = (int) gameRoom.getPlayers().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                .count();
+
         return RoomDTO.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
                         (roomEntity != null ? roomEntity.getMaxPlayers() : gameRoom.getPlayers().size()))
-                .currentPlayers(gameRoom.getPlayers().size())
+                .currentPlayers(currentNonSpectators)  // 🔥 只计算非观战者
                 .status(status)
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())

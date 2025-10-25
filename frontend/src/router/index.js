@@ -121,7 +121,7 @@ router.beforeEach(async (to, from, next) => {
 
           if (response.data) {
             console.log('✅ 从服务器恢复房间信息:', roomId)
-            playerStore.saveRoom(response.data)
+            playerStore.setRoom(response.data)
             next()
             return
           }

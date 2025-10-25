@@ -47,6 +47,17 @@ public class SubmissionServiceImpl implements SubmissionService {
             throw new BusinessException("当前没有有效题目");
         }
 
+        // 🔥 检查是否是观战者
+        boolean isSpectator = gameRoom.getPlayers().stream()
+                .filter(p -> p.getPlayerId().equals(playerId))
+                .findFirst()
+                .map(PlayerDTO::getSpectator)
+                .orElse(false);
+
+        if (isSpectator) {
+            throw new BusinessException("观战者不能提交答案");
+        }
+
         // 🔥 根据 DTO 的 ID 查询 Entity
         QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
                 .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
@@ -104,8 +115,13 @@ public class SubmissionServiceImpl implements SubmissionService {
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
 
-        // 🔥 修改：遍历所有玩家（包括断线的）
+        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者
         for (PlayerDTO player : gameRoom.getPlayers()) {
+            // 🔥 跳过观战者
+            if (Boolean.TRUE.equals(player.getSpectator())) {
+                continue;
+            }
+
             String playerId = player.getPlayerId();
 
             // 🔥 检查是否已提交
@@ -159,7 +175,9 @@ public class SubmissionServiceImpl implements SubmissionService {
             return false;
         }
 
+        // 🔥 只检查非观战者玩家
         return gameRoom.getPlayers().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
     }
 }

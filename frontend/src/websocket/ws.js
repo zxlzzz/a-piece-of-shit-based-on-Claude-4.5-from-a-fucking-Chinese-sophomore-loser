@@ -73,8 +73,6 @@ export function connect(playerId, onConnect, onError) {
       },
       
       reconnectDelay: 3000,
-      heartbeatIncoming: 0,  // 🔥 30秒（与后端一致）
-      heartbeatOutgoing: 0,  // 🔥 30秒（与后端一致）
       
       onConnect: (frame) => {
         clearTimeout(timeoutId); // 🔥 清除超时

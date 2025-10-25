@@ -1,3 +1,24 @@
+<template>
+  <div class="space-y-2 sm:space-y-3">
+    <div class="flex items-center justify-between text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+      <span>最小: {{ minval }}</span>
+      <span>步长: {{ step }}</span>
+      <span>最大: {{ maxval }}</span>
+    </div>
+    
+    <div class="flex justify-center items-center">
+      <InputNumber 
+        v-model="model" 
+        :step="step"
+        :min="minval"
+        :max="maxval"
+        :disabled="disabled"
+        class="custom-input-number"
+      />
+    </div>
+  </div>
+</template>
+
 <script setup>
 import InputNumber from 'primevue/inputnumber'
 import { computed } from 'vue'
@@ -37,42 +58,30 @@ const model = computed({
 })
 </script>
 
-<template>
-  <div class="space-y-3">
-    <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-      <span>最小值: {{ minval }}</span>
-      <span>步长: {{ step }}</span>
-      <span>最大值: {{ maxval }}</span>
-    </div>
-    
-    <div class="flex justify-center items-center">
-      <InputNumber 
-        v-model="model" 
-        :step="step"
-        :min="minval"
-        :max="maxval"
-        :disabled="disabled"
-        class="custom-input-number"
-      />
-    </div>
-  </div>
-</template>
-
 <style scoped>
 .custom-input-number {
-  max-width: 300px; /* 限制最大宽度，避免太宽 */
+  width: 100%;
+  max-width: 280px; /* 🔥 移动端适配 */
 }
 
 :deep(.custom-input-number input) {
   width: 100%;
   text-align: center;
-  font-size: 1.5rem;
+  font-size: 1.25rem; /* 🔥 移动端 20px */
   font-weight: bold;
-  padding: 1rem;
+  padding: 0.75rem; /* 🔥 移动端减小 */
   background-color: white;
   color: #111827;
   border: 2px solid #d1d5db;
   border-radius: 0.5rem;
+}
+
+/* 🔥 桌面端放大 */
+@media (min-width: 640px) {
+  :deep(.custom-input-number input) {
+    font-size: 1.5rem; /* 24px */
+    padding: 1rem;
+  }
 }
 
 :deep(.custom-input-number input:focus) {
@@ -90,5 +99,4 @@ const model = computed({
 .dark :deep(.custom-input-number input:focus) {
   border-color: #60a5fa;
 }
-
 </style>

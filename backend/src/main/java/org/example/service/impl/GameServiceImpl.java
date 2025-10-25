@@ -64,8 +64,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public RoomDTO joinRoom(String roomCode, String playerId, String playerName) {
-        roomLifecycleService.handleJoin(roomCode, playerId, playerName);
+    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator) {
+        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
 

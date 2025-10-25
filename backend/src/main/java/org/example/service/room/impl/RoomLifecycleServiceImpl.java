@@ -75,7 +75,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public void handleJoin(String roomCode, String playerId, String playerName) {
+    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator) {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
@@ -104,6 +104,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 // 🔥 改：直接设置房间和准备状态
                 player.setRoom(room);
                 player.setReady(false);
+                player.setSpectator(spectator != null && spectator);  // 设置观战模式
 
                 playerRepository.save(player);
 
@@ -112,11 +113,12 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         .name(playerName)
                         .score(0)
                         .ready(false)
+                        .spectator(spectator != null && spectator)  // 设置观战模式
                         .build();
                 gameRoom.getPlayers().add(playerDTO);
                 gameRoom.getScores().put(playerId, 0);
 
-                log.info("✅ 玩家 {} ({}) 加入房间 {}", playerName, playerId, roomCode);
+                log.info("✅ 玩家 {} ({}) 加入房间 {} (观战模式: {})", playerName, playerId, roomCode, spectator);
 
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);

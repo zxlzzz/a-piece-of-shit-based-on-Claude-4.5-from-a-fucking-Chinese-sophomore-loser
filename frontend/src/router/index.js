@@ -70,54 +70,71 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const playerStore = usePlayerStore()
-  
+
   console.log('🛣️ 路由守卫:', from.name, '→', to.name, '登录状态:', playerStore.isLoggedIn)
-  
+
   // 1. 检查是否需要登录
   if (to.meta.requiresAuth && !playerStore.isLoggedIn) {
     console.warn('❌ 未登录，跳转到登录页')
-    alert('请先登录')
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }
-  
+
   // 2. 检查房间权限（wait/game/result）
   if (to.name === 'wait' || to.name === 'game' || to.name === 'result') {
     const roomId = to.params.roomId
     const currentRoom = playerStore.currentRoom
-    
+
     console.log('🏠 检查房间权限:', { roomId, currentRoom: currentRoom?.roomCode })
-    
+
     // 🔥 改进：先尝试从 store 获取，如果没有再从 localStorage 加载
     if (!currentRoom) {
       console.log('📦 从 localStorage 加载房间信息')
       const loaded = playerStore.loadRoom()
-      
+
       if (!loaded) {
-        console.error('❌ 没有房间信息')
-        alert('房间信息不存在，请重新加入房间')
-        next({ name: 'find' })
+        console.warn('⚠️ 没有本地房间信息，尝试从服务器获取')
+
+        // 🔥 新增：尝试从服务器获取房间状态（静默失败）
+        try {
+          const { getRoomStatus } = await import('@/api')
+          const response = await getRoomStatus(roomId)
+
+          if (response.data) {
+            console.log('✅ 从服务器恢复房间信息:', roomId)
+            playerStore.saveRoom(response.data)
+            next()
+            return
+          }
+        } catch (error) {
+          console.log('⚠️ 房间不存在或已结束，跳转到查找房间页:', roomId)
+          // 🔥 静默处理，清理本地数据，跳转到查找房间页
+          playerStore.clearRoom()
+          next({ name: 'find', replace: true })
+          return
+        }
+      }
+
+      if (loaded && loaded.roomCode !== roomId) {
+        console.warn('⚠️ 房间码不匹配，清理本地数据')
+        playerStore.clearRoom()
+        next({ name: 'find', replace: true })
         return
       }
-      
-      if (loaded.roomCode !== roomId) {
-        console.error('❌ 房间码不匹配:', loaded.roomCode, '≠', roomId)
-        alert('房间不匹配')
-        next({ name: 'find' })
-        return
+
+      if (loaded) {
+        console.log('✅ 房间信息加载成功:', loaded.roomCode)
       }
-      
-      console.log('✅ 房间信息加载成功:', loaded.roomCode)
     } else if (currentRoom.roomCode !== roomId) {
-      console.error('❌ 当前房间与目标房间不匹配')
-      alert('房间不匹配')
-      next({ name: 'find' })
+      console.warn('⚠️ 当前房间与目标房间不匹配')
+      playerStore.clearRoom()
+      next({ name: 'find', replace: true })
       return
     }
   }
-  
+
   console.log('✅ 路由守卫通过')
   next()
 })

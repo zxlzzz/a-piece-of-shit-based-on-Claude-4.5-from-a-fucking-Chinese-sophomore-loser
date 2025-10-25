@@ -19,8 +19,9 @@ public interface RoomLifecycleService {
 
     /**
      * 加入房间
+     * @param spectator 是否为观战者
      */
-    void handleJoin(String roomCode, String playerId, String playerName);
+    void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator);
 
     /**
      * 离开房间

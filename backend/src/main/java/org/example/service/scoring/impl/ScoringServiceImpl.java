@@ -61,18 +61,20 @@ public class ScoringServiceImpl implements ScoringService {
                     .build();
         }
 
-        // 构建玩家状态
+        // 构建玩家状态（🔥 过滤观战者）
         Map<String, PlayerGameState> playerStates = new HashMap<>();
-        gameRoom.getPlayers().forEach(player -> {
-            int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
-            PlayerGameState state = gameRoom.getOrCreatePlayerState(
-                    player.getPlayerId(),
-                    player.getName(),
-                    currentScore
-            );
-            state.setTotalScore(currentScore);
-            playerStates.put(player.getPlayerId(), state);
-        });
+        gameRoom.getPlayers().stream()
+                .filter(player -> !Boolean.TRUE.equals(player.getSpectator()))  // 🔥 排除观战者
+                .forEach(player -> {
+                    int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
+                    PlayerGameState state = gameRoom.getOrCreatePlayerState(
+                            player.getPlayerId(),
+                            player.getName(),
+                            currentScore
+                    );
+                    state.setTotalScore(currentScore);
+                    playerStates.put(player.getPlayerId(), state);
+                });
 
         // 构建游戏上下文（使用 DTO）
         GameContext context = GameContext.builder()

@@ -83,8 +83,13 @@ public class GameFlowServiceImpl implements GameFlowService {
             gameRoom.setRoomEntity(room);
             gameRoom.setGameId(savedGame.getId());
 
-            // 创建玩家游戏记录
+            // 🔥 创建玩家游戏记录（排除观战者）
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
+                // 🔥 跳过观战者
+                if (Boolean.TRUE.equals(playerDTO.getSpectator())) {
+                    continue;
+                }
+
                 PlayerEntity player = playerRepository.findByPlayerId(playerDTO.getPlayerId())
                         .orElseThrow(() -> new BusinessException("玩家不存在: " + playerDTO.getPlayerId()));
 
@@ -129,7 +134,9 @@ public class GameFlowServiceImpl implements GameFlowService {
     public void advanceQuestion(String roomCode, String reason, boolean fillDefaults) {
         AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
         if (!isAdvancing.compareAndSet(false, true)) {
-            log.warn("⚠️ 房间 {} 正在推进中，跳过", roomCode);
+            log.warn("⚠️ 房间 {} 正在推进中，跳过（原因: {}）", roomCode, reason);
+            // 🔥 广播当前状态，避免客户端等待
+            broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             return;
         }
 
@@ -240,9 +247,21 @@ public class GameFlowServiceImpl implements GameFlowService {
                 game.setEndTime(LocalDateTime.now());
                 gameRepository.save(game);
 
-                // 3. 保存玩家最终分数
+                // 🔥 3. 保存玩家最终分数（排除观战者）
                 for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
                     String playerId = entry.getKey();
+
+                    // 🔥 检查是否是观战者
+                    boolean isSpectator = gameRoom.getPlayers().stream()
+                            .filter(p -> p.getPlayerId().equals(playerId))
+                            .findFirst()
+                            .map(PlayerDTO::getSpectator)
+                            .orElse(false);
+
+                    if (isSpectator) {
+                        continue;  // 🔥 跳过观战者
+                    }
+
                     PlayerEntity player = playerRepository.findByPlayerId(playerId)
                             .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 

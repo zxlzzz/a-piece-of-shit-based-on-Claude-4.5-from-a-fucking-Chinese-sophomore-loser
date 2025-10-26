@@ -4,7 +4,7 @@ import { usePlayerStore } from '@/stores/player'
 import Dialog from 'primevue/dialog'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import ResultContent from './ResultContent.vue'
+import ResultContent from '@/components/result/ResultContent.vue'
 import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()

@@ -4,8 +4,8 @@ import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import CreateRoomCard from './CreateRoomCard.vue'
-import RoomCard from './RoomCard.vue'
+import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
+import RoomCard from '@/components/room/RoomCard.vue'
 
 const router = useRouter()
 const toast = useToast()

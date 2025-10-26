@@ -17,12 +17,12 @@ const router = createRouter({
         {
           path: '/table',
           name: 'table',
-          component: () => import('@/views/Question.vue')
+          component: () => import('@/components/question/Question.vue')
         },
         {
           path: '/find',
           name: 'find',
-          component: () => import('@/views/Room/RoomView.vue')
+          component: () => import('@/views/room/RoomView.vue')
           // 🔥 删除 meta: { requiresAuth: true }
         },
         {
@@ -39,19 +39,19 @@ const router = createRouter({
         {
           path: '/result/:roomId',
           name: 'result',
-          component: () => import('@/views/Room/ResultView.vue'),
+          component: () => import('@/views/room/ResultView.vue'),
           meta: { requiresAuth: true }  // ✅ 保留
         },
         {
           path: '/game/:roomId',
           name: 'game',
-          component: () => import('@/views/Room/GameView.vue'),
+          component: () => import('@/views/room/GameView.vue'),
           meta: { requiresAuth: true }  // ✅ 保留
         },
         {
           path: '/wait/:roomId',
           name: 'wait',
-          component: () => import('@/views/Room/WaitRoom.vue'),
+          component: () => import('@/views/room/WaitRoom.vue'),
           props: true,
           meta: { requiresAuth: true }  // ✅ 保留
         },

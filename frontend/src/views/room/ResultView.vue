@@ -3,9 +3,9 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useBreakpoints } from '@vueuse/core'
-import ResultContent from '../ResultContent.vue'
-import ChatRoom from './ChatRoom.vue'
-import MobileChatDrawer from './MobileChatDrawer.vue'
+import ResultContent from '@/components/result/ResultContent.vue'
+import ChatRoom from '@/components/chat/ChatRoom.vue'
+import MobileChatDrawer from '@/components/game/MobileChatDrawer.vue'
 import { getGameHistory } from '@/api'
 
 const route = useRoute()

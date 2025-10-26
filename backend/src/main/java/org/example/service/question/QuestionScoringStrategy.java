@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.question;
 
 import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.GameContext;

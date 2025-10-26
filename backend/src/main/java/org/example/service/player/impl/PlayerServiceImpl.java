@@ -1,4 +1,4 @@
-package org.example.service.impl;
+package org.example.service.player.impl;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -7,7 +7,7 @@ import org.example.entity.PlayerEntity;
 import org.example.entity.RoomEntity;
 import org.example.exception.BusinessException;
 import org.example.repository.PlayerRepository;
-import org.example.service.PlayerService;
+import org.example.service.player.PlayerService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

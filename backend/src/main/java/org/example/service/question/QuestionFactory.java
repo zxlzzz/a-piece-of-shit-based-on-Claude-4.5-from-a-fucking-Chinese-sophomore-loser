@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.question;
 
 import jakarta.annotation.PostConstruct;
 import org.example.exception.BusinessException;

@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.game;
 
 import org.example.controller.GameController;
 import org.example.dto.GameHistorySummaryDTO;

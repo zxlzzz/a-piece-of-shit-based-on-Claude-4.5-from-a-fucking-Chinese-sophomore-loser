@@ -6,16 +6,16 @@ import { useToast } from 'primevue/usetoast'
 import { useBreakpoints } from '@vueuse/core'
 
 // 🔥 导入组件
-import GameHeader from './GameHeader.vue'
-import GameContent from './GameContent.vue'
-import MobileChatDrawer from './MobileChatDrawer.vue'
-import ChatRoom from './ChatRoom.vue'
+import GameHeader from '@/components/game/GameHeader.vue'
+import GameContent from '@/components/game/GameContent.vue'
+import MobileChatDrawer from '@/components/game/MobileChatDrawer.vue'
+import ChatRoom from '@/components/chat/ChatRoom.vue'
 
-// 🔥 导入 components
-import { useGameCountdown } from '@/components/useGameCountdown'
-import { useGameSubmit } from '@/components/useGameSubmit'
-import { useGameKeyboard } from '@/components/useGameKeyboard'
-import { useGameWebSocket } from '@/components/useGameWebSocket'
+// 🔥 导入 composables
+import { useGameCountdown } from '@/composables/game/useGameCountdown'
+import { useGameSubmit } from '@/composables/game/useGameSubmit'
+import { useGameKeyboard } from '@/composables/game/useGameKeyboard'
+import { useGameWebSocket } from '@/composables/game/useGameWebSocket'
 
 const route = useRoute()
 const router = useRouter()

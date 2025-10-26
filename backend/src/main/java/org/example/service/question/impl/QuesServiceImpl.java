@@ -1,4 +1,4 @@
-package org.example.service.impl;
+package org.example.service.question.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -12,7 +12,7 @@ import org.example.repository.BidQuestionConfigRepository;
 import org.example.repository.ChoiceQuestionConfigRepository;
 import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
-import org.example.service.QuesService;
+import org.example.service.question.QuesService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;

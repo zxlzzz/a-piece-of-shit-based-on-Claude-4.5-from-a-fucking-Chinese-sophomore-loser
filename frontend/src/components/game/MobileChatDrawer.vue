@@ -32,7 +32,7 @@
 </template>
 
 <script setup>
-import ChatRoom from './ChatRoom.vue'
+import ChatRoom from '../chat/ChatRoom.vue'
 
 defineProps({
   show: Boolean,

@@ -1,7 +1,7 @@
 <script setup>
 import { useToast } from 'primevue/usetoast'
 import { onMounted, onUnmounted } from 'vue'
-import WebSocketStatus from './components/WebSocketStatus.vue'
+import WebSocketStatus from './components/common/WebSocketStatus.vue'
 const toast = useToast()
 
 // 监听 API 错误（api.js 触发的）

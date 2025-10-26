@@ -65,22 +65,14 @@ onMounted(async () => {
 
     const isPlayerInRoom = savedRoom.players?.some(p => p.playerId === playerStore.playerId)
     if (!isPlayerInRoom) {
-      toast.add({
-        severity: 'error',
-        summary: '错误',
-        detail: '您不在此房间中',
-        life: 3000
-      })
+      // 🔥 静默跳转，不显示toast（用户无法处理）
+      console.log('⚠️ 玩家不在房间中，返回房间列表')
       router.push('/find')
       return
     }
   } else {
-    toast.add({
-      severity: 'error',
-      summary: '错误',
-      detail: '房间信息不存在',
-      life: 3000
-    })
+    // 🔥 静默跳转，不显示toast（用户无法处理）
+    console.log('⚠️ 没有房间信息，返回房间列表')
     router.push('/find')
     return
   }

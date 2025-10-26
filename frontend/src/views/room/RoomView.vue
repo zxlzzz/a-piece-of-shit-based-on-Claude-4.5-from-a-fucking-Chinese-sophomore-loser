@@ -63,13 +63,16 @@ const loadActiveRooms = async () => {
       !currentRoom.value || r.roomCode !== currentRoom.value.roomCode
     )
   } catch (error) {
-    console.error(error)
-    toast.add({
-      severity: 'error',
-      summary: '加载失败',
-      detail: '获取房间列表失败',
-      life: 3000
-    })
+    console.error('加载房间列表失败:', error)
+    // 🔥 网络错误才显示提示（用户可以重试）
+    if (!error.response || error.code === 'ECONNABORTED') {
+      toast.add({
+        severity: 'error',
+        summary: '网络错误',
+        detail: '加载房间列表失败，请检查网络后重试',
+        life: 4000
+      })
+    }
   } finally {
     refreshing.value = false
   }

@@ -75,7 +75,8 @@ const {
   clearCountdown
 } = useGameCountdown(handleAutoSubmit)
 
-useGameKeyboard(showChat, hasSubmitted, question)
+// 🔥 传递 isSpectator 防止观战者通过键盘提交
+useGameKeyboard(showChat, hasSubmitted, question, computed(() => playerStore.isSpectator))
 
 const { connectWebSocket } = useGameWebSocket(
   roomCode,

@@ -12,6 +12,17 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   const handleChoose = (choice) => {
+    // 🔥 观战者不能提交答案
+    if (playerStore.isSpectator) {
+      toast.add({
+        severity: 'warn',
+        summary: '观战模式',
+        detail: '观战者不能提交答案',
+        life: 2000
+      })
+      return
+    }
+
     if (hasSubmitted.value) {
       toast.add({
         severity: 'warn',
@@ -21,7 +32,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
       return
     }
-    
+
     if (!question.value || !question.value.id) {
       toast.add({
         severity: 'error',
@@ -31,19 +42,19 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
       return
     }
-    
+
     hasSubmitted.value = true
     const submissionKey = getSubmissionKey()
     localStorage.setItem(submissionKey, 'true')
     console.log('💾 提交前保存状态:', submissionKey)
-    
+
     try {
-      sendSubmit({ 
-        roomCode: roomCode.value, 
-        playerId: playerStore.playerId, 
+      sendSubmit({
+        roomCode: roomCode.value,
+        playerId: playerStore.playerId,
         choice: choice.toString()
       })
-      
+
       toast.add({
         severity: 'success',
         summary: '提交成功',
@@ -54,7 +65,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       console.error('❌ 提交失败:', error)
       hasSubmitted.value = false
       localStorage.removeItem(submissionKey)
-      
+
       toast.add({
         severity: 'error',
         summary: '提交失败',
@@ -65,37 +76,43 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   const handleAutoSubmit = () => {
+    // 🔥 观战者不需要自动提交
+    if (playerStore.isSpectator) {
+      console.log('⚠️ 观战者不自动提交')
+      return
+    }
+
     if (hasSubmitted.value) {
       console.log('⚠️ 已提交，跳过自动提交')
       return
     }
-    
+
     if (!question.value || !question.value.id) {
       console.error('❌ 题目不存在，无法自动提交')
       return
     }
-    
+
     hasSubmitted.value = true
-    
+
     let defaultChoice
     if (question.value.type === 'CHOICE') {
       defaultChoice = question.value.options?.[0]?.key || 'A'
     } else if (question.value.type === 'BID') {
       defaultChoice = question.value.min || 0
     }
-    
+
     const submissionKey = getSubmissionKey()
     localStorage.setItem(submissionKey, 'true')
     console.log('💾 自动提交前保存状态:', submissionKey)
-    
+
     try {
-      sendSubmit({ 
-        roomCode: roomCode.value, 
-        playerId: playerStore.playerId, 
+      sendSubmit({
+        roomCode: roomCode.value,
+        playerId: playerStore.playerId,
         choice: defaultChoice.toString(),
         force: true
       })
-      
+
       toast.add({
         severity: 'info',
         summary: '自动提交',

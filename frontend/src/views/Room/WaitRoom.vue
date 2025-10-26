@@ -28,7 +28,9 @@ const chatRoomRef = ref(null)
 
 const isAllReady = computed(() => {
   if (!room.value || !room.value.players) return false
-  return room.value.players.every(p => p.ready)
+  const nonSpectators = room.value.players.filter(p => !p.spectator)
+  if (nonSpectators.length === 0) return false
+  return nonSpectators.every(p => p.ready)
 })
 
 const currentPlayerReady = computed(() => {
@@ -526,7 +528,7 @@ const refreshRoomState = async () => {
                 <div class="text-center">
                   <p class="text-gray-500 dark:text-gray-400 mb-1">准备状态</p>
                   <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-                    {{ room.players?.filter(p => p.ready).length || 0 }}/{{ room.players?.length || 0 }}
+                    {{ room.players?.filter(p => !p.spectator && p.ready).length || 0 }}/{{ room.players?.filter(p => !p.spectator).length || 0 }}
                   </p>
                 </div>
               </div>
@@ -630,7 +632,7 @@ const refreshRoomState = async () => {
                       </span>
                     </div>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
-                      {{ player.ready ? '已准备' : '等待中' }}
+                      {{ player.spectator ? '观战中' : (player.ready ? '已准备' : '等待中') }}
                     </p>
                   </div>
                 </div>
@@ -681,6 +683,17 @@ const refreshRoomState = async () => {
                 : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'"
             >
               {{ currentPlayerReady ? '已准备' : '准备' }}
+            </button>
+
+            <!-- 观战者显示观战中标识 -->
+            <div v-else class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
+                           bg-purple-50 text-purple-700 border border-purple-200 
+                           dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800
+                           text-center">
+              <i class="pi pi-eye mr-1"></i>
+              观战中
+            </div>
+            <button style="display:none"
             </button>
 
             <button 

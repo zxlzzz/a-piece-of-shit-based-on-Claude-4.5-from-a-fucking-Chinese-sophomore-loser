@@ -27,7 +27,7 @@
 
     <!-- 🔥 题目列表（瀑布流布局） -->
     <div v-else class="max-w-7xl mx-auto">
-      <div class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 sm:gap-6">
+      <div class="columns-1 sm:columns-2 lg:columns-3 xl:columns-3 gap-4 sm:gap-6">
         <QuesShowCard
           v-for="q in questions"
           :key="q.id"

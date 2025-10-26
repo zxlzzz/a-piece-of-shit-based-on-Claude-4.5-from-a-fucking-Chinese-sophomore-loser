@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为
+ * 0-3
+ */
+
 @Component
 public class Q011CattleRaiseStrategy extends BaseQuestionStrategy {
     public Q011CattleRaiseStrategy(BuffApplier buffApplier) {

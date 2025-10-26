@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人都想要一个物品（得到后可以十分的价格出售），现从第三人手里购买（均可购买），物品的价格由分别报价，如果你们的报价相差大于等于3分，则出价较低的人无法购买，否则都按自己的出价购买，则你的报价为
+ * 1-9
+ */
+
 @Component
 public class Q009BiddingCompetitionStrategy extends BaseQuestionStrategy {
     public Q009BiddingCompetitionStrategy(BuffApplier buffApplier) {

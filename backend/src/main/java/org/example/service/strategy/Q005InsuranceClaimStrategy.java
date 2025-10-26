@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。
+ * 2-8
+ */
+
 @Component
 public class Q005InsuranceClaimStrategy extends BaseQuestionStrategy {
     public Q005InsuranceClaimStrategy(BuffApplier buffApplier) {

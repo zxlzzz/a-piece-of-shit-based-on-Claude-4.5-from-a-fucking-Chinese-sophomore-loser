@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。
+ * 2-7
+ */
+
 @Component
 public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
     public Q004SheepAuctionStrategy(BuffApplier buffApplier) {

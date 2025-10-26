@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 选择一项（本题共进行3次），选完3个数后，会将所选数字之和加起来，和最小的玩家额外获得5分，最后计分时，如果你们所选的数有唯一众数（出现次数最多的），则这个数不计分（只不计入最后得分，求和时会算入）
+ * 2 4 6 8 10
+ */
 @Component
 @Slf4j
 public class QR002NumberSumStrategy extends BaseRepeatableStrategy {

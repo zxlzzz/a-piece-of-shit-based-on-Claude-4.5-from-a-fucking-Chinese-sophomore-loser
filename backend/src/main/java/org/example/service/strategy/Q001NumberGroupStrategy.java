@@ -5,6 +5,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除
+ */
 @Component
 public class Q001NumberGroupStrategy extends BaseQuestionStrategy {
     private static final Set<Integer> GROUP_A = Set.of(1, 2, 3);

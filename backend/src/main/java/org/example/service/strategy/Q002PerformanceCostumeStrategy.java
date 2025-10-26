@@ -5,6 +5,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。
+ *         "key": "A",
+ *         "text": "精致的侍卫服装（7）"
+ *         "key": "B",
+ *         "text": "王子服装（5）"
+ *         "key": "C",
+ *         "text": "普通侍卫服装（3）"
+ */
 @Component
 public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy {
     public Q002PerformanceCostumeStrategy(BuffApplier buffApplier) {

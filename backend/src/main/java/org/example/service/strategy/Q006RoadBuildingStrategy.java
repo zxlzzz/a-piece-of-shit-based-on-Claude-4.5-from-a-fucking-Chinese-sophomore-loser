@@ -5,6 +5,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人共同修路，总共需要 6 分。出分较高的人得 8 分，较低的得 4 分，相同则均得 4 分。
+ * 2-8
+ */
+
 @Component
 public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
     public Q006RoadBuildingStrategy(BuffApplier buffApplier) {

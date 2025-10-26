@@ -5,6 +5,16 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10） 2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择
+ *         "key": "A",
+ *         "text": "核心地段（消耗5分）"
+ *         "key": "B",
+ *         "text": "边缘地段（消耗3分）"
+ *         "key": "C",
+ *         "text": "什么都不做"
+ */
+
 @Component
 public class Q008ShopLocationStrategy extends BaseQuestionStrategy {
     public Q008ShopLocationStrategy(BuffApplier buffApplier) {

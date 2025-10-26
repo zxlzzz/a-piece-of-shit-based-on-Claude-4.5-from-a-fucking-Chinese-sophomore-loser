@@ -5,6 +5,12 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。
+ * 0-10
+ *
+ */
+
 @Component
 public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
     public Q007DoubleAuctionStrategy(BuffApplier buffApplier) {

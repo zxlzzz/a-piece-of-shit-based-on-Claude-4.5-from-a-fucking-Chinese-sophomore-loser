@@ -6,6 +6,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 
+/**
+ * 选4次，A.得2分，B.下一次得分翻倍，C.对手下一题得分减半
+ * 2人
+ */
+
 @Component
 public class QR001StrategyChoiceStrategy extends BaseRepeatableStrategy {
     public QR001StrategyChoiceStrategy(BuffApplier buffApplier) {

@@ -1,4 +1,5 @@
 <script setup>
+import axios from "axios";
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref, watch } from 'vue'
 
@@ -8,24 +9,117 @@ const loading = ref(false)
 const showForm = ref(false)
 const editingQuestion = ref(null)
 
-const API_BASE = 'http://localhost:8080/api/admin/questions'
+const API_BASE = '/api/admin/questions'
+
+/* ================================================
+   🔥 axios 实例配置
+================================================ */
+const api = axios.create({
+  baseURL: "/api",
+  timeout: 10000,
+});
+
+// ============ 请求拦截器（添加 token）============
+api.interceptors.request.use(
+  (config) => {
+    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.params);
+    
+    // 🔥 自动添加 token 到请求头
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    return config;
+  },
+  (error) => {
+    console.error('❌ Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// ============ 响应拦截器 ============
+api.interceptors.response.use(
+  (response) => {
+    console.log('✅ API Response:', response.config.url, response.data);
+    return response;
+  },
+  (error) => {
+    console.error('❌ API Error:', error.response?.data || error.message);
+    
+    // 🔥 处理 401 未授权错误
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('playerId');
+      localStorage.removeItem('playerName');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+    
+    // 🔥 检查是否需要静默处理（配置中设置了 silentError: true）
+    const silentError = error.config?.silentError;
+    
+    // 🔥 过滤不需要全局提示的错误
+    const shouldShowToast = !silentError && !isIgnorableError(error);
+    
+    // 只有需要提示的错误才触发全局事件
+    if (shouldShowToast) {
+      window.dispatchEvent(new CustomEvent('api-error', {
+        detail: {
+          message: error.response?.data?.message || error.message || '请求失败',
+          status: error.response?.status,
+          url: error.config?.url
+        }
+      }));
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+// 🔥 判断是否是可忽略的错误（不需要弹窗提示）
+function isIgnorableError(error) {
+  const status = error.response?.status;
+  const message = error.response?.data?.message || '';
+  const url = error.config?.url || '';
+  
+  // 房间不存在（404）- 静默处理
+  if (status === 404 && url.includes('/rooms/')) {
+    return true;
+  }
+  
+  // 房间已结束/不存在等业务错误 - 静默处理
+  if (message.includes('房间不存在') ||
+      message.includes('房间已结束') ||
+      message.includes('房间已过期')) {
+    return true;
+  }
+  
+  // 重复提交等正常业务逻辑 - 静默处理
+  if (message.includes('已经提交') ||
+      message.includes('已提交')) {
+    return true;
+  }
+  
+  return false;
+}
 
 // 表单数据
 const form = ref({
-  type: 'choice',
+  type: 'CHOICE',
   text: '',
   strategyId: '',
   minPlayers: 2,
   maxPlayers: 2,
-  defaultChoice: '',
+  defaultCHOICE: '',
   
-  // choice 专用
+  // CHOICE 专用
   options: [
     { key: 'A', text: '' },
     { key: 'B', text: '' }
   ],
   
-  // bid 专用
+  // BID 专用
   min: 0,
   max: 100,
   step: 1,
@@ -46,11 +140,11 @@ const form = ref({
 
 // 监听类型切换，清空对应字段
 watch(() => form.value.type, (newType) => {
-  if (newType === 'choice') {
+  if (newType === 'CHOICE') {
     form.value.min = null
     form.value.max = null
     form.value.step = null
-  } else if (newType === 'bid') {
+  } else if (newType === 'BID') {
     form.value.options = []
   }
 })
@@ -78,9 +172,8 @@ watch(() => form.value.isRepeatable, (isChecked) => {
 const loadQuestions = async () => {
   loading.value = true
   try {
-    const response = await fetch(API_BASE)
-    const data = await response.json()
-    questions.value = data.content || data
+    const response = await api.get('/admin/questions')
+    questions.value = response.data.content || response.data
     toast.add({
       severity: 'success',
       summary: '加载成功',
@@ -104,12 +197,12 @@ const loadQuestions = async () => {
 const openCreateForm = () => {
   editingQuestion.value = null
   form.value = {
-    type: 'choice',
+    type: 'CHOICE',
     text: '',
     strategyId: '',
     minPlayers: 2,
     maxPlayers: 2,
-    defaultChoice: '',
+    defaultCHOICE: '',
     options: [
       { key: 'A', text: '' },
       { key: 'B', text: '' }
@@ -165,26 +258,26 @@ const openEditForm = (question) => {
     }
   }
   
-  // 情况4：choice 类型但没有 options，给个默认值
-  if (parsedOptions.length === 0 && question.type === 'choice') {
+  // 情况4：CHOICE 类型但没有 options，给个默认值
+  if (parsedOptions.length === 0 && question.type === 'CHOICE') {
     parsedOptions = [{ key: 'A', text: '' }]
-    console.warn('⚠️ choice 类型但没有 options，使用默认值')
+    console.warn('⚠️ CHOICE 类型但没有 options，使用默认值')
   }
   
   // 🔥 填充表单
   form.value = {
     // 基础信息
-    type: question.type || 'choice',
+    type: question.type || 'CHOICE',
     text: question.text || '',
     strategyId: question.strategyId || '',
     minPlayers: question.minPlayers ?? 2,
     maxPlayers: question.maxPlayers ?? 2,
-    defaultChoice: question.defaultChoice || '',
+    defaultCHOICE: question.defaultCHOICE || '',
     
-    // choice 专用
+    // CHOICE 专用
     options: parsedOptions,
     
-    // bid 专用
+    // BID 专用
     min: question.min ?? 0,
     max: question.max ?? 100,
     step: question.step ?? 1,
@@ -203,7 +296,7 @@ const openEditForm = (question) => {
     repeatGroupId: question.repeatGroupId || ''
   }
   
-  console.log('✅ 表单已填充:', form.value)  // 🔥 调试用
+  console.log('✅ 表单已填充:', form.value)
   
   showForm.value = true
 }
@@ -234,18 +327,8 @@ const submitForm = async () => {
     return
   }
   
-  // 验证 choice 类型的选项
-  if (form.value.type === 'choice' && form.value.options.length === 0) {
-    toast.add({
-      severity: 'warn',
-      summary: '请添加选项',
-      detail: '选择题至少需要一个选项',
-      life: 3000
-    })
-    return
-  }
-  // 🔥 验证 choice 类型的选项
-  if (form.value.type === 'choice') {
+  // 🔥 验证 CHOICE 类型的选项
+  if (form.value.type === 'CHOICE') {
     if (!form.value.options || form.value.options.length === 0) {
       toast.add({
         severity: 'warn',
@@ -270,8 +353,8 @@ const submitForm = async () => {
     }
   }
   
-  // 🔥 验证 bid 类型的范围
-  if (form.value.type === 'bid') {
+  // 🔥 验证 BID 类型的范围
+  if (form.value.type === 'BID') {
     if (form.value.min == null || form.value.max == null) {
       toast.add({
         severity: 'warn',
@@ -290,17 +373,17 @@ const submitForm = async () => {
     strategyId: form.value.strategyId,
     minPlayers: form.value.minPlayers,
     maxPlayers: form.value.maxPlayers,
-    defaultChoice: form.value.defaultChoice,
+    defaultCHOICE: form.value.defaultCHOICE,
     
-    // choice 专用
-    options: form.value.type === 'choice' && form.value.options.length > 0 
+    // CHOICE 专用
+    options: form.value.type === 'CHOICE' && form.value.options.length > 0 
       ? form.value.options 
       : null,
     
-    // bid 专用
-    min: form.value.type === 'bid' ? form.value.min : null,
-    max: form.value.type === 'bid' ? form.value.max : null,
-    step: form.value.type === 'bid' ? form.value.step : null,
+    // BID 专用
+    min: form.value.type === 'BID' ? form.value.min : null,
+    max: form.value.type === 'BID' ? form.value.max : null,
+    step: form.value.type === 'BID' ? form.value.step : null,
     
     // 序列配置
     sequenceGroupId: form.value.isSequence ? form.value.sequenceGroupId : null,
@@ -315,20 +398,14 @@ const submitForm = async () => {
     repeatGroupId: form.value.isRepeatable ? form.value.repeatGroupId : null
   }
 
-  console.log('🔍 提交的 payload:', payload) 
+  console.log('🔍 提交的 payload:', payload)
   loading.value = true
   try {
-    const url = editingQuestion.value 
-      ? `${API_BASE}/${editingQuestion.value.id}`
-      : API_BASE
-    
-    const response = await fetch(url, {
-      method: editingQuestion.value ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    
-    if (!response.ok) throw new Error('操作失败')
+    if (editingQuestion.value) {
+      await api.put(`/admin/questions/${editingQuestion.value.id}`, payload)
+    } else {
+      await api.post('/admin/questions', payload)
+    }
     
     toast.add({
       severity: 'success',
@@ -343,7 +420,7 @@ const submitForm = async () => {
     toast.add({
       severity: 'error',
       summary: '操作失败',
-      detail: error.message,
+      detail: error.response?.data?.message || error.message,
       life: 3000
     })
   } finally {
@@ -357,8 +434,7 @@ const deleteQuestion = async (id) => {
   
   loading.value = true
   try {
-    const response = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' })
-    if (!response.ok) throw new Error('删除失败')
+    await api.delete(`/admin/questions/${id}`)
     
     toast.add({
       severity: 'success',
@@ -371,7 +447,7 @@ const deleteQuestion = async (id) => {
     toast.add({
       severity: 'error',
       summary: '删除失败',
-      detail: error.message,
+      detail: error.response?.data?.message || error.message,
       life: 3000
     })
   } finally {
@@ -383,8 +459,8 @@ const deleteQuestion = async (id) => {
 const exportQuestions = async () => {
   loading.value = true
   try {
-    const response = await fetch(`${API_BASE}/export`)
-    const data = await response.json()
+    const response = await api.get('/admin/questions/export')
+    const data = response.data
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -405,7 +481,7 @@ const exportQuestions = async () => {
     toast.add({
       severity: 'error',
       summary: '导出失败',
-      detail: error.message,
+      detail: error.response?.data?.message || error.message,
       life: 3000
     })
   } finally {
@@ -419,8 +495,7 @@ const clearAll = async () => {
   
   loading.value = true
   try {
-    const response = await fetch(`${API_BASE}/all`, { method: 'DELETE' })
-    if (!response.ok) throw new Error('清空失败')
+    await api.delete('/admin/questions/all')
     
     toast.add({
       severity: 'success',
@@ -433,7 +508,7 @@ const clearAll = async () => {
     toast.add({
       severity: 'error',
       summary: '清空失败',
-      detail: error.message,
+      detail: error.response?.data?.message || error.message,
       life: 3000
     })
   } finally {
@@ -511,7 +586,7 @@ onMounted(() => {
                 <td class="px-4 py-3 text-sm text-gray-900 dark:text-white">{{ q.id }}</td>
                 <td class="px-4 py-3 text-sm">
                   <span class="px-2 py-1 rounded text-xs font-medium"
-                        :class="q.type === 'choice' 
+                        :class="q.type === 'CHOICE' 
                           ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' 
                           : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'">
                     {{ q.type }}
@@ -582,9 +657,9 @@ onMounted(() => {
               <div class="flex gap-2 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg w-fit">
                 <button
                   type="button"
-                  @click="form.type = 'choice'"
+                  @click="form.type = 'CHOICE'"
                   class="px-6 py-2 rounded-md font-medium transition-all"
-                  :class="form.type === 'choice'
+                  :class="form.type === 'CHOICE'
                     ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
                 >
@@ -592,9 +667,9 @@ onMounted(() => {
                 </button>
                 <button
                   type="button"
-                  @click="form.type = 'bid'"
+                  @click="form.type = 'BID'"
                   class="px-6 py-2 rounded-md font-medium transition-all"
-                  :class="form.type === 'bid'
+                  :class="form.type === 'BID'
                     ? 'bg-white dark:bg-gray-600 text-purple-600 dark:text-purple-400 shadow-sm'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
                 >
@@ -653,7 +728,7 @@ onMounted(() => {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     默认选择（可选）
                   </label>
-                  <input v-model="form.defaultChoice"
+                  <input v-model="form.defaultCHOICE"
                          placeholder="默认答案"
                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
@@ -661,8 +736,8 @@ onMounted(() => {
               </div>
             </div>
 
-            <!-- 🔥 choice 类型的选项 -->
-            <div v-if="form.type === 'choice'" 
+            <!-- 🔥 CHOICE 类型的选项 -->
+            <div v-if="form.type === 'CHOICE'" 
                  class="border border-blue-200 dark:border-blue-800 rounded-lg p-4 bg-blue-50/50 dark:bg-blue-900/10">
               <h3 class="font-semibold text-blue-700 dark:text-blue-400 mb-4">
                 <i class="pi pi-list mr-2"></i>选项设置
@@ -694,8 +769,8 @@ onMounted(() => {
               </button>
             </div>
 
-            <!-- 🔥 bid 类型的范围 -->
-            <div v-if="form.type === 'bid'" 
+            <!-- 🔥 BID 类型的范围 -->
+            <div v-if="form.type === 'BID'" 
                  class="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50/50 dark:bg-purple-900/10">
               <h3 class="font-semibold text-purple-700 dark:text-purple-400 mb-4">
                 <i></i>竞价范围

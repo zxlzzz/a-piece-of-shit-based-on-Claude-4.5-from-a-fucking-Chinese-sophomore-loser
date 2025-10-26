@@ -9,7 +9,7 @@ import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.pojo.RoomStatus;
 import org.example.repository.*;
-import org.example.service.QuestionSelectorService;
+import org.example.service.question.QuestionSelectorService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;

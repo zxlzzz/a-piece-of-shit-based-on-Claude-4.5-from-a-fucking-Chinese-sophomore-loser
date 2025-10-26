@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
-import org.example.service.QuesService;
+import org.example.service.question.QuesService;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

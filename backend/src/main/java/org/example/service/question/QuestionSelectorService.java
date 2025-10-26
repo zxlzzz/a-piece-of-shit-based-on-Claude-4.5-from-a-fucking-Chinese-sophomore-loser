@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.question;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

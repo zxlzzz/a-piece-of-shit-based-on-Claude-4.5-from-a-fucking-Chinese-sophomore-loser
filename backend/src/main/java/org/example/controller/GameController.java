@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
-import org.example.service.GameService;
+import org.example.service.game.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.room.RoomLifecycleService;

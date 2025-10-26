@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.player;
 
 import org.example.entity.PlayerEntity;
 import org.example.entity.RoomEntity;

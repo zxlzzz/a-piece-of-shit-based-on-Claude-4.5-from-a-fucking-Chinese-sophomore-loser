@@ -6,7 +6,7 @@ import org.example.pojo.GameRoom;
 import org.example.pojo.JoinRequest;
 import org.example.dto.RoomDTO;
 import org.example.pojo.SubmitRequest;
-import org.example.service.GameService;
+import org.example.service.game.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.room.RoomLifecycleService;
 import org.springframework.messaging.handler.annotation.MessageMapping;

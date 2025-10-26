@@ -3,7 +3,7 @@ package org.example.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.QuestionDTO;
 import org.example.exception.BusinessException;
-import org.example.service.QuesService;
+import org.example.service.question.QuesService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 

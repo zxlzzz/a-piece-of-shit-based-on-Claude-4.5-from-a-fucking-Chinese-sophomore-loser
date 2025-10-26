@@ -1,4 +1,4 @@
-package org.example.service;
+package org.example.service.question;
 
 import jakarta.transaction.Transactional;
 import org.example.dto.QuestionDTO;

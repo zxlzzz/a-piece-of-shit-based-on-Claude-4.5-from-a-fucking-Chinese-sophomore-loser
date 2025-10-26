@@ -6,7 +6,7 @@ import org.example.dto.PlayerSubmissionDTO;
 import org.example.dto.QuestionDTO;
 import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.*;
-import org.example.service.QuestionScoringStrategy;
+import org.example.service.question.QuestionScoringStrategy;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 

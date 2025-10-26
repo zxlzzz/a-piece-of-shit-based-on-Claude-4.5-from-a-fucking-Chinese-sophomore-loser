@@ -5,12 +5,12 @@ import { sendLeave, sendReady, sendStart } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ChatRoom from './ChatRoom.vue'
-import CustomForm from './CustomForm.vue'
-import PlayerListCard from './PlayerListCard.vue'
-import RoomInfoCard from './RoomInfoCard.vue'
-import WaitRoomActions from './WaitRoomActions.vue'
-import { useWaitRoomWebSocket } from './useWaitRoomWebSocket'
+import ChatRoom from '@/components/chat/ChatRoom.vue'
+import CustomForm from '@/components/room/CustomForm.vue'
+import PlayerListCard from '@/components/room/PlayerListCard.vue'
+import RoomInfoCard from '@/components/room/RoomInfoCard.vue'
+import WaitRoomActions from '@/components/room/WaitRoomActions.vue'
+import { useWaitRoomWebSocket } from '@/composables/room/useWaitRoomWebSocket'
 
 const playerStore = usePlayerStore()
 const route = useRoute()

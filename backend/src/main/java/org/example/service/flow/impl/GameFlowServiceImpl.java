@@ -101,10 +101,14 @@ public class GameFlowServiceImpl implements GameFlowService {
                 playerGameRepository.save(playerGame);
             }
 
-            // 🔥 选题（返回 DTO）
+            // 🔥 选题（返回 DTO）- 计算非观战者人数
+            int nonSpectatorCount = (int) gameRoom.getPlayers().stream()
+                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                    .count();
+
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
-                    gameRoom.getPlayers().size()
+                    nonSpectatorCount
             );
 
             // 初始化游戏房间状态
@@ -119,8 +123,9 @@ public class GameFlowServiceImpl implements GameFlowService {
             timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
-            log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {}",
-                    roomCode, questions.size(), gameRoom.getPlayers().size());
+            log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {} (观战者: {})",
+                    roomCode, questions.size(), nonSpectatorCount,
+                    gameRoom.getPlayers().size() - nonSpectatorCount);
 
             // 🔥 同步到 Redis
             roomCache.syncToRedis(roomCode);

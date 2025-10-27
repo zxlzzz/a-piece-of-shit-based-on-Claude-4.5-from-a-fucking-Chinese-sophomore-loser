@@ -8,6 +8,8 @@ let reconnectAttempts = 0;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000; // 1秒
 let reconnectTimer = null;
+let isReconnecting = false; // 🔥 标记是否正在重连
+let subscriptionCallbacks = []; // 🔥 保存订阅回调用于重连后恢复
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -78,12 +80,27 @@ export function connect(playerId, onConnect, onError) {
         clearTimeout(timeoutId); // 🔥 清除超时
         connected = true;
         connectPromise = null;
-        reconnectAttempts = 0;
+
         console.log("✅ STOMP connected for playerId:", playerId);
         console.log("📋 Connection frame:", frame);
-        
+
+        // 🔥 重连成功
+        if (isReconnecting) {
+          console.log('🎉 重连成功，恢复订阅...');
+          isReconnecting = false;
+          reconnectAttempts = 0;
+
+          // 触发重连成功事件
+          window.dispatchEvent(new CustomEvent('websocket-reconnected'));
+
+          // 恢复所有订阅
+          restoreSubscriptions();
+        } else {
+          reconnectAttempts = 0;
+        }
+
         subscribeToPersonalMessages(playerId);
-        
+
         if (onConnect) onConnect(stompClient);
         resolve(stompClient);
       },
@@ -93,18 +110,32 @@ export function connect(playerId, onConnect, onError) {
         connected = false;
         connectPromise = null;
         console.warn("⚠️ STOMP disconnected");
-        if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+
+        // 🔥 只有非手动断开才自动重连
+        if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          isReconnecting = true;
           const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
           reconnectAttempts++;
           console.log(`🔄 将在 ${delay}ms 后重连 (尝试 ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`);
-          
+
+          // 🔥 触发重连中事件（带进度信息）
+          window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
+            detail: {
+              attempts: reconnectAttempts,
+              maxAttempts: MAX_RECONNECT_ATTEMPTS,
+              delay: delay
+            }
+          }));
+
           reconnectTimer = setTimeout(() => {
             reconnect().catch(err => {
               console.error('重连失败:', err);
+              // 如果还没到最大次数，onDisconnect会再次触发重连
             });
           }, delay);
-        } else {
+        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
           console.error('❌ 已达到最大重连次数，停止重连');
+          isReconnecting = false;
           window.dispatchEvent(new CustomEvent('websocket-max-reconnect-failed'));
         }
       },
@@ -168,6 +199,41 @@ function subscribeToPersonalMessages(playerId) {
 }
 
 /**
+ * 🔥 恢复重连后的订阅
+ */
+function restoreSubscriptions() {
+  console.log(`🔄 恢复 ${subscriptionCallbacks.length} 个订阅...`);
+  subscriptionCallbacks.forEach(callback => {
+    try {
+      callback();
+    } catch (err) {
+      console.error('恢复订阅失败:', err);
+    }
+  });
+}
+
+/**
+ * 🔥 注册订阅回调（用于重连后恢复）
+ */
+export function registerSubscriptionCallback(callback) {
+  if (typeof callback === 'function' && !subscriptionCallbacks.includes(callback)) {
+    subscriptionCallbacks.push(callback);
+    console.log('✅ 注册订阅回调，当前共', subscriptionCallbacks.length, '个');
+  }
+}
+
+/**
+ * 🔥 移除订阅回调
+ */
+export function unregisterSubscriptionCallback(callback) {
+  const index = subscriptionCallbacks.indexOf(callback);
+  if (index > -1) {
+    subscriptionCallbacks.splice(index, 1);
+    console.log('✅ 移除订阅回调，剩余', subscriptionCallbacks.length, '个');
+  }
+}
+
+/**
  * 断开连接
  * @param {boolean} force - 是否强制清理所有状态
  */
@@ -176,6 +242,11 @@ export function disconnect(force = false) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
+
+  // 🔥 停止自动重连
+  isReconnecting = false;
+  reconnectAttempts = 0;
+
   if (stompClient) {
     try {
       stompClient.deactivate();
@@ -183,15 +254,17 @@ export function disconnect(force = false) {
       console.warn('❌ 断开连接失败:', e);
     }
   }
-  
+
   // 🔥 强制清理所有状态
   stompClient = null;
   connected = false;
   currentPlayerId = null;
   connectPromise = null;
-  
+
+  // 🔥 清理订阅回调
   if (force) {
-    console.log("🔌 STOMP 强制断开并清理状态");
+    subscriptionCallbacks = [];
+    console.log("🔌 STOMP 强制断开并清理所有状态");
   } else {
     console.log("🔌 STOMP disconnected manually");
   }
@@ -437,5 +510,7 @@ export default {
   getCurrentPlayerId,
   getStompClient,
   sendMessage,
-  getConnectionState
+  getConnectionState,
+  registerSubscriptionCallback,
+  unregisterSubscriptionCallback
 };

@@ -1,11 +1,12 @@
 import { ref } from 'vue'
-import { connect, disconnect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
+import { connect, disconnect, isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   const wsConnected = ref(false)
   const subscriptions = ref([])
   const loading = ref(false)
+  let roomUpdateCallback = null // 🔥 保存room更新回调
 
   const handleRoomDeleted = () => {
     toast.add({
@@ -28,11 +29,27 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     console.log('🔄 WebSocket 重连中...', event.detail)
     wsConnected.value = false
 
+    const { attempts, maxAttempts, delay } = event.detail
+    const delaySeconds = Math.round(delay / 1000)
+
     toast.add({
       severity: 'warn',
       summary: '连接中断',
-      detail: `正在尝试重连... (${event.detail.attempts}/5)`,
-      life: 3000
+      detail: `正在重连 (${attempts}/${maxAttempts})，${delaySeconds}秒后尝试...`,
+      life: Math.min(delay + 1000, 4000)
+    })
+  }
+
+  // 🔥 重连成功处理
+  const handleReconnected = () => {
+    console.log('🎉 重连成功')
+    wsConnected.value = true
+
+    toast.add({
+      severity: 'success',
+      summary: '重连成功',
+      detail: '连接已恢复',
+      life: 2000
     })
   }
 
@@ -43,21 +60,21 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     toast.add({
       severity: 'error',
       summary: '连接失败',
-      detail: '连接已断开，请刷新页面',
-      life: 0
+      detail: '连接已断开，请返回房间列表',
+      life: 4000
     })
 
+    // 🔥 自动跳转而不是confirm弹窗
     setTimeout(() => {
-      if (confirm('连接已断开，是否重新连接？')) {
-        window.location.reload()
-      } else {
-        router.push('/find')
-      }
-    }, 2000)
+      router.push('/find')
+    }, 3000)
   }
 
   const setupRoomSubscription = (room, onRoomUpdate) => {
     console.log('📡 WaitRoom: 开始订阅房间:', roomCode.value)
+
+    // 🔥 保存回调用于重连恢复
+    roomUpdateCallback = onRoomUpdate
 
     if (subscriptions.value.length > 0) {
       console.log('🧹 清理旧订阅')
@@ -198,11 +215,27 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     await refreshRoomState(room)
   }
 
+  // 🔥 订阅恢复回调（重连后自动调用）
+  const subscriptionRestoreCallback = () => {
+    console.log('🔄 WaitRoom: 恢复房间订阅...')
+    if (roomUpdateCallback) {
+      try {
+        setupRoomSubscription({ value: null }, roomUpdateCallback)
+      } catch (err) {
+        console.error('恢复订阅失败:', err)
+      }
+    }
+  }
+
   const cleanup = () => {
     window.removeEventListener('room-deleted', handleRoomDeleted)
     window.removeEventListener('websocket-error', handleWebSocketError)
     window.removeEventListener('websocket-reconnecting', handleReconnecting)
+    window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
+
+    // 🔥 取消注册订阅恢复回调
+    unregisterSubscriptionCallback(subscriptionRestoreCallback)
 
     if (subscriptions.value.length > 0) {
       unsubscribeAll(subscriptions.value)
@@ -214,7 +247,11 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     window.addEventListener('room-deleted', handleRoomDeleted)
     window.addEventListener('websocket-error', handleWebSocketError)
     window.addEventListener('websocket-reconnecting', handleReconnecting)
+    window.addEventListener('websocket-reconnected', handleReconnected)
     window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
+
+    // 🔥 注册订阅恢复回调
+    registerSubscriptionCallback(subscriptionRestoreCallback)
   }
 
   return {

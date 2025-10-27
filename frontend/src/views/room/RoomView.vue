@@ -2,10 +2,11 @@
 import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
+import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -18,6 +19,10 @@ const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 const searchQuery = ref('') // 🔥 房间搜索关键词
 
+// 自动刷新
+const REFRESH_INTERVAL = 5000 // 5秒刷新一次
+let refreshTimer = null
+
 // 🔥 过滤后的房间列表（支持前缀匹配）
 const filteredRooms = computed(() => {
   if (!searchQuery.value.trim()) {
@@ -28,6 +33,22 @@ const filteredRooms = computed(() => {
     room.roomCode.toUpperCase().startsWith(query)
   )
 })
+
+// 启动自动刷新
+const startAutoRefresh = () => {
+  if (refreshTimer) return
+  refreshTimer = setInterval(() => {
+    loadActiveRooms()
+  }, REFRESH_INTERVAL)
+}
+
+// 停止自动刷新
+const stopAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
 
 // 初始化
 onMounted(async () => {
@@ -44,7 +65,8 @@ onMounted(async () => {
   }
 
   await loadActiveRooms()
-  
+  startAutoRefresh() // 启动自动刷新
+
   // 🔥 改进：尝试恢复房间，失败则自动清理
   const savedRoom = playerStore.loadRoom()
   if (savedRoom) {
@@ -65,6 +87,11 @@ onMounted(async () => {
       currentRoom.value = null
     }
   }
+})
+
+// 清理定时器
+onUnmounted(() => {
+  stopAutoRefresh()
 })
 
 const loadActiveRooms = async () => {
@@ -316,8 +343,14 @@ const handleLogout = () => {
               </p>
             </div>
 
+            <!-- 骨架屏（首次加载） -->
+            <div v-if="refreshing && activeRooms.length === 0"
+                 class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <SkeletonRoomCard v-for="i in 4" :key="i" />
+            </div>
+
             <!-- 房间列表 -->
-            <div v-if="filteredRooms.length > 0"
+            <div v-else-if="filteredRooms.length > 0"
                  class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div
                 v-for="room in filteredRooms"

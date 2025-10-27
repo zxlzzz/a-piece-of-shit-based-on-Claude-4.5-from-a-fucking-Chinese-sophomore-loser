@@ -5,6 +5,8 @@ import Dialog from 'primevue/dialog'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ResultContent from '@/components/result/ResultContent.vue'
+import SkeletonHistoryCard from '@/components/common/SkeletonHistoryCard.vue'
+import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
@@ -186,9 +188,8 @@ onMounted(() => {
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="loading" class="text-center py-12">
-        <i class="pi pi-spin pi-spinner text-4xl text-gray-400 mb-3"></i>
-        <p class="text-gray-500 dark:text-gray-400">加载中</p>
+      <div v-if="loading" class="space-y-2 sm:space-y-3">
+        <SkeletonHistoryCard v-for="i in 5" :key="i" />
       </div>
 
       <!-- 错误状态 -->
@@ -274,10 +275,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <div v-if="detailLoading" class="text-center py-8 sm:py-12">
-        <i class="pi pi-spin pi-spinner text-2xl sm:text-3xl text-gray-400 mb-3"></i>
-        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">加载中...</p>
-      </div>
+      <SkeletonResult v-if="detailLoading" />
 
       <div v-else-if="detailError" class="text-center py-12">
         <i class="pi pi-exclamation-circle text-3xl text-red-500 mb-3"></i>

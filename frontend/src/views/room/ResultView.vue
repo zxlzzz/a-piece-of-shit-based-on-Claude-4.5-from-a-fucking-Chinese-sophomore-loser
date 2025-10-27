@@ -6,6 +6,7 @@ import { useBreakpoints } from '@vueuse/core'
 import ResultContent from '@/components/result/ResultContent.vue'
 import ChatRoom from '@/components/chat/ChatRoom.vue'
 import MobileChatDrawer from '@/components/game/MobileChatDrawer.vue'
+import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { getGameHistory } from '@/api'
 
 const route = useRoute()
@@ -89,11 +90,7 @@ onMounted(() => {
           </div>
                   
           <!-- 加载状态 -->
-          <div v-if="loading"
-               class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
-            <i class="pi pi-spin pi-spinner text-3xl sm:text-4xl text-gray-400 mb-3"></i>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">加载中</p>
-          </div>
+          <SkeletonResult v-if="loading" />
 
           <!-- 错误状态 -->
           <div v-else-if="error"

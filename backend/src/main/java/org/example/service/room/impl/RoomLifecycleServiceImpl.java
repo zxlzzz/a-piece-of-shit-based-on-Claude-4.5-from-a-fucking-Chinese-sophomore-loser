@@ -350,13 +350,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
             log.info("⚠️ 玩家 {} ({}) 从房间 {} 断开连接", playerName, playerId, roomCode);
 
-            // 🔥 如果游戏进行中且所有玩家都断线，自动推进
+            // 🔥 如果游戏进行中且所有非观战玩家都断线，自动推进
             if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
                 boolean allDisconnected = gameRoom.getPlayers().stream()
+                        .filter(p -> !Boolean.TRUE.equals(p.getSpectator())) // 排除观战者
                         .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
 
                 if (allDisconnected) {
-                    log.warn("❌ 房间 {} 所有玩家都断开连接", roomCode);
+                    log.warn("❌ 房间 {} 所有非观战玩家都断开连接", roomCode);
                     // 注意：不在这里调用 advanceQuestion，由 GameFlowService 处理
                 }
             }

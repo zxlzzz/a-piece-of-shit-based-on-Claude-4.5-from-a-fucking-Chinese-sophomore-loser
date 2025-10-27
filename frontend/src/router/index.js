@@ -1,4 +1,3 @@
-import AppLayout from '@/layout/AppLayout.vue'
 import { usePlayerStore } from '@/stores/player'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -7,7 +6,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: AppLayout,
+      component: () => import('@/layout/AppLayout.vue'),
       children: [
         {
           path: '/',

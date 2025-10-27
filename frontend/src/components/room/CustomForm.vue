@@ -289,7 +289,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 const props = defineProps({
   maxQuestions: {
@@ -348,16 +348,31 @@ const handleSubmit = () => {
   if (formData.value.questionCount < 1) {
     return
   }
-  
+
   // 🔥 校验：closest_to_target 必须填目标分
   if (formData.value.rankingMode === 'closest_to_target' && !formData.value.targetScore) {
     return
   }
-  
+
   emit('submit', formData.value)
 }
 
 const handleCancel = () => {
   emit('cancel')
 }
+
+// Esc键关闭
+const handleKeydown = (e) => {
+  if (e.key === 'Escape') {
+    handleCancel()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>

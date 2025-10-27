@@ -2,7 +2,7 @@
 import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
@@ -16,6 +16,18 @@ const loading = ref(false)
 const activeRooms = ref([])
 const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
+const searchQuery = ref('') // 🔥 房间搜索关键词
+
+// 🔥 过滤后的房间列表（支持前缀匹配）
+const filteredRooms = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return activeRooms.value
+  }
+  const query = searchQuery.value.trim().toUpperCase()
+  return activeRooms.value.filter(room =>
+    room.roomCode.toUpperCase().startsWith(query)
+  )
+})
 
 // 初始化
 onMounted(async () => {
@@ -250,7 +262,7 @@ const handleLogout = () => {
                       border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             
             <!-- 标题栏 -->
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center justify-between mb-4">
               <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <i class="pi pi-home text-blue-500"></i>
                 活跃房间
@@ -258,12 +270,12 @@ const handleLogout = () => {
                   ({{ activeRooms.length }})
                 </span>
               </h2>
-              
+
               <!-- 刷新按钮 -->
               <button
                 @click="loadActiveRooms"
                 :disabled="refreshing"
-                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700
                        rounded-lg transition-colors"
                 :class="{ 'animate-spin': refreshing }"
               >
@@ -271,11 +283,44 @@ const handleLogout = () => {
               </button>
             </div>
 
+            <!-- 🔥 搜索框 -->
+            <div class="mb-4">
+              <div class="relative">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="搜索房间码（支持前缀匹配，如输入 'AB' 可搜索到 'ABC123'）"
+                  class="w-full px-4 py-2.5 pl-10
+                         bg-gray-50 dark:bg-gray-700/50
+                         border border-gray-200 dark:border-gray-600
+                         rounded-lg
+                         text-gray-800 dark:text-white
+                         placeholder-gray-400 dark:placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         transition-all"
+                />
+                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <button
+                  v-if="searchQuery"
+                  @click="searchQuery = ''"
+                  class="absolute right-3 top-1/2 -translate-y-1/2
+                         text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
+                         transition-colors"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <p v-if="searchQuery && filteredRooms.length === 0"
+                 class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                未找到匹配的房间
+              </p>
+            </div>
+
             <!-- 房间列表 -->
-            <div v-if="activeRooms.length > 0" 
+            <div v-if="filteredRooms.length > 0"
                  class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div
-                v-for="room in activeRooms"
+                v-for="room in filteredRooms"
                 :key="room.roomCode"
                 class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 sm:p-4
                        border border-gray-200 dark:border-gray-600

@@ -16,11 +16,45 @@ const password = ref('')
 const name = ref('') // 昵称（仅注册时需要）
 const loading = ref(false)
 
+// 实时验证状态
+const usernameError = ref('')
+const passwordError = ref('')
+const nameError = ref('')
+const usernameTouched = ref(false)
+const passwordTouched = ref(false)
+const nameTouched = ref(false)
+
+// 实时验证函数
+const validateUsernameField = () => {
+  if (!usernameTouched.value) return
+  const result = validateUsername(username.value)
+  usernameError.value = result.valid ? '' : result.message
+}
+
+const validatePasswordField = () => {
+  if (!passwordTouched.value) return
+  const result = validatePassword(password.value)
+  passwordError.value = result.valid ? '' : result.message
+}
+
+const validateNameField = () => {
+  if (!nameTouched.value) return
+  const result = validatePlayerName(name.value)
+  nameError.value = result.valid ? '' : result.message
+}
+
 const switchMode = () => {
   isLogin.value = !isLogin.value
   username.value = ''
   password.value = ''
   name.value = ''
+  // 重置验证状态
+  usernameError.value = ''
+  passwordError.value = ''
+  nameError.value = ''
+  usernameTouched.value = false
+  passwordTouched.value = false
+  nameTouched.value = false
 }
 
 const handleSubmit = async () => {
@@ -128,6 +162,11 @@ const canSubmit = computed(() => {
     return username.value.trim() && password.value.trim() && name.value.trim()
   }
 })
+
+// 字符计数
+const usernameLength = computed(() => username.value.trim().length)
+const passwordLength = computed(() => password.value.length)
+const nameLength = computed(() => name.value.trim().length)
 </script>
 
 <template>
@@ -172,69 +211,96 @@ const canSubmit = computed(() => {
         <div class="space-y-4">
           <!-- 用户名 -->
           <div>
-            <label 
-              for="username" 
+            <label
+              for="username"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               用户名
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ usernameLength }}/20</span>
             </label>
-            <input 
+            <input
               id="username"
               v-model="username"
               type="text"
               placeholder="请输入用户名"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="[
+                'w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white',
+                'focus:outline-none focus:ring-2 focus:border-transparent',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                usernameError && usernameTouched ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              ]"
+              @blur="usernameTouched = true; validateUsernameField()"
+              @input="validateUsernameField"
               @keypress="handleKeyPress"
               :disabled="loading"
               autofocus
             />
+            <p v-if="usernameError && usernameTouched" class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ usernameError }}
+            </p>
           </div>
 
           <!-- 密码 -->
           <div>
-            <label 
-              for="password" 
+            <label
+              for="password"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               密码
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ passwordLength }}/20</span>
             </label>
-            <input 
+            <input
               id="password"
               v-model="password"
               type="password"
               placeholder="请输入密码（至少6位）"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="[
+                'w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white',
+                'focus:outline-none focus:ring-2 focus:border-transparent',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                passwordError && passwordTouched ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              ]"
+              @blur="passwordTouched = true; validatePasswordField()"
+              @input="validatePasswordField"
               @keypress="handleKeyPress"
               :disabled="loading"
             />
+            <p v-if="passwordError && passwordTouched" class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ passwordError }}
+            </p>
           </div>
 
           <!-- 昵称（仅注册时显示）-->
           <div v-if="!isLogin">
-            <label 
-              for="name" 
+            <label
+              for="name"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               游戏昵称
+              <span class="text-xs text-gray-500 dark:text-gray-400 ml-2">{{ nameLength }}/20</span>
             </label>
-            <input 
+            <input
               id="name"
               v-model="name"
               type="text"
               placeholder="请输入游戏昵称"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
-                     bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                     disabled:opacity-50 disabled:cursor-not-allowed"
+              :class="[
+                'w-full px-4 py-3 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white',
+                'focus:outline-none focus:ring-2 focus:border-transparent',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                nameError && nameTouched ? 'border-red-500 focus:ring-red-500' : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+              ]"
+              @blur="nameTouched = true; validateNameField()"
+              @input="validateNameField"
               @keypress="handleKeyPress"
               :disabled="loading"
             />
+            <p v-if="nameError && nameTouched" class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+              <i class="pi pi-exclamation-circle"></i>
+              {{ nameError }}
+            </p>
           </div>
 
           <!-- 提交按钮 -->

@@ -21,6 +21,7 @@ const isMobile = breakpoints.smaller('tablet')
 const roomCode = ref(route.params.roomId)
 const gameHistory = ref(null)
 const loading = ref(true)
+const error = ref(null)
 const showChat = ref(!isMobile.value)  // 🔥 移动端默认关闭
 const unreadCount = ref(0)  // 🔥 未读消息计数
 const hasUnreadMessages = computed(() => unreadCount.value > 0)  // 🔥 是否有未读消息
@@ -40,15 +41,22 @@ const handleNewMessage = () => {
   }
 }
 
-onMounted(async () => {
+const loadGameHistory = async () => {
+  loading.value = true
+  error.value = null
   try {
     const response = await getGameHistory(roomCode.value)
     gameHistory.value = response.data
-  } catch (error) {
-    console.error('加载游戏历史失败:', error)
+  } catch (err) {
+    console.error('加载游戏历史失败:', err)
+    error.value = err.response?.data?.message || err.message || '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+onMounted(() => {
+  loadGameHistory()
 })
 </script>
 
@@ -86,7 +94,21 @@ onMounted(async () => {
             <i class="pi pi-spin pi-spinner text-3xl sm:text-4xl text-gray-400 mb-3"></i>
             <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400">加载中</p>
           </div>
-                  
+
+          <!-- 错误状态 -->
+          <div v-else-if="error"
+               class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
+            <i class="pi pi-exclamation-circle text-3xl sm:text-4xl text-red-500 mb-3"></i>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
+            <button
+              @click="loadGameHistory"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+            >
+              <i class="pi pi-refresh mr-2"></i>
+              重试
+            </button>
+          </div>
+
           <!-- 复用内容组件 -->
           <ResultContent v-else-if="gameHistory" :game-history="gameHistory" />
         </div>

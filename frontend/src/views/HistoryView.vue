@@ -11,10 +11,13 @@ const playerStore = usePlayerStore()
 const router = useRouter()
 const games = ref([])
 const loading = ref(false)
+const error = ref(null)
 const filter = ref('all')
 const showDetail = ref(false)
 const selectedGame = ref(null)
+const selectedGameId = ref(null)
 const detailLoading = ref(false)
+const detailError = ref(null)
 
 const breakpoints = useBreakpoints({
   mobile: 0,
@@ -38,11 +41,13 @@ const filteredGames = computed(() => {
 
 const loadHistory = async () => {
   loading.value = true
+  error.value = null
   try {
     const response = await getHistoryList(playerStore.playerId)
     games.value = response.data
-  } catch (error) {
-    console.error('加载历史记录失败:', error)
+  } catch (err) {
+    console.error('加载历史记录失败:', err)
+    error.value = err.response?.data?.message || err.message || '加载失败'
   } finally {
     loading.value = false
   }
@@ -50,16 +55,25 @@ const loadHistory = async () => {
 
 const viewDetail = async (gameId) => {
   showDetail.value = true
+  selectedGameId.value = gameId
   detailLoading.value = true
+  detailError.value = null
   selectedGame.value = null
-  
+
   try {
     const response = await getHistoryDetail(gameId)
     selectedGame.value = response.data
-  } catch (error) {
-    console.error('加载游戏详情失败:', error)
+  } catch (err) {
+    console.error('加载游戏详情失败:', err)
+    detailError.value = err.response?.data?.message || err.message || '加载失败'
   } finally {
     detailLoading.value = false
+  }
+}
+
+const retryLoadDetail = () => {
+  if (selectedGameId.value) {
+    viewDetail(selectedGameId.value)
   }
 }
 
@@ -177,6 +191,19 @@ onMounted(() => {
         <p class="text-gray-500 dark:text-gray-400">加载中</p>
       </div>
 
+      <!-- 错误状态 -->
+      <div v-else-if="error" class="text-center py-12">
+        <i class="pi pi-exclamation-circle text-4xl text-red-500 mb-3"></i>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
+        <button
+          @click="loadHistory"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          <i class="pi pi-refresh mr-2"></i>
+          重试
+        </button>
+      </div>
+
       <!-- 历史记录列表 -->
       <div v-else-if="filteredGames.length > 0" class="space-y-2 sm:space-y-3">
         <div 
@@ -252,15 +279,22 @@ onMounted(() => {
         <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">加载中...</p>
       </div>
 
-      <ResultContent 
-        v-else-if="selectedGame" 
-        :game-history="selectedGame" 
-      />
-
-      <div v-else class="text-center py-12">
-        <i class="pi pi-exclamation-circle text-3xl text-gray-400 mb-3"></i>
-        <p class="text-sm text-gray-500 dark:text-gray-400">加载失败，请重试</p>
+      <div v-else-if="detailError" class="text-center py-12">
+        <i class="pi pi-exclamation-circle text-3xl text-red-500 mb-3"></i>
+        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">{{ detailError }}</p>
+        <button
+          @click="retryLoadDetail"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+        >
+          <i class="pi pi-refresh mr-2"></i>
+          重试
+        </button>
       </div>
+
+      <ResultContent
+        v-else-if="selectedGame"
+        :game-history="selectedGame"
+      />
     </Dialog>
   </div>
 </template>

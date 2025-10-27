@@ -18,19 +18,27 @@
           <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
             题目数量
           </label>
-          <input 
+          <input
             v-model.number="formData.questionCount"
             type="number"
             min="1"
             :max="maxQuestions"
-            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
-                   bg-white dark:bg-gray-700
-                   text-sm sm:text-base
-                   text-gray-900 dark:text-white
-                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                   transition-colors"
+            :class="[
+              'w-full px-3 py-2 rounded-lg border text-sm sm:text-base',
+              'bg-white dark:bg-gray-700 text-gray-900 dark:text-white',
+              'focus:ring-2 focus:border-transparent transition-colors',
+              questionCountError && questionCountTouched
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+            ]"
+            @blur="questionCountTouched = true; validateQuestionCount()"
+            @input="validateQuestionCount"
           />
-          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+          <p v-if="questionCountError && questionCountTouched" class="mt-1 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+            <i class="pi pi-exclamation-circle"></i>
+            {{ questionCountError }}
+          </p>
+          <p v-else class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             可选范围：1-{{ maxQuestions }}
           </p>
         </div>
@@ -136,18 +144,23 @@
               </div>
 
               <!-- 🔥 目标分输入框（条件显示） -->
-              <div v-if="formData.rankingMode === 'closest_to_target'" 
+              <div v-if="formData.rankingMode === 'closest_to_target'"
                    class="mt-2 sm:mt-3 pl-5 sm:pl-7">
-                <input 
+                <input
                   v-model.number="formData.targetScore"
                   type="number"
                   placeholder="输入目标分数（例如：100）"
-                  class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
-                         bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-xs sm:text-sm
-                         focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                         placeholder:text-gray-400 dark:placeholder:text-gray-500"
+                  :class="[
+                    'w-full px-3 py-2 rounded-lg border text-xs sm:text-sm',
+                    'bg-white dark:bg-gray-700 text-gray-900 dark:text-white',
+                    'focus:ring-2 focus:border-transparent',
+                    'placeholder:text-gray-400 dark:placeholder:text-gray-500',
+                    !formData.targetScore
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500'
+                  ]"
                 />
-                <p v-if="!formData.targetScore" 
+                <p v-if="!formData.targetScore"
                    class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
                   <i class="pi pi-exclamation-circle text-xs"></i>
                   请设置目标分数
@@ -305,6 +318,24 @@ const formData = ref({
     minAvgScore: props.currentSettings?.winConditions?.minAvgScore || null
   }
 })
+
+// 实时验证状态
+const questionCountError = ref('')
+const questionCountTouched = ref(false)
+
+// 验证题目数量
+const validateQuestionCount = () => {
+  if (!questionCountTouched.value) return
+
+  const count = formData.value.questionCount
+  if (!count || count < 1) {
+    questionCountError.value = '题目数量至少为1'
+  } else if (count > props.maxQuestions) {
+    questionCountError.value = `题目数量不能超过${props.maxQuestions}`
+  } else {
+    questionCountError.value = ''
+  }
+}
 
 // 🔥 计算属性：是否有通关条件
 const hasWinConditions = computed(() => {

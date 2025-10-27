@@ -77,13 +77,22 @@ function isIgnorableError(error) {
   // 房间已结束/不存在等业务错误 - 静默处理
   if (message.includes('房间不存在') ||
       message.includes('房间已结束') ||
-      message.includes('房间已过期')) {
+      message.includes('房间已过期') ||
+      message.includes('房间已满') ||
+      message.includes('游戏已开始')) {
     return true;
   }
 
   // 重复提交等正常业务逻辑 - 静默处理
   if (message.includes('已经提交') ||
-      message.includes('已提交')) {
+      message.includes('已提交') ||
+      message.includes('已准备') ||
+      message.includes('未准备')) {
+    return true;
+  }
+
+  // 🔥 自动恢复操作失败 - 静默处理（GET请求且是查询房间状态）
+  if (error.config?.method === 'get' && url.includes('/rooms/') && status === 404) {
     return true;
   }
 

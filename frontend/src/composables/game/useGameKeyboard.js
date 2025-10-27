@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted } from 'vue'
 
-export function useGameKeyboard(showChat, hasSubmitted, question) {
+export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
   const focusChatInput = () => {
     showChat.value = true
     setTimeout(() => {
@@ -38,16 +38,21 @@ export function useGameKeyboard(showChat, hasSubmitted, question) {
       return
     }
     
+    // 🔥 观战者不能提交答案
+    if (isSpectator?.value) {
+      return
+    }
+
     if (hasSubmitted.value || !question.value) {
       return
     }
-    
+
     if (question.value.type === 'CHOICE') {
       const keyMap = { '1': 'A', '2': 'B', '3': 'C', '4': 'D' }
       if (keyMap[e.key]) {
         e.preventDefault()
-        const event = new CustomEvent('select-option', { 
-          detail: { key: keyMap[e.key] } 
+        const event = new CustomEvent('select-option', {
+          detail: { key: keyMap[e.key] }
         })
         window.dispatchEvent(event)
         return
@@ -73,6 +78,10 @@ export function useGameKeyboard(showChat, hasSubmitted, question) {
     }
     
     if (e.key === 'Enter') {
+      // 🔥 观战者不能提交答案
+      if (isSpectator?.value) {
+        return
+      }
       e.preventDefault()
       const event = new CustomEvent('submit-answer')
       window.dispatchEvent(event)

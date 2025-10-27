@@ -9,6 +9,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000; // 1秒
 let reconnectTimer = null;
 let isReconnecting = false; // 🔥 标记是否正在重连
+let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
 let subscriptionCallbacks = []; // 🔥 保存订阅回调用于重连后恢复
 
 /**
@@ -80,6 +81,7 @@ export function connect(playerId, onConnect, onError) {
         clearTimeout(timeoutId); // 🔥 清除超时
         connected = true;
         connectPromise = null;
+        manualDisconnect = false; // 🔥 连接成功，重置手动断开标志
 
         console.log("✅ STOMP connected for playerId:", playerId);
         console.log("📋 Connection frame:", frame);
@@ -110,6 +112,12 @@ export function connect(playerId, onConnect, onError) {
         connected = false;
         connectPromise = null;
         console.warn("⚠️ STOMP disconnected");
+
+        // 🔥 手动断开或已经在重连中，不再触发新的重连
+        if (manualDisconnect) {
+          console.log('⚠️ 手动断开，不自动重连');
+          return;
+        }
 
         // 🔥 只有非手动断开才自动重连
         if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
@@ -238,14 +246,15 @@ export function unregisterSubscriptionCallback(callback) {
  * @param {boolean} force - 是否强制清理所有状态
  */
 export function disconnect(force = false) {
+  // 🔥 标记为手动断开，防止自动重连
+  manualDisconnect = true;
+  isReconnecting = false;
+  reconnectAttempts = 0;
+
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
-
-  // 🔥 停止自动重连
-  isReconnecting = false;
-  reconnectAttempts = 0;
 
   if (stompClient) {
     try {
@@ -255,7 +264,7 @@ export function disconnect(force = false) {
     }
   }
 
-  // 🔥 强制清理所有状态
+  // 🔥 清理所有状态
   stompClient = null;
   connected = false;
   currentPlayerId = null;

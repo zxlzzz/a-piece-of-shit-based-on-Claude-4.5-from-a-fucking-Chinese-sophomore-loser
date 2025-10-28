@@ -65,6 +65,11 @@ public class GameRoom implements Serializable {
     private boolean finished = false;
 
     /**
+     * 是否为测试房间（包含虚拟玩家）
+     */
+    private boolean testRoom = false;
+
+    /**
      * 提交记录
      * 外层键：题目索引（从0开始）
      * 内层键：playerId

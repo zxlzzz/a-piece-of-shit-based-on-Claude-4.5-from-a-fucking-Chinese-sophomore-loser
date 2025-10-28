@@ -15,6 +15,11 @@ public interface GameService {
     // 🔥 恢复原版签名
     RoomDTO createRoom(Integer maxPlayers, Integer questionCount);
 
+    /**
+     * 创建测试房间（自动填充虚拟玩家）
+     */
+    RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount);
+
     // 🔥 新增：更新房间设置
     RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);
 

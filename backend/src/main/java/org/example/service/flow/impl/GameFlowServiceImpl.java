@@ -77,16 +77,22 @@ public class GameFlowServiceImpl implements GameFlowService {
             GameEntity game = GameEntity.builder()
                     .room(room)
                     .startTime(LocalDateTime.now())
+                    .isTest(gameRoom.isTestRoom())  // 标记测试游戏
                     .build();
             GameEntity savedGame = gameRepository.save(game);
 
             gameRoom.setRoomEntity(room);
             gameRoom.setGameId(savedGame.getId());
 
-            // 🔥 创建玩家游戏记录（排除观战者）
+            // 🔥 创建玩家游戏记录（排除观战者和Bot）
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
                 // 🔥 跳过观战者
                 if (Boolean.TRUE.equals(playerDTO.getSpectator())) {
+                    continue;
+                }
+
+                // 🔥 跳过虚拟玩家（Bot）
+                if (playerDTO.getPlayerId().startsWith("BOT_")) {
                     continue;
                 }
 

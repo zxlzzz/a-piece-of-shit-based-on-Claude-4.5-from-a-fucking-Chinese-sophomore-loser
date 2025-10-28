@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { getHistoryDetail, getHistoryList } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import Dialog from 'primevue/dialog'
@@ -44,7 +45,7 @@ const loadHistory = async () => {
     const response = await getHistoryList(playerStore.playerId)
     games.value = response.data
   } catch (error) {
-    console.error('加载历史记录失败:', error)
+    logger.error('加载历史记录失败:', error)
   } finally {
     loading.value = false
   }
@@ -59,7 +60,7 @@ const viewDetail = async (gameId) => {
     const response = await getHistoryDetail(gameId)
     selectedGame.value = response.data
   } catch (error) {
-    console.error('加载游戏详情失败:', error)
+    logger.error('加载游戏详情失败:', error)
   } finally {
     detailLoading.value = false
   }
@@ -111,7 +112,7 @@ const formatDate = (dateStr) => {
       minute: '2-digit'
     })
   } catch (error) {
-    console.error('日期格式化失败:', dateStr, error)
+    logger.error('日期格式化失败:', dateStr, error)
     return dateStr
   }
 }

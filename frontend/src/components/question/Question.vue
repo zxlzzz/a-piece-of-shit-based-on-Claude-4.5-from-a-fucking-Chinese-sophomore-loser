@@ -47,6 +47,7 @@
 </template>
 
 <script setup>
+import { logger } from '@/utils/logger'
 import { getAllQuestions } from '@/api'
 import { onMounted, ref } from 'vue'
 import QuesShowCard from './QuesShowCard.vue'
@@ -60,7 +61,7 @@ onMounted(async () => {
     const res = await getAllQuestions()
     questions.value = res.data
   } catch (err) {
-    console.error("获取题库失败:", err)
+    logger.error("获取题库失败:", err)
     error.value = "加载失败，请刷新重试"
   } finally {
     loading.value = false

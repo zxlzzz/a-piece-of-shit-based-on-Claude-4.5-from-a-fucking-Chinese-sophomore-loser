@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -78,7 +79,6 @@ export const usePlayerStore = defineStore('player', () => {
       // 🔥 检查房间是否过期（例如2小时）
       const TWO_HOURS = 2 * 60 * 60 * 1000
       if (roomData._savedAt && (Date.now() - roomData._savedAt > TWO_HOURS)) {
-        console.log('房间缓存已过期，自动清除')
         clearRoom()
         return null
       }
@@ -88,7 +88,7 @@ export const usePlayerStore = defineStore('player', () => {
       return roomData
     }
   } catch (error) {
-    console.error('恢复房间数据失败:', error)
+    logger.error('恢复房间数据失败:', error)
     clearRoom()
   }
   return null

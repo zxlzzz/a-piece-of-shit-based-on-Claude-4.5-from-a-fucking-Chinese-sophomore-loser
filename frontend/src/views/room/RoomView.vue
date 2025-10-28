@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
@@ -77,10 +78,9 @@ onMounted(async () => {
     } catch (error) {
       // 🔥 静默处理404错误，不显示弹窗
       if (error.response?.status === 404) {
-        console.log('房间已失效，自动清除缓存')
       } else {
         // 其他错误才提示
-        console.error('获取房间状态失败:', error)
+        logger.error('获取房间状态失败:', error)
       }
       // 清理失效的房间数据
       playerStore.clearRoom()
@@ -102,7 +102,7 @@ const loadActiveRooms = async () => {
       !currentRoom.value || r.roomCode !== currentRoom.value.roomCode
     )
   } catch (error) {
-    console.error('加载房间列表失败:', error)
+    logger.error('加载房间列表失败:', error)
     // 🔥 网络错误才显示提示（用户可以重试）
     if (!error.response || error.code === 'ECONNABORTED') {
       toast.add({
@@ -123,7 +123,6 @@ const handleCreate = async ({ questionCount, maxPlayers }) => {
     const createResponse = await createRoom(maxPlayers, questionCount)
     const roomData = createResponse.data
     
-    console.log('房间创建成功:', roomData)
     
     const joinResponse = await joinRoom(
       roomData.roomCode,
@@ -146,7 +145,7 @@ const handleCreate = async ({ questionCount, maxPlayers }) => {
     router.push(`/wait/${roomData.roomCode}`)
     
   } catch (error) {
-    console.error("创建房间失败:", error)
+    logger.error("创建房间失败:", error)
     toast.add({
       severity: 'error',
       summary: '创建失败',
@@ -190,7 +189,7 @@ const handleJoinRoom = async (roomCode, spectator = false) => {
 
     router.push(`/wait/${roomCode}`)
   } catch (error) {
-    console.error('加入房间失败:', error)
+    logger.error('加入房间失败:', error)
     toast.add({
       severity: 'error',
       summary: '加入失败',

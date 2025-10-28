@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
 import { connect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
@@ -20,7 +21,6 @@ export function useGameWebSocket(
   const subscriptions = ref([])
 
   const handleReconnecting = (event) => {
-    console.log('🔄 GameView: WebSocket 重连中...', event.detail)
     
     toast.add({
       severity: 'warn',
@@ -31,7 +31,7 @@ export function useGameWebSocket(
   }
 
   const handleMaxReconnectFailed = () => {
-    console.error('❌ GameView: WebSocket 重连失败')
+    logger.error('❌ GameView: WebSocket 重连失败')
     
     toast.add({
       severity: 'error',
@@ -53,11 +53,9 @@ export function useGameWebSocket(
 
   const refreshRoomState = async () => {
     try {
-      console.log('🔄 GameView: 刷新房间状态...')
       const response = await getRoomStatus(roomCode.value)
       const updatedRoom = response.data
       
-      console.log('✅ GameView: 房间状态已刷新:', updatedRoom)
       
       room.value = updatedRoom
       question.value = updatedRoom.currentQuestion
@@ -92,7 +90,7 @@ export function useGameWebSocket(
       }
       
     } catch (error) {
-      console.error('❌ GameView: 刷新房间状态失败:', error)
+      logger.error('❌ GameView: 刷新房间状态失败:', error)
     }
   }
 
@@ -100,7 +98,6 @@ export function useGameWebSocket(
     const subs = subscribeRoom(
       roomCode.value,
       (update) => {
-        console.log("房间更新:", update)
         
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
@@ -111,7 +108,6 @@ export function useGameWebSocket(
           if (oldIndex !== undefined) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
             localStorage.removeItem(oldSubmissionKey)
-            console.log('🧹 清除旧题目提交记录:', oldSubmissionKey)
           }
           
           clearCountdown()
@@ -123,9 +119,7 @@ export function useGameWebSocket(
           const savedSubmission = localStorage.getItem(newSubmissionKey)
           if (savedSubmission === 'true') {
             restoreSubmitState()
-            console.log('✅ 新题目已提交过')
           } else {
-            console.log('🆕 新题目未提交，可以作答')
           }
           
           if (update.questionStartTime) {
@@ -142,7 +136,6 @@ export function useGameWebSocket(
         const isGameFinished = update.finished === true || update.status === 'FINISHED'
 
         if (isGameFinished) {
-          console.log('🎮 游戏结束，准备跳转')
           clearCountdown()
           toast.add({
             severity: 'info',
@@ -151,13 +144,12 @@ export function useGameWebSocket(
             life: 2000
           })
           setTimeout(() => {
-            console.log('🚀 跳转到结果页:', `/result/${roomCode.value}`)
             router.push(`/result/${roomCode.value}`)
           }, 1000)
         }
       },
       (error) => {
-        console.error('🔥 房间错误:', error)
+        logger.error('🔥 房间错误:', error)
         
         if (error.error?.includes('房间不存在') || error.error?.includes('不存在')) {
           toast.add({
@@ -188,13 +180,11 @@ export function useGameWebSocket(
 
   const connectWebSocket = async () => {
     if (!isConnected()) {
-      console.warn('⚠️ GameView: WebSocket 未连接，尝试连接...')
       
       try {
         await connect(playerStore.playerId)
-        console.log('✅ GameView: WebSocket 连接成功')
       } catch (err) {
-        console.error('❌ GameView: WebSocket 连接失败', err)
+        logger.error('❌ GameView: WebSocket 连接失败', err)
         toast.add({
           severity: 'error',
           summary: '连接失败',

@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { updateRoomSettings } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { sendLeave, sendReady, sendStart } from '@/websocket/ws'
@@ -66,13 +67,11 @@ onMounted(async () => {
     const isPlayerInRoom = savedRoom.players?.some(p => p.playerId === playerStore.playerId)
     if (!isPlayerInRoom) {
       // 🔥 静默跳转，不显示toast（用户无法处理）
-      console.log('⚠️ 玩家不在房间中，返回房间列表')
       router.push('/find')
       return
     }
   } else {
     // 🔥 静默跳转，不显示toast（用户无法处理）
-    console.log('⚠️ 没有房间信息，返回房间列表')
     router.push('/find')
     return
   }
@@ -92,7 +91,7 @@ const handleReady = async () => {
   if (currentPlayerReady.value) return
 
   if (!wsConnected.value) {
-    console.error('❌ WebSocket 未连接，无法设置准备状态')
+    logger.error('❌ WebSocket 未连接，无法设置准备状态')
     toast.add({
       severity: 'error',
       summary: '连接错误',
@@ -122,7 +121,7 @@ const handleReady = async () => {
     })
 
   } catch (error) {
-    console.error("设置准备状态失败:", error)
+    logger.error("设置准备状态失败:", error)
     toast.add({
       severity: 'error',
       summary: '失败',
@@ -138,7 +137,7 @@ const handleStart = () => {
   if (!isAllReady.value) return
 
   if (!wsConnected.value) {
-    console.error('❌ WebSocket 未连接，无法开始游戏')
+    logger.error('❌ WebSocket 未连接，无法开始游戏')
     toast.add({
       severity: 'error',
       summary: '连接错误',
@@ -179,7 +178,7 @@ const copyRoomCode = async () => {
       life: 2000
     })
   } catch (error) {
-    console.error('复制失败:', error)
+    logger.error('复制失败:', error)
     toast.add({
       severity: 'error',
       summary: '复制失败',
@@ -212,7 +211,7 @@ const handleCustomFormSubmit = async (formData) => {
     showCustomForm.value = false
 
   } catch (error) {
-    console.error('更新设置失败:', error)
+    logger.error('更新设置失败:', error)
     toast.add({
       severity: 'error',
       summary: '失败',

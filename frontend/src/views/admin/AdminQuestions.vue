@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import axios from "axios";
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref, watch } from 'vue'
@@ -22,7 +23,6 @@ const api = axios.create({
 // ============ 请求拦截器（添加 token）============
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.params);
     
     // 🔥 自动添加 token 到请求头
     const token = localStorage.getItem('token');
@@ -33,7 +33,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    logger.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -41,11 +41,10 @@ api.interceptors.request.use(
 // ============ 响应拦截器 ============
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.data);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.response?.data || error.message);
+    logger.error('❌ API Error:', error.response?.data || error.message);
     
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {
@@ -181,7 +180,7 @@ const loadQuestions = async () => {
       life: 2000
     })
   } catch (error) {
-    console.error('加载失败', error)
+    logger.error('加载失败', error)
     toast.add({
       severity: 'error',
       summary: '加载失败',
@@ -226,8 +225,6 @@ const openCreateForm = () => {
 // 打开编辑表单
 const openEditForm = (question) => {
   editingQuestion.value = question
-  console.log('🔍 question 所有字段:', Object.keys(question))
-  console.log('🔍 question 完整数据:', question)
   
   // 🔥 解析 options（支持多种格式）
   let parsedOptions = []
@@ -235,15 +232,13 @@ const openEditForm = (question) => {
   // 情况1：后端直接返回 options 数组
   if (Array.isArray(question.options) && question.options.length > 0) {
     parsedOptions = question.options
-    console.log('✅ 使用 question.options:', parsedOptions)
   }
   // 情况2：后端返回 optionsJson 字符串
   else if (question.optionsJson) {
     try {
       parsedOptions = JSON.parse(question.optionsJson)
-      console.log('✅ 解析 question.optionsJson:', parsedOptions)
     } catch (e) {
-      console.error('❌ 解析 optionsJson 失败:', e)
+      logger.error('❌ 解析 optionsJson 失败:', e)
       parsedOptions = []
     }
   }
@@ -251,9 +246,8 @@ const openEditForm = (question) => {
   else if (typeof question.options === 'string') {
     try {
       parsedOptions = JSON.parse(question.options)
-      console.log('✅ 解析字符串 question.options:', parsedOptions)
     } catch (e) {
-      console.error('❌ 解析字符串 options 失败:', e)
+      logger.error('❌ 解析字符串 options 失败:', e)
       parsedOptions = []
     }
   }
@@ -261,7 +255,6 @@ const openEditForm = (question) => {
   // 情况4：CHOICE 类型但没有 options，给个默认值
   if (parsedOptions.length === 0 && question.type === 'CHOICE') {
     parsedOptions = [{ key: 'A', text: '' }]
-    console.warn('⚠️ CHOICE 类型但没有 options，使用默认值')
   }
   
   // 🔥 填充表单
@@ -296,7 +289,6 @@ const openEditForm = (question) => {
     repeatGroupId: question.repeatGroupId || ''
   }
   
-  console.log('✅ 表单已填充:', form.value)
   
   showForm.value = true
 }
@@ -398,7 +390,6 @@ const submitForm = async () => {
     repeatGroupId: form.value.isRepeatable ? form.value.repeatGroupId : null
   }
 
-  console.log('🔍 提交的 payload:', payload)
   loading.value = true
   try {
     if (editingQuestion.value) {
@@ -416,7 +407,7 @@ const submitForm = async () => {
     showForm.value = false
     loadQuestions()
   } catch (error) {
-    console.error('操作失败', error)
+    logger.error('操作失败', error)
     toast.add({
       severity: 'error',
       summary: '操作失败',
@@ -443,7 +434,7 @@ const deleteQuestion = async (id) => {
     })
     loadQuestions()
   } catch (error) {
-    console.error('删除失败', error)
+    logger.error('删除失败', error)
     toast.add({
       severity: 'error',
       summary: '删除失败',
@@ -477,7 +468,7 @@ const exportQuestions = async () => {
       life: 2000
     })
   } catch (error) {
-    console.error('导出失败', error)
+    logger.error('导出失败', error)
     toast.add({
       severity: 'error',
       summary: '导出失败',
@@ -504,7 +495,7 @@ const clearAll = async () => {
     })
     loadQuestions()
   } catch (error) {
-    console.error('清空失败', error)
+    logger.error('清空失败', error)
     toast.add({
       severity: 'error',
       summary: '清空失败',

@@ -11,9 +11,7 @@ export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
       
       if (chatInput) {
         chatInput.focus()
-        console.log('✅ 已聚焦到聊天输入框')
       } else {
-        console.warn('⚠️ 未找到聊天输入框')
       }
     }, 100)
   }

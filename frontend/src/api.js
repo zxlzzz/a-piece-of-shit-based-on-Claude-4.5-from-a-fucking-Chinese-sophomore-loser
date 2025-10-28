@@ -1,4 +1,5 @@
 import axios from "axios";
+import { logger } from "@/utils/logger";
 
 const api = axios.create({
   baseURL: "/api",
@@ -8,18 +9,16 @@ const api = axios.create({
 // ============ 请求拦截器（添加 token）============
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.params);
-    
-    // 🔥 自动添加 token 到请求头
+    // 自动添加 token 到请求头
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    logger.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -27,11 +26,10 @@ api.interceptors.request.use(
 // ============ 响应拦截器 ============
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.data);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.response?.data || error.message);
+    logger.error('API Error:', error.response?.data || error.message);
 
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {

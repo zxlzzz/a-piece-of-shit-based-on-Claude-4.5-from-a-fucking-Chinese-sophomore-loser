@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { login, register } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { validateUsername, validatePassword, validatePlayerName } from '@/utils/player'
@@ -79,7 +80,6 @@ const handleSubmit = async () => {
     }
     
     const authData = resp.data
-    console.log('🔍 认证成功:', authData)
     
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
@@ -97,7 +97,7 @@ const handleSubmit = async () => {
     }, 500)
     
   } catch (err) {
-    console.error('操作失败:', err)
+    logger.error('操作失败:', err)
     
     const errorMsg = err.response?.data?.message || 
                      err.response?.data || 

@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
@@ -46,7 +47,7 @@ onMounted(async () => {
     const response = await getGameHistory(roomCode.value)
     gameHistory.value = response.data
   } catch (error) {
-    console.error('加载游戏历史失败:', error)
+    logger.error('加载游戏历史失败:', error)
   } finally {
     loading.value = false
   }

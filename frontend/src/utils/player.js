@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 /**
  * 验证用户名（登录用）
  * @param {string} username - 用户名
@@ -105,7 +106,6 @@ export function generatePlayerColor(seed) {
   ]
   
   if (!seed || typeof seed !== 'string') {
-    console.warn('⚠️ generatePlayerColor: seed 无效，使用默认颜色', seed)
     return colors[0]
   }
   

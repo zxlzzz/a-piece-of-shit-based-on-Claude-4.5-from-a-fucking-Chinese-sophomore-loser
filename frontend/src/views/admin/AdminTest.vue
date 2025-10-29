@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import axios from 'axios'
+import { usePlayerStore } from '@/stores/player'
 
 const router = useRouter()
 const toast = useToast()
@@ -12,6 +13,7 @@ const toast = useToast()
 const maxPlayers = ref(3)
 const questionCount = ref(5)
 const loading = ref(false)
+const playerStore = usePlayerStore
 
 /* ================================================
    🔥 axios 实例配置

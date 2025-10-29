@@ -58,26 +58,31 @@ public class SubmissionServiceImpl implements SubmissionService {
             throw new BusinessException("观战者不能提交答案");
         }
 
-        // 🔥 根据 DTO 的 ID 查询 Entity
-        QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
-                .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
+        // 🔥 Bot 玩家：只更新内存，不保存到数据库
+        boolean isBot = playerId.startsWith("BOT_");
 
-        PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+        if (!isBot) {
+            // 🔥 真实玩家：保存到数据库
+            QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
+                    .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
 
-        GameEntity game = gameRepository.findById(gameRoom.getGameId())
-                .orElseThrow(() -> new BusinessException("游戏不存在"));
+            PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                    .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
-        SubmissionEntity submission = SubmissionEntity.builder()
-                .player(player)
-                .question(questionEntity)  // ✅ 使用 Entity
-                .game(game)
-                .choice(choice)
-                .build();
+            GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                    .orElseThrow(() -> new BusinessException("游戏不存在"));
 
-        submissionRepository.save(submission);
+            SubmissionEntity submission = SubmissionEntity.builder()
+                    .player(player)
+                    .question(questionEntity)
+                    .game(game)
+                    .choice(choice)
+                    .build();
 
-        // 更新内存状态
+            submissionRepository.save(submission);
+        }
+
+        // 更新内存状态（Bot 和真实玩家都需要）
         gameRoom.getSubmissions()
                 .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
                 .put(playerId, choice);
@@ -93,7 +98,7 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
-        log.info("💾 玩家 {} 提交答案: {}", playerId, choice);
+        log.info("💾 玩家 {} 提交答案: {} {}", playerId, choice, isBot ? "(Bot)" : "");
     }
 
     @Override
@@ -115,7 +120,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
 
-        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者
+        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者和Bot
         for (PlayerDTO player : gameRoom.getPlayers()) {
             // 🔥 跳过观战者
             if (Boolean.TRUE.equals(player.getSpectator())) {
@@ -123,6 +128,11 @@ public class SubmissionServiceImpl implements SubmissionService {
             }
 
             String playerId = player.getPlayerId();
+
+            // 🔥 跳过 Bot 玩家（Bot 应该已经提交了）
+            if (playerId.startsWith("BOT_")) {
+                continue;
+            }
 
             // 🔥 检查是否已提交
             if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(playerId)) {

@@ -67,8 +67,8 @@ function isIgnorableError(error) {
   const message = error.response?.data?.message || '';
   const url = error.config?.url || '';
 
-  // 房间不存在（404）- 静默处理
-  if (status === 404 && url.includes('/rooms/')) {
+  // 房间不存在（404/400）- 静默处理
+  if ((status === 404 || status === 400) && url.includes('/rooms/')) {
     return true;
   }
 
@@ -130,8 +130,8 @@ export const setPlayerReady = (roomCode, playerId, ready) =>
     params: { ready }
   });
 
-export const getRoomStatus = (roomCode) =>
-  api.get(`/rooms/${roomCode}`);
+export const getRoomStatus = (roomCode, silentError = false) =>
+  api.get(`/rooms/${roomCode}`, { silentError });
 
 export const getGameResults = (roomCode) =>
   api.get(`/rooms/${roomCode}/results`);

@@ -116,7 +116,7 @@ router.beforeEach(async (to, from, next) => {
         // 🔥 新增：尝试从服务器获取房间状态（静默失败）
         try {
           const { getRoomStatus } = await import('@/api')
-          const response = await getRoomStatus(roomId)
+          const response = await getRoomStatus(roomId, true)  // 🔥 silentError=true
 
           if (response.data) {
             playerStore.setRoom(response.data)

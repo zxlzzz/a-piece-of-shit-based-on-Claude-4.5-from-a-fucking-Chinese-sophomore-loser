@@ -1,7 +1,7 @@
 <script setup>
 import { logger } from '@/utils/logger'
 import { joinRoom } from '@/api'
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import axios from 'axios'
@@ -14,6 +14,20 @@ const maxPlayers = ref(3)
 const questionCount = ref(5)
 const loading = ref(false)
 const playerStore = usePlayerStore
+
+// 🔥 检查登录状态
+onMounted(() => {
+  if (!playerStore.isLoggedIn) {
+    toast.add({
+      severity: 'error',
+      summary: '未登录',
+      detail: '请先登录后再使用测试工具',
+      life: 3000
+    })
+    router.push('/login')
+    return
+  }
+})
 
 /* ================================================
    🔥 axios 实例配置
@@ -62,6 +76,26 @@ api.interceptors.response.use(
 );
 
 const createTestRoom = async () => {
+  // 🔥 调试日志
+  logger.error('当前登录状态:', {
+    isLoggedIn: playerStore.isLoggedIn,
+    playerId: playerStore.playerId,
+    playerName: playerStore.playerName,
+    token: playerStore.token ? '存在' : '不存在'
+  })
+
+  // 🔥 再次检查登录状态（防御性编程）
+  if (!playerStore.isLoggedIn || !playerStore.playerId || !playerStore.playerName) {
+    toast.add({
+      severity: 'error',
+      summary: '未登录',
+      detail: `请先登录后再创建测试房间 (playerId: ${playerStore.playerId}, playerName: ${playerStore.playerName})`,
+      life: 5000
+    })
+    router.push('/login')
+    return
+  }
+
   if (maxPlayers.value < 2 || maxPlayers.value > 10) {
     toast.add({
       severity: 'error',

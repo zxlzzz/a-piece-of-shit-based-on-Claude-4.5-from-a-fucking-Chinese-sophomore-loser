@@ -86,18 +86,21 @@ onMounted(async () => {
           <SkeletonResult v-if="loading" />
 
           <!-- 错误状态 -->
-          <div v-else-if="error"
+          <div v-else-if="!gameHistory"
                class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
             <i class="pi pi-exclamation-circle text-3xl sm:text-4xl text-red-500 mb-3"></i>
-            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4">{{ error }}</p>
+            <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4">无法加载游戏结果</p>
             <button
-              @click="loadGameHistory"
+              @click="$router.push('/find')"
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
             >
-              <i class="pi pi-refresh mr-2"></i>
-              重试
+              <i class="pi pi-home mr-2"></i>
+              返回首页
             </button>
           </div>
+
+          <!-- 🔥 正常状态：显示结果内容 -->
+          <ResultContent v-else :gameHistory="gameHistory" />
         </div>
         <!-- PC 端聊天 -->
           <transition name="slide">

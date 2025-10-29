@@ -4,10 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
 import org.example.dto.QuestionDTO;
-import org.example.entity.GameEntity;
-import org.example.entity.PlayerEntity;
-import org.example.entity.QuestionEntity;
-import org.example.entity.SubmissionEntity;
+import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.repository.GameRepository;
@@ -20,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -189,5 +186,60 @@ public class SubmissionServiceImpl implements SubmissionService {
         return gameRoom.getPlayers().stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
+    }
+
+    @Override
+    /*
+      自动为Bot提交随机答案
+     */
+    public void autoSubmitBots(GameRoom gameRoom) {
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
+        if (currentQuestion == null) {
+            return;
+        }
+
+        Random random = new Random();
+        int currentIndex = gameRoom.getCurrentIndex();
+        Map<String, String> currentSubmissions = gameRoom.getSubmissions()
+                .computeIfAbsent(currentIndex, k -> new HashMap<>());
+
+        // 为所有Bot提交答案
+        gameRoom.getPlayers().stream()
+                .filter(player -> player.getPlayerId().startsWith("BOT_"))
+                .forEach(bot -> {
+                    // 如果Bot还没提交，生成随机答案
+                    if (!currentSubmissions.containsKey(bot.getPlayerId())) {
+                        String botAnswer;
+
+                        if ("CHOICE".equals(currentQuestion.getType())) {
+                            // CHOICE题：随机选择一个选项
+                            List<String> options = Optional.ofNullable(currentQuestion.getOptions())
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(QuestionOption::getKey)
+                                    .toList();
+                            if (options != null && !options.isEmpty()) {
+                                botAnswer = options.get(random.nextInt(options.size()));
+                            } else {
+                                botAnswer = "A";  // 默认选项
+                            }
+                        } else if ("BID".equals(currentQuestion.getType())) {
+                            // BID题：在范围内随机数
+                            Integer min = currentQuestion.getMin();
+                            Integer max = currentQuestion.getMax();
+                            if (min != null && max != null) {
+                                botAnswer = String.valueOf(random.nextInt(max - min + 1) + min);
+                            } else {
+                                botAnswer = "5";  // 默认值
+                            }
+                        } else {
+                            botAnswer = "A";  // 未知题型默认
+                        }
+
+                        // 提交Bot答案
+                        submitAnswer(gameRoom.getRoomCode(), bot.getPlayerId(), botAnswer);
+                        log.info("Bot {} 自动提交答案: {}", bot.getName(), botAnswer);
+                    }
+                });
     }
 }

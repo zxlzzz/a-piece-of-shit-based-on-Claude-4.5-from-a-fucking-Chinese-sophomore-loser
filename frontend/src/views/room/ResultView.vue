@@ -18,24 +18,22 @@ const breakpoints = useBreakpoints({
   tablet: 768,
   desktop: 1024,
 })
-const isMobile = breakpoints.smaller('tablet')
+const isDesktop = breakpoints.greaterOrEqual('desktop')  // 🔥 新增：大于等于 1024px 是桌面端
 
 const roomCode = ref(route.params.roomId)
 const gameHistory = ref(null)
 const loading = ref(true)
-const showChat = ref(!isMobile.value)  // 🔥 移动端默认关闭
-const unreadCount = ref(0)  // 🔥 未读消息计数
-const hasUnreadMessages = computed(() => unreadCount.value > 0)  // 🔥 是否有未读消息
+const showChat = ref(false)
+const unreadCount = ref(0)
+const hasUnreadMessages = computed(() => unreadCount.value > 0)
 
 const toggleChat = () => {
   showChat.value = !showChat.value
-  // 🔥 打开聊天时清空未读
   if (showChat.value) {
     unreadCount.value = 0
   }
 }
 
-// 🔥 处理新消息
 const handleNewMessage = () => {
   if (!showChat.value) {
     unreadCount.value++
@@ -57,9 +55,10 @@ onMounted(async () => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
     <div class="max-w-7xl mx-auto">
+      <!-- 🔥 只在桌面端且显示聊天时才分栏 -->
       <div class="grid gap-4 sm:gap-6" 
-           :class="showChat && !isMobile ? 'lg:grid-cols-[1fr_400px]' : 'lg:grid-cols-1'">
-                
+           :class="showChat && isDesktop ? 'lg:grid-cols-[1fr_400px]' : 'grid-cols-1'">
+        
         <!-- 主内容区 -->
         <div class="space-y-4 sm:space-y-6">
           <!-- 顶部栏 -->
@@ -73,7 +72,6 @@ onMounted(async () => {
                        rounded-lg text-sm font-medium transition-colors"
               >
                 <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'"></i>
-                <!-- 🔥 未读消息红点 -->
                 <span v-if="hasUnreadMessages && !showChat"
                       class="absolute -top-0.5 -right-0.5
                              w-2 h-2 bg-red-500 rounded-full
@@ -99,27 +97,27 @@ onMounted(async () => {
             </button>
           </div>
 
-          <!-- 🔥 正常状态：显示结果内容 -->
           <ResultContent v-else :gameHistory="gameHistory" />
         </div>
-        <!-- PC 端聊天 -->
-          <transition name="slide">
-            <div v-show="showChat && !isMobile" class="hidden lg:block">
-              <ChatRoom
-                v-if="roomCode"
-                :roomCode="roomCode"
-                :playerId="playerStore.playerId"
-                :playerName="playerStore.playerName"
-                @newMessage="handleNewMessage"
-              />
-            </div>
-          </transition>
+
+        <!-- 🔥 桌面端聊天 - 只在 1024px+ 且 showChat 为 true 时显示 -->
+        <transition name="slide">
+          <div v-show="showChat && isDesktop" class="hidden lg:block">
+            <ChatRoom
+              v-if="roomCode"
+              :roomCode="roomCode"
+              :playerId="playerStore.playerId"
+              :playerName="playerStore.playerName"
+              @newMessage="handleNewMessage"
+            />
+          </div>
+        </transition>
       </div>
     </div>
 
-    <!-- 🔥 移动端聊天抽屉 -->
+    <!-- 🔥 非桌面端聊天抽屉 - 小于 1024px 时使用 -->
     <MobileChatDrawer
-      :show="showChat && isMobile"
+      :show="showChat && !isDesktop"
       :roomCode="roomCode"
       :playerId="playerStore.playerId"
       :playerName="playerStore.playerName"

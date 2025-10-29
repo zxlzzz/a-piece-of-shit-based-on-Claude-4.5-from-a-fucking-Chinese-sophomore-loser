@@ -120,7 +120,15 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         .ready(false)
                         .spectator(spectator != null && spectator)  // 设置观战模式
                         .build();
-                gameRoom.getPlayers().add(playerDTO);
+
+                // 🔥 测试房间：真实玩家插入到第一位（成为房主）
+                if (gameRoom.isTestRoom()) {
+                    gameRoom.getPlayers().add(0, playerDTO);
+                    log.info("🔧 测试房间：真实玩家 {} 插入到第一位（房主）", playerName);
+                } else {
+                    gameRoom.getPlayers().add(playerDTO);
+                }
+
                 gameRoom.getScores().put(playerId, 0);
 
                 log.info("✅ 玩家 {} ({}) 加入房间 {} (观战模式: {})", playerName, playerId, roomCode, spectator);

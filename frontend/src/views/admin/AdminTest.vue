@@ -76,13 +76,21 @@ api.interceptors.response.use(
 );
 
 const createTestRoom = async () => {
+  // 🔥 调试日志
+  logger.error('当前登录状态:', {
+    isLoggedIn: playerStore.isLoggedIn,
+    playerId: playerStore.playerId,
+    playerName: playerStore.playerName,
+    token: playerStore.token ? '存在' : '不存在'
+  })
+
   // 🔥 再次检查登录状态（防御性编程）
   if (!playerStore.isLoggedIn || !playerStore.playerId || !playerStore.playerName) {
     toast.add({
       severity: 'error',
       summary: '未登录',
-      detail: '请先登录后再创建测试房间',
-      life: 3000
+      detail: `请先登录后再创建测试房间 (playerId: ${playerStore.playerId}, playerName: ${playerStore.playerName})`,
+      life: 5000
     })
     router.push('/login')
     return

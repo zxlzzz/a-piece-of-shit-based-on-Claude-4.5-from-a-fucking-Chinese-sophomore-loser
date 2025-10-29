@@ -1,5 +1,4 @@
 <script setup>
-import { defineProps } from 'vue'
 import { generatePlayerColor } from '@/utils/player'
 
 const props = defineProps({

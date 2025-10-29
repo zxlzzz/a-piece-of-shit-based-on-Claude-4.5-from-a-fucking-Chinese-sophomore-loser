@@ -1,5 +1,6 @@
 <script setup>
 import { logger } from '@/utils/logger'
+import { joinRoom } from '@/api'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
@@ -84,15 +85,27 @@ const createTestRoom = async () => {
   loading.value = true
 
   try {
-    // 创建测试房间
-    const response = await api.post('/admin/test/room', null, {
+    // 1. 创建测试房间
+    const createResponse = await api.post('/admin/test/room', null, {
       params: {
         maxPlayers: maxPlayers.value,
         questionCount: questionCount.value
       }
     })
 
-    const { roomCode, botCount } = response.data
+    const { roomCode, botCount } = createResponse.data
+
+    // 2. 🔥 真实玩家加入房间（与普通房间一样）
+    const joinResponse = await joinRoom(
+      roomCode,
+      playerStore.playerId,
+      playerStore.playerName,
+      false  // 不是观战者
+    )
+
+    // 3. 保存房间信息到 store
+    playerStore.setRoom(joinResponse.data)
+    playerStore.setSpectator(false)
 
     toast.add({
       severity: 'success',
@@ -101,7 +114,7 @@ const createTestRoom = async () => {
       life: 2000
     })
 
-    // 跳转到等待房间
+    // 4. 跳转到等待房间
     setTimeout(() => {
       router.push(`/wait/${roomCode}`)
     }, 500)

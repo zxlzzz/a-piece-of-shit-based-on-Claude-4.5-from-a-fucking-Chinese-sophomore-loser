@@ -12,6 +12,52 @@ const maxPlayers = ref(3)
 const questionCount = ref(5)
 const loading = ref(false)
 
+/* ================================================
+   🔥 axios 实例配置
+================================================ */
+const api = axios.create({
+  baseURL: "/api",
+  timeout: 10000,
+});
+
+// ============ 请求拦截器（添加 token）============
+api.interceptors.request.use(
+  (config) => {
+    // 🔥 自动添加 token 到请求头
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    return config;
+  },
+  (error) => {
+    logger.error('Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// ============ 响应拦截器 ============
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    logger.error('API Error:', error.response?.data || error.message);
+
+    // 🔥 处理 401 未授权错误
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('playerId');
+      localStorage.removeItem('playerName');
+      window.location.href = '/login';
+      return Promise.reject(error);
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 const createTestRoom = async () => {
   if (maxPlayers.value < 2 || maxPlayers.value > 10) {
     toast.add({
@@ -37,7 +83,7 @@ const createTestRoom = async () => {
 
   try {
     // 创建测试房间
-    const response = await axios.post('/api/admin/test/room', null, {
+    const response = await api.post('/admin/test/room', null, {
       params: {
         maxPlayers: maxPlayers.value,
         questionCount: questionCount.value

@@ -15,18 +15,30 @@ const maxPlayers = ref(3)
 const questionCount = ref(5)
 const loading = ref(false)
 
-// 🔥 检查登录状态
+// 🔥 检查登录状态（添加调试日志）
 onMounted(() => {
-  if (!playerStore.isLoggedIn) {
-    toast.add({
-      severity: 'error',
-      summary: '未登录',
-      detail: '请先登录后再使用测试工具',
-      life: 3000
-    })
-    router.push('/login')
-    return
-  }
+  // 调试日志
+  logger.error('onMounted 登录检查:', {
+    isLoggedIn: playerStore.isLoggedIn,
+    playerId: playerStore.playerId,
+    playerName: playerStore.playerName,
+    token: playerStore.token ? '存在' : '不存在',
+    localStorage_playerId: localStorage.getItem('playerId'),
+    localStorage_playerName: localStorage.getItem('playerName'),
+    localStorage_token: localStorage.getItem('token') ? '存在' : '不存在'
+  })
+
+  // 暂时注释掉登录检查，因为它会误判
+  // if (!playerStore.isLoggedIn) {
+  //   toast.add({
+  //     severity: 'error',
+  //     summary: '未登录',
+  //     detail: '请先登录后再使用测试工具',
+  //     life: 3000
+  //   })
+  //   router.push('/login')
+  //   return
+  // }
 })
 
 /* ================================================

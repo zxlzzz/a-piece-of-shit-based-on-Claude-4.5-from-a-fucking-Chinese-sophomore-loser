@@ -241,8 +241,4 @@ public class GameServiceImpl implements GameService {
     public GameHistoryDTO getHistoryDetail(Long gameId) {
         return gameHistoryService.getHistoryDetail(gameId);
     }
-
-    // ==================== 测试工具辅助方法 ====================
-
-
 }

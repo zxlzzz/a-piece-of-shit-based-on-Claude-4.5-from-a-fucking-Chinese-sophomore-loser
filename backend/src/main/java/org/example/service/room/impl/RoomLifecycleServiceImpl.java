@@ -124,6 +124,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 gameRoom.getScores().put(playerId, 0);
 
                 log.info("✅ 玩家 {} ({}) 加入房间 {} (观战模式: {})", playerName, playerId, roomCode, spectator);
+                log.info("🔧 当前房间玩家列表: {}, ready状态: {}",
+                    gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList(),
+                    gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
 
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);
@@ -335,6 +338,18 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         roomCache.syncToRedis(roomCode);
 
         log.info("✅ 玩家 {} 设置准备状态: {}", playerId, ready);
+        log.info("🔧 当前房间所有玩家ready状态: {}",
+            gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
+
+        // 🔥 检查是否所有玩家都准备好了
+        long totalPlayers = gameRoom.getPlayers().stream()
+            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+            .count();
+        long readyPlayers = gameRoom.getPlayers().stream()
+            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+            .filter(PlayerDTO::getReady)
+            .count();
+        log.info("🔧 准备情况: {}/{} 玩家已准备", readyPlayers, totalPlayers);
     }
 
     @Override

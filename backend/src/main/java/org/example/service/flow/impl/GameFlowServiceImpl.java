@@ -258,7 +258,7 @@ public class GameFlowServiceImpl implements GameFlowService {
                 game.setEndTime(LocalDateTime.now());
                 gameRepository.save(game);
 
-                // 🔥 3. 保存玩家最终分数（排除观战者）
+                // 🔥 3. 保存玩家最终分数（排除观战者和Bot）
                 for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
                     String playerId = entry.getKey();
 
@@ -271,6 +271,11 @@ public class GameFlowServiceImpl implements GameFlowService {
 
                     if (isSpectator) {
                         continue;  // 🔥 跳过观战者
+                    }
+
+                    // 🔥 跳过 Bot 玩家（Bot 不保存到数据库）
+                    if (playerId.startsWith("BOT_")) {
+                        continue;
                     }
 
                     PlayerEntity player = playerRepository.findByPlayerId(playerId)

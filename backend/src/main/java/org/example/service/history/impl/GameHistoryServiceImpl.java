@@ -4,26 +4,21 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.example.dto.GameHistoryDTO;
-import org.example.dto.GameHistorySummaryDTO;
-import org.example.dto.PlayerRankDTO;
-import org.example.dto.QuestionDetailDTO;
+import org.example.dto.*;
 import org.example.entity.GameEntity;
 import org.example.entity.GameResultEntity;
+import org.example.entity.QuestionOption;
+import org.example.entity.QuestionType;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
-import org.example.repository.GameRepository;
-import org.example.repository.GameResultRepository;
+import org.example.repository.*;
 import org.example.service.cache.RoomCache;
 import org.example.service.history.GameHistoryService;
 import org.example.service.leaderboard.LeaderboardService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -39,6 +34,8 @@ public class GameHistoryServiceImpl implements GameHistoryService {
     private final ObjectMapper objectMapper;
     private final RoomCache roomCache;
     private final LeaderboardService leaderboardService;
+    private final ChoiceQuestionConfigRepository choiceConfigRepository;
+    private final BidQuestionConfigRepository bidConfigRepository;
 
 
     @Override
@@ -210,6 +207,7 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                 .orElseThrow(() -> new BusinessException("游戏记录不存在"));
 
         List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
+        List<QuestionDetailDTO> questionDetails = buildQuestionDetails(gameRoom);
 
         return GameHistoryDTO.builder()
                 .gameId(game.getId())
@@ -219,7 +217,108 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                 .questionCount(gameRoom.getQuestions().size())
                 .playerCount(gameRoom.getPlayers().size())
                 .leaderboard(leaderboard)
-                .questionDetails(new ArrayList<>())
+                .questionDetails(questionDetails)
                 .build();
+    }
+
+    /**
+     * 构建题目详情（从当前游戏状态）
+     */
+    private List<QuestionDetailDTO> buildQuestionDetails(GameRoom gameRoom) {
+        List<QuestionDetailDTO> details = new ArrayList<>();
+
+        for (int i = 0; i < gameRoom.getQuestions().size(); i++) {
+            QuestionDTO question = gameRoom.getQuestions().get(i);
+            Map<String, String> submissions = gameRoom.getSubmissions().get(i);
+
+            if (submissions == null) {
+                continue;
+            }
+
+            Map<String, Integer> choiceCounts = new HashMap<>();
+            for (String choice : submissions.values()) {
+                choiceCounts.put(choice, choiceCounts.getOrDefault(choice, 0) + 1);
+            }
+
+            Map<String, GameRoom.QuestionScoreDetail> questionScores =
+                    gameRoom.getQuestionScores().getOrDefault(i, new HashMap<>());
+
+            List<PlayerSubmissionDTO> playerSubmissions = new ArrayList<>();
+            for (Map.Entry<String, String> entry : submissions.entrySet()) {
+                String playerId = entry.getKey();
+                String choice = entry.getValue();
+
+                gameRoom.getPlayers().stream()
+                        .filter(p -> p.getPlayerId().equals(playerId))
+                        .findFirst()
+                        .ifPresent(player -> {
+                            GameRoom.QuestionScoreDetail scoreDetail = questionScores.get(playerId);
+                            Integer baseScore = scoreDetail != null ? scoreDetail.getBaseScore() : 0;
+                            Integer finalScore = scoreDetail != null ? scoreDetail.getFinalScore() : 0;
+
+                            playerSubmissions.add(PlayerSubmissionDTO.builder()
+                                    .playerId(playerId)
+                                    .playerName(player.getName())
+                                    .choice(choice)
+                                    .baseScore(baseScore)
+                                    .finalScore(finalScore)
+                                    .submittedAt(null)
+                                    .build());
+                        });
+            }
+
+            String optionText = formatOptions(question);
+
+            details.add(QuestionDetailDTO.builder()
+                    .questionIndex(i)
+                    .questionText(question.getText())
+                    .optionText(optionText)
+                    .questionType(question.getType())
+                    .playerSubmissions(playerSubmissions)
+                    .choiceCounts(choiceCounts)
+                    .build());
+        }
+
+        return details;
+    }
+
+    /**
+     * 格式化题目选项文本
+     */
+    private String formatOptions(QuestionDTO question) {
+        if (question == null) {
+            return "题目数据错误";
+        }
+
+        if (question.getType() == QuestionType.BID) {
+            return bidConfigRepository.findByQuestion_Id(question.getId())
+                    .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
+                    .orElse("自由出价");
+        }
+
+        if (question.getType() == QuestionType.CHOICE) {
+            return choiceConfigRepository.findByQuestion_Id(question.getId())
+                    .map(config -> {
+                        try {
+                            List<QuestionOption> options = objectMapper.readValue(
+                                    config.getOptionsJson(),
+                                    new TypeReference<List<QuestionOption>>() {}
+                            );
+
+                            return options.stream()
+                                    .sorted(Comparator.comparing(QuestionOption::getKey))
+                                    .map(option -> option.getKey() + ". " + option.getText())
+                                    .collect(Collectors.joining(" | "));
+
+                        } catch (Exception e) {
+                            log.error("解析选项 JSON 失败: questionId={}, error={}",
+                                    question.getId(), e.getMessage());
+                            return "选项格式错误";
+                        }
+                    })
+                    .orElse("无选项");
+        }
+
+        return "未知题型";
     }
 }

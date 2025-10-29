@@ -187,8 +187,12 @@ public class GameRoom implements Serializable {
      * 题目得分详情
      */
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     @lombok.Builder
-    public static class QuestionScoreDetail {
+    public static class QuestionScoreDetail implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         /**
          * 基础得分（策略计算的原始分数）
          */

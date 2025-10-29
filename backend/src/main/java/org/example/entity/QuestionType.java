@@ -1,6 +1,9 @@
 package org.example.entity;
 
+import lombok.Getter;
+
 // ✅ 应该改成枚举
+@Getter
 public enum QuestionType {
     CHOICE("CHOICE"),
     BID("BID");
@@ -8,9 +11,5 @@ public enum QuestionType {
     private final String value;
     QuestionType(String value) {
         this.value = value;
-    }
-
-    public String getValue() {
-        return value;
     }
 }

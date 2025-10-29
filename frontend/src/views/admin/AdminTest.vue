@@ -1,7 +1,7 @@
 <script setup>
 import { logger } from '@/utils/logger'
 import { joinRoom } from '@/api'
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from 'primevue/usetoast'
 import axios from 'axios'
@@ -14,20 +14,6 @@ const maxPlayers = ref(3)
 const questionCount = ref(5)
 const loading = ref(false)
 const playerStore = usePlayerStore
-
-// 🔥 检查登录状态
-onMounted(() => {
-  if (!playerStore.isLoggedIn) {
-    toast.add({
-      severity: 'error',
-      summary: '未登录',
-      detail: '请先登录后再使用测试工具',
-      life: 3000
-    })
-    router.push('/login')
-    return
-  }
-})
 
 /* ================================================
    🔥 axios 实例配置
@@ -76,21 +62,18 @@ api.interceptors.response.use(
 );
 
 const createTestRoom = async () => {
-  // 🔥 调试日志
-  logger.error('当前登录状态:', {
-    isLoggedIn: playerStore.isLoggedIn,
-    playerId: playerStore.playerId,
-    playerName: playerStore.playerName,
-    token: playerStore.token ? '存在' : '不存在'
-  })
+  // 🔥 直接从 localStorage 读取（像 AdminQuestions 一样）
+  const playerId = localStorage.getItem('playerId')
+  const playerName = localStorage.getItem('playerName')
+  const token = localStorage.getItem('token')
 
-  // 🔥 再次检查登录状态（防御性编程）
-  if (!playerStore.isLoggedIn || !playerStore.playerId || !playerStore.playerName) {
+  // 🔥 检查登录状态
+  if (!token || !playerId || !playerName) {
     toast.add({
       severity: 'error',
       summary: '未登录',
-      detail: `请先登录后再创建测试房间 (playerId: ${playerStore.playerId}, playerName: ${playerStore.playerName})`,
-      life: 5000
+      detail: '请先登录后再创建测试房间',
+      life: 3000
     })
     router.push('/login')
     return
@@ -129,17 +112,20 @@ const createTestRoom = async () => {
 
     const { roomCode, botCount } = createResponse.data
 
-    // 2. 🔥 真实玩家加入房间（与普通房间一样）
+    // 2. 🔥 真实玩家加入房间
     const joinResponse = await joinRoom(
       roomCode,
-      playerStore.playerId,
-      playerStore.playerName,
+      playerId,
+      playerName,
       false  // 不是观战者
     )
 
-    // 3. 保存房间信息到 store
-    playerStore.setRoom(joinResponse.data)
-    playerStore.setSpectator(false)
+    // 3. 保存房间信息到 localStorage（供 WaitRoom 使用）
+    const roomWithTimestamp = {
+      ...joinResponse.data,
+      _savedAt: Date.now()
+    }
+    localStorage.setItem('currentRoom', JSON.stringify(roomWithTimestamp))
 
     toast.add({
       severity: 'success',

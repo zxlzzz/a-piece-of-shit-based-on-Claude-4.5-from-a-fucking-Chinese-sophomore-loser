@@ -7,12 +7,14 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Button: typeof import('primevue/button')['default']
     ChatRoom: typeof import('./src/components/chat/ChatRoom.vue')['default']
     ChooseBar: typeof import('./src/components/game/ChooseBar.vue')['default']
     CreateRoomCard: typeof import('./src/components/room/CreateRoomCard.vue')['default']
     CustomForm: typeof import('./src/components/room/CustomForm.vue')['default']
     GameContent: typeof import('./src/components/game/GameContent.vue')['default']
     GameHeader: typeof import('./src/components/game/GameHeader.vue')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
     MobileChatDrawer: typeof import('./src/components/game/MobileChatDrawer.vue')['default']
     NumberBar: typeof import('./src/components/game/NumberBar.vue')['default']
     PlayerListCard: typeof import('./src/components/room/PlayerListCard.vue')['default']

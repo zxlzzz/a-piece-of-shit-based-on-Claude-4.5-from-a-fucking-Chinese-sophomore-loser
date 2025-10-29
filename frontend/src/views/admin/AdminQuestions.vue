@@ -10,8 +10,6 @@ const loading = ref(false)
 const showForm = ref(false)
 const editingQuestion = ref(null)
 
-const API_BASE = '/api/admin/questions'
-
 /* ================================================
    🔥 axios 实例配置
 ================================================ */

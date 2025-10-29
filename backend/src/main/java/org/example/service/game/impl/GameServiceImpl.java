@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 游戏服务实现（重构后 - 协调者模式）
@@ -254,7 +255,11 @@ public class GameServiceImpl implements GameService {
 
                         if ("CHOICE".equals(currentQuestion.getType())) {
                             // CHOICE题：随机选择一个选项
-                            List<String> options = currentQuestion.getOptions();
+                            List<String> options = Optional.ofNullable(currentQuestion.getOptions())
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(QuestionOption::getKey)
+                                    .toList();
                             if (options != null && !options.isEmpty()) {
                                 botAnswer = options.get(random.nextInt(options.size()));
                             } else {

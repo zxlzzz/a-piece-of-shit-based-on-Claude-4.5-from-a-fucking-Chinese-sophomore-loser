@@ -2,12 +2,10 @@
 import { logger } from '@/utils/logger'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
 import axios from 'axios'
 
 const router = useRouter()
-const playerStore = usePlayerStore()
 const toast = useToast()
 
 const maxPlayers = ref(3)

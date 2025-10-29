@@ -120,6 +120,14 @@ router.beforeEach(async (to, from, next) => {
 
           if (response.data) {
             playerStore.setRoom(response.data)
+
+            // 🔥 检查result页面：只有finished的游戏才能访问
+            if (to.name === 'result' && !response.data.finished) {
+              logger.warn('游戏未结束，无法访问结果页面')
+              next({ name: response.data.started ? 'game' : 'wait', params: { roomId }, replace: true })
+              return
+            }
+
             next()
             return
           }
@@ -138,11 +146,24 @@ router.beforeEach(async (to, from, next) => {
       }
 
       if (loaded) {
+        // 🔥 检查result页面：只有finished的游戏才能访问
+        if (to.name === 'result' && !loaded.finished) {
+          logger.warn('游戏未结束，无法访问结果页面')
+          next({ name: loaded.started ? 'game' : 'wait', params: { roomId }, replace: true })
+          return
+        }
       }
     } else if (currentRoom.roomCode !== roomId) {
       playerStore.clearRoom()
       next({ name: 'find', replace: true })
       return
+    } else {
+      // 🔥 检查result页面：只有finished的游戏才能访问
+      if (to.name === 'result' && !currentRoom.finished) {
+        logger.warn('游戏未结束，无法访问结果页面')
+        next({ name: currentRoom.started ? 'game' : 'wait', params: { roomId }, replace: true })
+        return
+      }
     }
   }
 

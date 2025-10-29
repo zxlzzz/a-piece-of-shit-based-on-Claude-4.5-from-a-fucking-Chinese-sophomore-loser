@@ -203,6 +203,13 @@ public class GameHistoryServiceImpl implements GameHistoryService {
 
     private GameHistoryDTO getCurrentGameStatus(String roomCode){
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        // 🔥 检查游戏是否已结束
+        if (!gameRoom.isFinished()) {
+            log.warn("⚠️ 游戏还未结束，无法获取结果: roomCode={}", roomCode);
+            throw new BusinessException("游戏还未结束");
+        }
+
         GameEntity game = gameRepository.findByRoomCodeWithRoom(roomCode)
                 .orElseThrow(() -> new BusinessException("游戏记录不存在"));
 

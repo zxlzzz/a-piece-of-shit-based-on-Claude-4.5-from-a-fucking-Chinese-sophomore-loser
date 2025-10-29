@@ -297,6 +297,25 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     @Override
     @Transactional
     public void setPlayerReady(String roomCode, String playerId, boolean ready) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            throw new BusinessException("房间不存在");
+        }
+
+        // 🔥 测试房间中的Bot玩家：只更新内存，不操作数据库
+        if (playerId.startsWith("BOT_")) {
+            gameRoom.getPlayers().stream()
+                    .filter(p -> p.getPlayerId().equals(playerId))
+                    .findFirst()
+                    .ifPresent(p -> p.setReady(ready));
+
+            // 同步到 Redis
+            roomCache.syncToRedis(roomCode);
+            log.info("✅ Bot玩家 {} 设置准备状态: {}", playerId, ready);
+            return;
+        }
+
+        // 🔥 真实玩家：更新数据库 + 内存
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
@@ -307,16 +326,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         player.setReady(ready);
         playerRepository.save(player);
 
-        GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom != null) {
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(p -> p.setReady(ready));
+        gameRoom.getPlayers().stream()
+                .filter(p -> p.getPlayerId().equals(playerId))
+                .findFirst()
+                .ifPresent(p -> p.setReady(ready));
 
-            // 🔥 同步到 Redis
-            roomCache.syncToRedis(roomCode);
-        }
+        // 🔥 同步到 Redis
+        roomCache.syncToRedis(roomCode);
 
         log.info("✅ 玩家 {} 设置准备状态: {}", playerId, ready);
     }

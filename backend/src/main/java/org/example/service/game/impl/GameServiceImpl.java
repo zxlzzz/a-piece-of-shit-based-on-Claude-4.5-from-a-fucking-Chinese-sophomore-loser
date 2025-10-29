@@ -57,7 +57,7 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount) {
-        log.info("创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
+        log.info("🔧 创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
 
         // 创建普通房间
         GameRoom gameRoom = new GameRoom();
@@ -65,6 +65,8 @@ public class GameServiceImpl implements GameService {
 
         RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom);
         gameRoom.setRoomEntity(savedRoom);
+
+        log.info("🔧 RoomEntity 已保存: roomCode={}, id={}", savedRoom.getRoomCode(), savedRoom.getId());
 
         // 添加虚拟玩家 (maxPlayers - 1 个)
         for (int i = 1; i < maxPlayers; i++) {
@@ -81,12 +83,15 @@ public class GameServiceImpl implements GameService {
             gameRoom.getPlayers().add(botPlayer);
             gameRoom.getScores().put(botId, 0);  // 初始化分数
 
-            log.info("添加虚拟玩家: {}", botName);
+            log.info("🔧 添加虚拟玩家: {}, ready={}", botName, true);
         }
 
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
 
-        log.info("测试房间创建完成: {}, Bot数量: {}", savedRoom.getRoomCode(), maxPlayers - 1);
+        log.info("🔧 测试房间创建完成: {}, Bot数量: {}, 玩家列表: {}",
+            savedRoom.getRoomCode(),
+            maxPlayers - 1,
+            gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList());
 
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
@@ -156,9 +161,17 @@ public class GameServiceImpl implements GameService {
     public List<RoomDTO> getAllActiveRoom() {
         return roomCache.getAll().stream()
                 .filter(gameRoom -> !gameRoom.isFinished())
-                .map(gameRoom -> roomLifecycleService.toRoomDTO(
-                        gameRoom.getRoomCode()
-                ))
+                .map(gameRoom -> {
+                    try {
+                        return roomLifecycleService.toRoomDTO(gameRoom.getRoomCode());
+                    } catch (BusinessException e) {
+                        // 🔥 房间在缓存中但数据库中不存在，跳过并清理
+                        log.warn("⚠️ 房间 {} 在缓存中但数据库中不存在，已清理", gameRoom.getRoomCode());
+                        roomCache.remove(gameRoom.getRoomCode());
+                        return null;
+                    }
+                })
+                .filter(roomDTO -> roomDTO != null)  // 过滤掉null值
                 .toList();
     }
 

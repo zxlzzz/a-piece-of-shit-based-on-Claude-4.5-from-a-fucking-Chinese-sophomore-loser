@@ -333,7 +333,8 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import axios from 'axios'
+import { loadTags } from '@/api'
+import { logger } from '@/utils/logger'
 
 const props = defineProps({
   maxQuestions: {
@@ -385,19 +386,6 @@ const toggleTag = (tagId) => {
   }
 }
 
-// 🔥 加载标签
-const loadTags = async () => {
-  try {
-    loadingTags.value = true
-    const response = await axios.get('/api/tags')
-    allTags.value = response.data || { mechanism: [], strategy: [] }
-  } catch (error) {
-    console.error('加载标签失败:', error)
-    tagError.value = true
-  } finally {
-    loadingTags.value = false
-  }
-}
 
 const handleSubmit = () => {
   // 校验题目数量
@@ -424,9 +412,16 @@ const handleKeydown = (e) => {
   }
 }
 
-onMounted(() => {
+onMounted(async() => {
   window.addEventListener('keydown', handleKeydown)
-  loadTags()  // 🔥 加载标签
+  try{
+    const res = await loadTags()
+    allTags.value = res.data
+  }catch(err){
+    logger.error(err)
+  }finally{
+    loadingTags.value = false
+  }
 })
 
 onUnmounted(() => {

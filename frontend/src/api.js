@@ -148,11 +148,8 @@ export const getAllActiveRooms = () =>
 export const updateRoomSettings = (roomCode, settings) =>
   api.put(`/rooms/${roomCode}/settings`, settings);
 
-// ============ 玩家相关API ============
-
-// ❌ 删除 createPlayer（已被 register 取代）
-// export const createPlayer = (playerId, name) =>
-//   api.post(`/players`, null, { params: { playerId, name } });
+export const loadTags = () =>
+  api.get(`/tags`);
 
 export const listPlayers = () =>
   api.get(`/players`);

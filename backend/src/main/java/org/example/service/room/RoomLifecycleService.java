@@ -6,6 +6,8 @@ import org.example.entity.RoomEntity;
 import org.example.pojo.GameRoom;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 房间生命周期服务
  * 负责房间的创建、加入、离开、设置等操作

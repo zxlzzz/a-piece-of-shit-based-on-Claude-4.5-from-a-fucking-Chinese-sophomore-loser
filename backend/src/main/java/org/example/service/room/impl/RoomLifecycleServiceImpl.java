@@ -40,7 +40,23 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     @Override
     @Transactional
     public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom) {
+        return initializeRoom(maxPlayers, questionCount, gameRoom, null);
+    }
+
+    @Override
+    @Transactional
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, java.util.List<Long> questionTagIds) {
         String roomCode = generateRoomCode();
+
+        // 🔥 序列化标签IDs
+        String questionTagIdsJson = null;
+        if (questionTagIds != null && !questionTagIds.isEmpty()) {
+            try {
+                questionTagIdsJson = objectMapper.writeValueAsString(questionTagIds);
+            } catch (Exception e) {
+                log.error("序列化questionTagIds失败", e);
+            }
+        }
 
         // 🔥 创建房间实体（只有基础字段）
         RoomEntity roomEntity = RoomEntity.builder()
@@ -52,6 +68,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .rankingMode("standard")
                 .targetScore(null)
                 .winConditionsJson(null)
+                .questionTagIdsJson(questionTagIdsJson)
                 .build();
 
         RoomEntity savedRoom = roomRepository.save(roomEntity);
@@ -69,7 +86,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         gameRoom.setDisconnectedPlayers(new ConcurrentHashMap<>());
         gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
 
-        log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}", roomCode, maxPlayers, questionCount);
+        log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}, 标签筛选: {}", roomCode, maxPlayers, questionCount, questionTagIds);
         return savedRoom;
     }
 

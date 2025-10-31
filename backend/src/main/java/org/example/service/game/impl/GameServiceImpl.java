@@ -47,11 +47,17 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public RoomDTO createRoom(Integer maxPlayers, Integer questionCount) {
+        return createRoom(maxPlayers, questionCount, null);
+    }
+
+    @Override
+    @Transactional
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, List<Long> questionTagIds) {
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom);
-        gameRoom.setRoomEntity(savedRoom);  // ✅ 新增
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, questionTagIds);
+        gameRoom.setRoomEntity(savedRoom);
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
-        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());  // ✅ 改这里
+        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
 
     @Override

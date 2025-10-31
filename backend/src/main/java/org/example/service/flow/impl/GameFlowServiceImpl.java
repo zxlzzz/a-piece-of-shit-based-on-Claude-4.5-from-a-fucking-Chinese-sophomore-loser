@@ -1,5 +1,7 @@
 package org.example.service.flow.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
@@ -50,6 +52,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
     private final GamePersistenceService gamePersistenceService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 推进锁（防止并发推进）
@@ -112,9 +115,23 @@ public class GameFlowServiceImpl implements GameFlowService {
                     .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                     .count();
 
+            // 🔥 解析标签筛选
+            List<Long> questionTagIds = null;
+            if (room.getQuestionTagIdsJson() != null && !room.getQuestionTagIdsJson().isEmpty()) {
+                try {
+                    questionTagIds = objectMapper.readValue(
+                            room.getQuestionTagIdsJson(),
+                            new TypeReference<List<Long>>() {}
+                    );
+                } catch (Exception e) {
+                    log.error("解析questionTagIds失败", e);
+                }
+            }
+
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
-                    nonSpectatorCount
+                    nonSpectatorCount,
+                    questionTagIds
             );
 
             // 初始化游戏房间状态

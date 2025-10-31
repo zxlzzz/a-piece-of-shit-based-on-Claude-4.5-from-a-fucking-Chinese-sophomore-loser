@@ -31,10 +31,11 @@ public class GameController {
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
-            @RequestParam(defaultValue = "10") Integer questionCount) {
+            @RequestParam(defaultValue = "10") Integer questionCount,
+            @RequestParam(required = false) List<Long> questionTagIds) {
         try {
-            RoomDTO room = gameService.createRoom(maxPlayers, questionCount);
-            log.info("✅ 创建房间成功: {}", room.getRoomCode());
+            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, questionTagIds);
+            log.info("✅ 创建房间成功: {} (标签筛选: {})", room.getRoomCode(), questionTagIds);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
             log.error("❌ 创建房间失败: {}", e.getMessage());

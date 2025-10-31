@@ -16,6 +16,11 @@ public interface GameService {
     RoomDTO createRoom(Integer maxPlayers, Integer questionCount);
 
     /**
+     * 创建房间（支持标签筛选）
+     */
+    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, List<Long> questionTagIds);
+
+    /**
      * 创建测试房间（自动填充虚拟玩家）
      */
     RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount);

@@ -99,6 +99,14 @@ public class RoomEntity implements Serializable {
     @Column(columnDefinition = "TEXT")
     private String winConditionsJson;
 
+    /**
+     * 题目标签筛选（JSON 格式存储标签ID列表）
+     * 例如: [1,2,3]
+     * 用于选题时筛选指定标签的题目
+     */
+    @Column(columnDefinition = "TEXT")
+    private String questionTagIdsJson;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;  // 创建时间

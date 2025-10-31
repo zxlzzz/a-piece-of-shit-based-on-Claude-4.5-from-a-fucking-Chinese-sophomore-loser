@@ -18,6 +18,11 @@ public interface RoomLifecycleService {
     RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom);
 
     /**
+     * 初始化房间（支持标签筛选）
+     */
+    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, List<Long> questionTagIds);
+
+    /**
      * 加入房间
      * @param spectator 是否为观战者
      */

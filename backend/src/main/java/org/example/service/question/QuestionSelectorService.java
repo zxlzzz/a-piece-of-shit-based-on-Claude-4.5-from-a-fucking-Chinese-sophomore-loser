@@ -9,6 +9,7 @@ import org.example.entity.QuestionEntity;
 import org.example.entity.QuestionMetadata;
 import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
+import org.example.repository.QuestionTagRelationRepository;
 import org.example.utils.DTOConverter;
 import org.springframework.stereotype.Service;
 
@@ -22,11 +23,17 @@ import static org.example.config.WebSocketConfig.WebSocketChannelInterceptor.log
 public class QuestionSelectorService {
     private final QuestionRepository questionRepository;
     private final QuestionMetadataRepository metadataRepository;
+    private final QuestionTagRelationRepository tagRelationRepository;
     private final DTOConverter dtoConverter;
 
-    public QuestionSelectorService(QuestionRepository questionRepository, QuestionMetadataRepository metadataRepository, DTOConverter dtoConverter) {
+    public QuestionSelectorService(
+            QuestionRepository questionRepository,
+            QuestionMetadataRepository metadataRepository,
+            QuestionTagRelationRepository tagRelationRepository,
+            DTOConverter dtoConverter) {
         this.questionRepository = questionRepository;
         this.metadataRepository = metadataRepository;
+        this.tagRelationRepository = tagRelationRepository;
         this.dtoConverter = dtoConverter;
     }
 
@@ -37,10 +44,31 @@ public class QuestionSelectorService {
      * @return 选中的题目列表（DTO格式，包含完整配置）
      */
     public List<QuestionDTO> selectQuestions(int totalCount, int playerCount) {
+        return selectQuestions(totalCount, playerCount, null);
+    }
+
+    /**
+     * 选择题目（支持标签筛选）
+     * @param totalCount 需要的题目总数
+     * @param playerCount 玩家人数
+     * @param tagIds 标签ID列表（可选，null表示不筛选）
+     * @return 选中的题目列表
+     */
+    public List<QuestionDTO> selectQuestions(int totalCount, int playerCount, List<Long> tagIds) {
         // 1. 查询所有题目（带配置）
         List<QuestionEntity> allQuestions = questionRepository.findAllWithConfigs();
 
-        // 2. 筛选适合人数的题目
+        // 2. 🔥 如果指定了标签，先根据标签筛选
+        if (tagIds != null && !tagIds.isEmpty()) {
+            Set<Long> filteredQuestionIds = filterQuestionIdsByTags(tagIds);
+            allQuestions = allQuestions.stream()
+                    .filter(q -> filteredQuestionIds.contains(q.getId()))
+                    .toList();
+
+            log.info("🏷️ 根据标签筛选后：{} 道题目", allQuestions.size());
+        }
+
+        // 3. 筛选适合人数的题目
         List<QuestionEntity> suitable = allQuestions.stream()
                 .filter(q -> q.getMinPlayers() <= playerCount && q.getMaxPlayers() >= playerCount)
                 .toList();
@@ -49,7 +77,7 @@ public class QuestionSelectorService {
             throw new RuntimeException("No suitable questions found");
         }
 
-        // 3. 批量查询所有题目的 metadata
+        // 4. 批量查询所有题目的 metadata
         List<Long> questionIds = suitable.stream()
                 .map(QuestionEntity::getId)
                 .toList();
@@ -59,13 +87,13 @@ public class QuestionSelectorService {
                 .stream()
                 .collect(Collectors.toMap(QuestionMetadata::getQuestionId, m -> m));
 
-        // 4. 构建题目池
+        // 5. 构建题目池
         QuestionPool pool = buildQuestionPool(suitable, metadataMap);
 
-        // 5. 从池中选择题目（Entity 列表）
+        // 6. 从池中选择题目（Entity 列表）
         List<QuestionEntity> selectedEntities = selectFromPool(pool, totalCount);
 
-        // 🔥 6. 转换成 DTO（带配置）
+        // 7. 转换成 DTO（带配置）
         List<QuestionDTO> selectedDTOs = selectedEntities.stream()
                 .map(dtoConverter::toQuestionDTOWithConfig)
                 .collect(Collectors.toList());
@@ -73,6 +101,21 @@ public class QuestionSelectorService {
         log.info("✅ 选题完成: 共选择 {} 道题目（玩家数: {}）", selectedDTOs.size(), playerCount);
 
         return selectedDTOs;
+    }
+
+    /**
+     * 根据标签筛选题目ID
+     */
+    private Set<Long> filterQuestionIdsByTags(List<Long> tagIds) {
+        // 查询所有包含这些标签的题目ID
+        return tagRelationRepository.findByQuestionIdIn(
+                        questionRepository.findAllWithConfigs().stream()
+                                .map(QuestionEntity::getId)
+                                .toList()
+                ).stream()
+                .filter(relation -> tagIds.contains(relation.getTagId()))
+                .map(org.example.entity.QuestionTagRelationEntity::getQuestionId)
+                .collect(Collectors.toSet());
     }
 
     private QuestionPool buildQuestionPool(

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.QuestionDTO;
+import org.example.dto.TagDTO;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.repository.BidQuestionConfigRepository;
@@ -13,6 +14,7 @@ import org.example.repository.ChoiceQuestionConfigRepository;
 import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
 import org.example.service.question.QuesService;
+import org.example.service.tag.QuestionTagService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -32,18 +34,21 @@ public class QuesServiceImpl implements QuesService {
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
     private final QuestionMetadataRepository metadataRepository;
+    private final QuestionTagService questionTagService;
 
     public QuesServiceImpl(
             QuestionRepository questionRepository,
             ObjectMapper objectMapper,
             ChoiceQuestionConfigRepository choiceConfigRepository,
             BidQuestionConfigRepository bidConfigRepository,
-            QuestionMetadataRepository metadataRepository) {
+            QuestionMetadataRepository metadataRepository,
+            QuestionTagService questionTagService) {
         this.questionRepository = questionRepository;
         this.objectMapper = objectMapper;
         this.choiceConfigRepository = choiceConfigRepository;
         this.bidConfigRepository = bidConfigRepository;
         this.metadataRepository = metadataRepository;
+        this.questionTagService = questionTagService;
     }
 
     @Override
@@ -203,8 +208,11 @@ public class QuesServiceImpl implements QuesService {
                 .stream()
                 .collect(Collectors.toMap(QuestionMetadata::getQuestionId, m -> m));
 
+        // 🔥 批量查询标签
+        Map<Long, List<TagDTO>> tagsMap = questionTagService.getTagsForQuestions(questionIds);
+
         return entities.stream()
-                .map(entity -> convertSingleToDTO(entity, choiceConfigMap, bidConfigMap, metadataMap))
+                .map(entity -> convertSingleToDTO(entity, choiceConfigMap, bidConfigMap, metadataMap, tagsMap))
                 .collect(Collectors.toList());
     }
 
@@ -215,7 +223,8 @@ public class QuesServiceImpl implements QuesService {
             QuestionEntity entity,
             Map<Long, ChoiceQuestionConfig> choiceConfigMap,
             Map<Long, BidQuestionConfig> bidConfigMap,
-            Map<Long, QuestionMetadata> metadataMap) {
+            Map<Long, QuestionMetadata> metadataMap,
+            Map<Long, List<TagDTO>> tagsMap) {
 
         QuestionDTO dto = new QuestionDTO();
         dto.setId(entity.getId());
@@ -252,6 +261,9 @@ public class QuesServiceImpl implements QuesService {
             dto.setRepeatInterval(metadata.getRepeatInterval());
             dto.setRepeatGroupId(metadata.getRepeatGroupId());
         }
+
+        // 🔥 设置标签
+        dto.setTags(tagsMap.getOrDefault(entity.getId(), Collections.emptyList()));
 
         return dto;
     }

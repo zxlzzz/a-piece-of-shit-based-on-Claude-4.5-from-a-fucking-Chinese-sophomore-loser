@@ -32,14 +32,15 @@
           v-for="q in questions"
           :key="q.id"
           :type="q.type"
-          :people="q.minPlayers === q.maxPlayers 
-            ? (q.minPlayers || '?') 
+          :people="q.minPlayers === q.maxPlayers
+            ? (q.minPlayers || '?')
             : `${q.minPlayers || '?'} ~ ${q.maxPlayers || '?'}`"
           :text="q.text"
           :choice="q.options"
           :min="q.min"
           :max="q.max"
           :step="q.step"
+          :tags="q.tags"
         />
       </div>
     </div>

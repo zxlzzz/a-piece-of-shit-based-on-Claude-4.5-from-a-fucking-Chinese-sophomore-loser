@@ -21,9 +21,22 @@
       <h3 class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
         题目内容
       </h3>
-      <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed mb-4 sm:mb-6">
+      <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed mb-3 sm:mb-4">
         {{ text }}
       </p>
+
+      <!-- 🔥 标签显示 -->
+      <div v-if="tags && tags.length > 0" class="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+        <span
+          v-for="tag in tags"
+          :key="tag.id"
+          :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+          class="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1
+                 rounded-full text-xs font-medium border"
+        >
+          {{ tag.name }}
+        </span>
+      </div>
 
       <!-- 🔥 选择题：显示选项 -->
       <div v-if="type === 'CHOICE' && Array.isArray(choice) && choice.length > 0">
@@ -117,6 +130,10 @@ defineProps({
   people: [Number, String],
   min: Number,
   max: Number,
-  step: Number
+  step: Number,
+  tags: {
+    type: Array,
+    default: () => []
+  }
 })
 </script>

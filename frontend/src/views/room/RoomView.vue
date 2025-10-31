@@ -117,10 +117,10 @@ const loadActiveRooms = async () => {
   }
 }
 
-const handleCreate = async ({ questionCount, maxPlayers }) => {
+const handleCreate = async ({ questionCount, maxPlayers, questionTagIds }) => {
   loading.value = true
   try {
-    const createResponse = await createRoom(maxPlayers, questionCount)
+    const createResponse = await createRoom(maxPlayers, questionCount, questionTagIds)
     const roomData = createResponse.data
     
     

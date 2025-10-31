@@ -107,10 +107,13 @@ export const login = (username, password) =>
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers, questionCount) =>
-  api.post('/rooms', null, {
-    params: {maxPlayers, questionCount}
-  });
+export const createRoom = (maxPlayers, questionCount, questionTagIds = null) => {
+  const params = { maxPlayers, questionCount };
+  if (questionTagIds && questionTagIds.length > 0) {
+    params.questionTagIds = questionTagIds;
+  }
+  return api.post('/rooms', null, { params });
+};
 
 export const joinRoom = (roomCode, playerId, playerName, spectator = false) =>
   api.post(`/rooms/${roomCode}/join`, null, {

@@ -18,7 +18,7 @@
           <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
             题目数量
           </label>
-          <input 
+          <input
             v-model.number="formData.questionCount"
             type="number"
             min="1"
@@ -32,6 +32,62 @@
           />
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             可选范围：1-{{ maxQuestions }}
+          </p>
+        </div>
+
+        <!-- 🔥 题目标签筛选 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            题目标签筛选
+            <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1 sm:ml-2">
+              （不选则为全部题目）
+            </span>
+          </label>
+
+          <div v-if="loadingTags" class="text-xs text-gray-500">加载标签中...</div>
+          <div v-else-if="tagError" class="text-xs text-red-500">加载标签失败</div>
+          <div v-else class="space-y-2">
+            <!-- 博弈机制类标签 -->
+            <div v-if="allTags.mechanism && allTags.mechanism.length">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">博弈机制</div>
+              <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                <button
+                  v-for="tag in allTags.mechanism"
+                  :key="tag.id"
+                  type="button"
+                  @click="toggleTag(tag.id)"
+                  :style="formData.questionTagIds.includes(tag.id)
+                    ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color }
+                    : { backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+                  class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80"
+                >
+                  {{ tag.name }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 策略特性类标签 -->
+            <div v-if="allTags.strategy && allTags.strategy.length">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">策略特性</div>
+              <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                <button
+                  v-for="tag in allTags.strategy"
+                  :key="tag.id"
+                  type="button"
+                  @click="toggleTag(tag.id)"
+                  :style="formData.questionTagIds.includes(tag.id)
+                    ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color }
+                    : { backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+                  class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80"
+                >
+                  {{ tag.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="formData.questionTagIds.length" class="mt-1.5 text-xs text-blue-600 dark:text-blue-400">
+            已选择 {{ formData.questionTagIds.length }} 个标签
           </p>
         </div>
 
@@ -277,6 +333,7 @@
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import axios from 'axios'
 
 const props = defineProps({
   maxQuestions: {
@@ -294,6 +351,11 @@ const emit = defineEmits(['submit', 'cancel'])
 // 🔥 折叠状态
 const showAdvanced = ref(false)
 
+// 🔥 标签数据
+const allTags = ref({ mechanism: [], strategy: [] })
+const loadingTags = ref(true)
+const tagError = ref(false)
+
 // 🔥 表单数据（从 props 初始化）
 const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
@@ -303,7 +365,8 @@ const formData = ref({
     minScorePerPlayer: props.currentSettings?.winConditions?.minScorePerPlayer || null,
     minTotalScore: props.currentSettings?.winConditions?.minTotalScore || null,
     minAvgScore: props.currentSettings?.winConditions?.minAvgScore || null
-  }
+  },
+  questionTagIds: props.currentSettings?.questionTagIds || []
 })
 
 // 🔥 计算属性：是否有通关条件
@@ -311,6 +374,30 @@ const hasWinConditions = computed(() => {
   const wc = formData.value.winConditions
   return wc.minScorePerPlayer || wc.minTotalScore || wc.minAvgScore
 })
+
+// 🔥 切换标签选择
+const toggleTag = (tagId) => {
+  const index = formData.value.questionTagIds.indexOf(tagId)
+  if (index > -1) {
+    formData.value.questionTagIds.splice(index, 1)
+  } else {
+    formData.value.questionTagIds.push(tagId)
+  }
+}
+
+// 🔥 加载标签
+const loadTags = async () => {
+  try {
+    loadingTags.value = true
+    const response = await axios.get('/api/tags')
+    allTags.value = response.data || { mechanism: [], strategy: [] }
+  } catch (error) {
+    console.error('加载标签失败:', error)
+    tagError.value = true
+  } finally {
+    loadingTags.value = false
+  }
+}
 
 const handleSubmit = () => {
   // 校验题目数量
@@ -339,6 +426,7 @@ const handleKeydown = (e) => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
+  loadTags()  // 🔥 加载标签
 })
 
 onUnmounted(() => {

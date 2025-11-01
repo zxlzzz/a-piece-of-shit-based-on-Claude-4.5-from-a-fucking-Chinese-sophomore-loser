@@ -397,6 +397,7 @@ const handleCustomFormSubmit = async (formData) => {
     // 🔥 调用后端 API
     const response = await updateRoomSettings(roomCode.value, {
       questionCount: formData.questionCount,
+      timeLimit: formData.timeLimit,
       rankingMode: formData.rankingMode,
       targetScore: formData.targetScore,
       winConditions: formData.winConditions

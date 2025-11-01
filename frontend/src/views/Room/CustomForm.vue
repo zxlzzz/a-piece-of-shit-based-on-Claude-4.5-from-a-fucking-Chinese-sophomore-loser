@@ -18,7 +18,7 @@
           <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
             题目数量
           </label>
-          <input 
+          <input
             v-model.number="formData.questionCount"
             type="number"
             min="1"
@@ -32,6 +32,29 @@
           />
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
             可选范围：1-{{ maxQuestions }}
+          </p>
+        </div>
+
+        <!-- 每题时长 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            每题时长（秒）
+          </label>
+          <input
+            v-model.number="formData.timeLimit"
+            type="number"
+            min="20"
+            max="120"
+            step="5"
+            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                   bg-white dark:bg-gray-700
+                   text-sm sm:text-base
+                   text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                   transition-colors"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            可选范围：20-120秒，步长5秒
           </p>
         </div>
 
@@ -297,6 +320,7 @@ const showAdvanced = ref(false)
 // 🔥 表单数据（从 props 初始化）
 const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
+  timeLimit: props.currentSettings?.timeLimit || 30,
   rankingMode: props.currentSettings?.rankingMode || 'standard',
   targetScore: props.currentSettings?.targetScore || null,
   winConditions: {

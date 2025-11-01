@@ -66,6 +66,12 @@ public class RoomEntity implements Serializable {
     private Integer timeLimit = 30;
 
     /**
+     * 房间密码（可选）
+     */
+    @Column(length = 50)
+    private String password;
+
+    /**
      * 房主玩家ID
      */
     @Column(length = 50)

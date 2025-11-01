@@ -103,14 +103,14 @@ export const guestLogin = (name) =>
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers, questionCount, timeLimit = 30) =>
+export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null) =>
   api.post('/rooms', null, {
-    params: {maxPlayers, questionCount, timeLimit}
+    params: {maxPlayers, questionCount, timeLimit, password}
   });
 
-export const joinRoom = (roomCode, playerId, playerName, spectator = false) =>
+export const joinRoom = (roomCode, playerId, playerName, spectator = false, password = null) =>
   api.post(`/rooms/${roomCode}/join`, null, {
-    params: { playerId, playerName, spectator }
+    params: { playerId, playerName, spectator, password }
   });
 
 export const startGame = (roomCode) =>
@@ -140,6 +140,11 @@ export const getAllActiveRooms = () =>
 
 export const updateRoomSettings = (roomCode, settings) =>
   api.put(`/rooms/${roomCode}/settings`, settings);
+
+export const kickPlayer = (roomCode, ownerId, targetPlayerId) =>
+  api.post(`/rooms/${roomCode}/kick`, null, {
+    params: { ownerId, targetPlayerId }
+  });
 
 // ============ 玩家相关API ============
 

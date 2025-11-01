@@ -32,10 +32,11 @@ public class GameController {
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
             @RequestParam(defaultValue = "10") Integer questionCount,
-            @RequestParam(defaultValue = "30") Integer timeLimit) {
+            @RequestParam(defaultValue = "30") Integer timeLimit,
+            @RequestParam(required = false) String password) {
         try {
-            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit);
-            log.info("✅ 创建房间成功: {}", room.getRoomCode());
+            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password);
+            log.info("✅ 创建房间成功: {} (密码保护: {})", room.getRoomCode(), password != null && !password.isEmpty());
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
             log.error("❌ 创建房间失败: {}", e.getMessage());
@@ -82,9 +83,10 @@ public class GameController {
             @PathVariable String roomCode,
             @RequestParam String playerId,
             @RequestParam String playerName,
-            @RequestParam(defaultValue = "false") Boolean spectator) {
+            @RequestParam(defaultValue = "false") Boolean spectator,
+            @RequestParam(required = false) String password) {
         try {
-            RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, spectator);
+            RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
             broadcaster.sendRoomUpdate(roomCode, room);
             log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
             return ResponseEntity.ok(room);
@@ -150,6 +152,23 @@ public class GameController {
         } catch (BusinessException e) {
             log.error("❌ 删除房间失败: {}", e.getMessage());
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PostMapping("/rooms/{roomCode}/kick")
+    public ResponseEntity<RoomDTO> kickPlayer(
+            @PathVariable String roomCode,
+            @RequestParam String ownerId,
+            @RequestParam String targetPlayerId) {
+        try {
+            RoomDTO room = gameService.kickPlayer(roomCode, ownerId, targetPlayerId);
+            broadcaster.sendRoomUpdate(roomCode, room);
+            broadcaster.sendPlayerKicked(roomCode, targetPlayerId);
+            log.info("✅ 玩家 {} 被房主 {} 踢出房间 {}", targetPlayerId, ownerId, roomCode);
+            return ResponseEntity.ok(room);
+        } catch (BusinessException e) {
+            log.error("❌ 踢出玩家失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
         }
     }
 

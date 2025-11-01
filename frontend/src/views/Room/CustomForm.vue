@@ -58,6 +58,28 @@
           </p>
         </div>
 
+        <!-- 房间密码 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            房间密码（可选）
+          </label>
+          <input
+            v-model="formData.password"
+            type="text"
+            placeholder="留空表示不设密码"
+            maxlength="50"
+            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                   bg-white dark:bg-gray-700
+                   text-sm sm:text-base
+                   text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                   transition-colors"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            设置密码后，其他玩家需要输入密码才能加入
+          </p>
+        </div>
+
         <!-- ========================================= -->
         <!-- 🔥 高级规则区域（可折叠） -->
         <!-- ========================================= -->
@@ -321,6 +343,7 @@ const showAdvanced = ref(false)
 const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
   timeLimit: props.currentSettings?.timeLimit || 30,
+  password: props.currentSettings?.password || '',
   rankingMode: props.currentSettings?.rankingMode || 'standard',
   targetScore: props.currentSettings?.targetScore || null,
   winConditions: {

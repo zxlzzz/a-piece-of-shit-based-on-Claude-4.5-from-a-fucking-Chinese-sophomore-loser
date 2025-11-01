@@ -45,9 +45,9 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit) {
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password) {
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, timeLimit, gameRoom);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, timeLimit, password, gameRoom);
         gameRoom.setRoomEntity(savedRoom);  // ✅ 新增
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());  // ✅ 改这里
@@ -64,8 +64,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator) {
-        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator);
+    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
+        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator, password);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
 
@@ -184,5 +184,34 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameHistoryDTO getHistoryDetail(Long gameId) {
         return gameHistoryService.getHistoryDetail(gameId);
+    }
+
+    @Override
+    @Transactional
+    public RoomDTO kickPlayer(String roomCode, String ownerId, String targetPlayerId) {
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        synchronized (roomCode.intern()) {
+            // 检查房间状态
+            if (gameRoom.isStarted()) {
+                throw new BusinessException("游戏已开始，无法踢出玩家");
+            }
+
+            // 检查操作者是否是房主（第一个玩家）
+            if (gameRoom.getPlayers().isEmpty() ||
+                !gameRoom.getPlayers().get(0).getPlayerId().equals(ownerId)) {
+                throw new BusinessException("只有房主可以踢出玩家");
+            }
+
+            // 不能踢出自己
+            if (targetPlayerId.equals(ownerId)) {
+                throw new BusinessException("不能踢出自己");
+            }
+
+            // 踢出玩家（使用 handleLeave 的逻辑）
+            roomLifecycleService.handleLeave(roomCode, targetPlayerId);
+
+            return roomLifecycleService.toRoomDTO(roomCode);
+        }
     }
 }

@@ -75,10 +75,10 @@ const loadActiveRooms = async () => {
   }
 }
 
-const handleCreate = async ({ questionCount, maxPlayers }) => {
+const handleCreate = async ({ questionCount, maxPlayers, password }) => {
   loading.value = true
   try {
-    const createResponse = await createRoom(maxPlayers, questionCount)
+    const createResponse = await createRoom(maxPlayers, questionCount, 30, password)
     const roomData = createResponse.data
     
     console.log('房间创建成功:', roomData)
@@ -122,7 +122,18 @@ const handleEnterRoom = () => {
   }
 }
 
-const handleJoinRoom = async (roomCode, spectator = false) => {
+const handleJoinRoom = async (roomCode, hasPassword, spectator = false) => {
+  let password = null
+
+  // 如果房间有密码，提示输入
+  if (hasPassword) {
+    password = prompt('此房间需要密码，请输入密码：')
+    if (password === null) {
+      // 用户取消输入
+      return
+    }
+  }
+
   loading.value = true
   try {
     // 🔥 改用 playerStore
@@ -130,7 +141,8 @@ const handleJoinRoom = async (roomCode, spectator = false) => {
       roomCode,
       playerStore.playerId,
       playerStore.playerName,
-      spectator
+      spectator,
+      password
     )
     currentRoom.value = response.data
     // 🔥 统一用 playerStore 存储
@@ -282,8 +294,9 @@ const handleLogout = () => {
                 <!-- 房间头部 -->
                 <div class="flex justify-between items-start mb-2 sm:mb-3">
                   <div>
-                    <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white">
+                    <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white flex items-center gap-2">
                       {{ room.roomCode }}
+                      <i v-if="room.hasPassword" class="pi pi-lock text-orange-500 text-sm" title="需要密码"></i>
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <i class="pi pi-users text-xs"></i>
@@ -328,7 +341,7 @@ const handleLogout = () => {
 
                 <!-- 加入按钮 -->
                 <button
-                  @click="handleJoinRoom(room.roomCode, spectatorModes[room.roomCode] || false)"
+                  @click="handleJoinRoom(room.roomCode, room.hasPassword, spectatorModes[room.roomCode] || false)"
                   :disabled="room.status !== 'WAITING' ||
                             room.currentPlayers >= room.maxPlayers ||
                             loading"

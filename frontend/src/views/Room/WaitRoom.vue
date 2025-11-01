@@ -1,5 +1,5 @@
 <script setup>
-import { updateRoomSettings, getRoomStatus } from '@/api'
+import { updateRoomSettings, getRoomStatus, kickPlayer } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { generatePlayerColor } from '@/utils/player'
 import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
@@ -82,16 +82,18 @@ onMounted(async () => {
 
   // 🔥 监听 WebSocket 错误事件
   window.addEventListener('room-deleted', handleRoomDeleted)
+  window.addEventListener('player-kicked', handlePlayerKicked)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('websocket-reconnecting', handleReconnecting)
   window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
-  
+
   // 开始连接
   await connectWebSocket()
 })
 
 onUnmounted(() => {
   window.removeEventListener('room-deleted', handleRoomDeleted)
+  window.removeEventListener('player-kicked', handlePlayerKicked)
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('websocket-reconnecting', handleReconnecting)
   window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
@@ -109,6 +111,19 @@ const handleRoomDeleted = (event) => {
     detail: '房主已离开，房间被解散',
     life: 3000
   })
+  setTimeout(() => {
+    router.push('/find')
+  }, 1000)
+}
+
+const handlePlayerKicked = (event) => {
+  toast.add({
+    severity: 'error',
+    summary: '您已被踢出',
+    detail: event.detail?.message || '您已被房主踢出房间',
+    life: 3000
+  })
+  playerStore.clearRoom()
   setTimeout(() => {
     router.push('/find')
   }, 1000)
@@ -246,7 +261,7 @@ const setupRoomSubscription = () => {
         console.log("📥 房间更新:", roomUpdate)
         room.value = roomUpdate
         playerStore.setRoom(roomUpdate)
-        
+
         if (roomUpdate.status === 'PLAYING') {
           toast.add({
             severity: 'info',
@@ -265,7 +280,8 @@ const setupRoomSubscription = () => {
           detail: error.error || '房间出现错误',
           life: 3000
         })
-      }
+      },
+      playerStore.playerId  // 传递 playerId 以订阅被踢事件
     )
     
     if (subs && subs.length > 0) {
@@ -366,9 +382,33 @@ const handleLeave = () => {
       playerId: playerStore.playerId
     })
   }
-  
+
   playerStore.clearRoom()
   router.push("/find")
+}
+
+const handleKickPlayer = async (targetPlayerId, playerName) => {
+  if (!confirm(`确定要踢出玩家 ${playerName} 吗？`)) {
+    return
+  }
+
+  try {
+    await kickPlayer(roomCode.value, playerStore.playerId, targetPlayerId)
+    toast.add({
+      severity: 'success',
+      summary: '踢出成功',
+      detail: `已将 ${playerName} 踢出房间`,
+      life: 2000
+    })
+  } catch (error) {
+    console.error('踢出玩家失败:', error)
+    toast.add({
+      severity: 'error',
+      summary: '踢出失败',
+      detail: error.response?.data?.message || '踢出玩家失败',
+      life: 3000
+    })
+  }
 }
 
 const copyRoomCode = async () => {
@@ -625,7 +665,7 @@ const refreshRoomState = async () => {
                       <p class="font-medium text-gray-900 dark:text-white text-xs sm:text-sm truncate">
                         {{ player.name }}
                       </p>
-                      <span v-if="player.playerId === playerStore.playerId" 
+                      <span v-if="player.playerId === playerStore.playerId"
                             class="text-xs px-1 py-0.5 sm:px-1.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded">
                         你
                       </span>
@@ -634,6 +674,17 @@ const refreshRoomState = async () => {
                       {{ player.ready ? '已准备' : '等待中' }}
                     </p>
                   </div>
+
+                  <!-- 踢出按钮（仅房主可见，且不能踢自己和房主） -->
+                  <button
+                    v-if="isRoomOwner && index !== 0 && player.playerId !== playerStore.playerId"
+                    @click="handleKickPlayer(player.playerId, player.name)"
+                    class="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20
+                           text-red-500 dark:text-red-400 transition-colors"
+                    title="踢出玩家"
+                  >
+                    <i class="pi pi-times text-xs sm:text-sm"></i>
+                  </button>
                 </div>
               </div>
             </div>

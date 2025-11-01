@@ -117,14 +117,6 @@ const loadActiveRooms = async () => {
   }
 }
 
-const handleCreate = async ({ questionCount, maxPlayers, password }) => {
-  loading.value = true
-  try {
-    const createResponse = await createRoom(maxPlayers, questionCount, 30, password)
-    const roomData = createResponse.data
-
-    console.log('房间创建成功:', roomData)
-
 const handleCreate = async ({ questionCount, maxPlayers, questionTagIds }) => {
   loading.value = true
   try {

@@ -10,6 +10,13 @@ const loading = ref(false)
 const showForm = ref(false)
 const editingQuestion = ref(null)
 
+// 🔥 标签管理相关状态
+const showTagManager = ref(false)
+const showTagEditor = ref(false)
+const editingTagQuestion = ref(null)
+const allTags = ref({ mechanism: [], strategy: [] })
+const newTag = ref({ name: '', category: 'mechanism', color: '#60a5fa' })
+
 /* ================================================
    🔥 axios 实例配置
 ================================================ */
@@ -481,11 +488,11 @@ const exportQuestions = async () => {
 // 清空所有题目
 const clearAll = async () => {
   if (!confirm('确定清空所有题目吗？此操作不可恢复！')) return
-  
+
   loading.value = true
   try {
     await api.delete('/admin/questions/all')
-    
+
     toast.add({
       severity: 'success',
       summary: '已清空',
@@ -497,6 +504,202 @@ const clearAll = async () => {
     toast.add({
       severity: 'error',
       summary: '清空失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// ==================== 🔥 标签管理功能 ====================
+
+// 切换标签管理面板
+const toggleTagManager = () => {
+  showTagManager.value = !showTagManager.value
+  if (showTagManager.value) {
+    loadTags()
+  }
+}
+
+// 加载所有标签
+const loadTags = async () => {
+  try {
+    const response = await api.get('/tags')
+    const tags = response.data
+
+    // 按类别分组
+    allTags.value = {
+      mechanism: tags.filter(t => t.category === 'mechanism'),
+      strategy: tags.filter(t => t.category === 'strategy')
+    }
+  } catch (error) {
+    logger.error('加载标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '加载标签失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 创建标签
+const createTag = async () => {
+  if (!newTag.value.name.trim()) {
+    toast.add({
+      severity: 'warn',
+      summary: '请输入标签名称',
+      life: 2000
+    })
+    return
+  }
+
+  try {
+    await api.post('/admin/tags', newTag.value)
+
+    toast.add({
+      severity: 'success',
+      summary: '创建成功',
+      detail: `标签 "${newTag.value.name}" 已创建`,
+      life: 2000
+    })
+
+    // 重置表单
+    newTag.value = { name: '', category: 'mechanism', color: '#60a5fa' }
+
+    // 重新加载标签和题目列表
+    await loadTags()
+    await loadQuestions()
+  } catch (error) {
+    logger.error('创建标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '创建失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 删除标签（级联删除所有题目关联）
+const deleteTag = async (tagId) => {
+  if (!confirm('确定删除该标签吗？将同时移除所有题目上的该标签！')) return
+
+  try {
+    await api.delete(`/admin/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '删除成功',
+      life: 2000
+    })
+
+    // 重新加载标签和题目列表
+    await loadTags()
+    await loadQuestions()
+  } catch (error) {
+    logger.error('删除标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '删除失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 打开标签编辑器
+const openTagEditor = (question) => {
+  editingTagQuestion.value = question
+  showTagEditor.value = true
+  loadTags()
+}
+
+// 为题目添加标签
+const addTagToQuestion = async (questionId, tagId) => {
+  try {
+    await api.post(`/admin/tags/questions/${questionId}/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '添加成功',
+      life: 1500
+    })
+
+    // 重新加载题目列表
+    await loadQuestions()
+
+    // 更新编辑器中的题目信息
+    editingTagQuestion.value = questions.value.find(q => q.id === questionId)
+  } catch (error) {
+    logger.error('添加标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '添加失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 从题目移除标签
+const removeTagFromQuestion = async (questionId, tagId) => {
+  try {
+    await api.delete(`/admin/tags/questions/${questionId}/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '移除成功',
+      life: 1500
+    })
+
+    // 重新加载题目列表
+    await loadQuestions()
+
+    // 更新编辑器中的题目信息
+    editingTagQuestion.value = questions.value.find(q => q.id === questionId)
+  } catch (error) {
+    logger.error('移除标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '移除失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 导出标签JSON
+const exportTags = async () => {
+  loading.value = true
+  try {
+    const response = await api.get('/admin/tags/export', {
+      responseType: 'text'
+    })
+
+    const jsonData = response.data
+
+    // 创建下载
+    const blob = new Blob([jsonData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `question-tags_${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    toast.add({
+      severity: 'success',
+      summary: '导出成功',
+      detail: '标签配置已导出',
+      life: 2000
+    })
+  } catch (error) {
+    logger.error('导出标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '导出失败',
       detail: error.response?.data?.message || error.message,
       life: 3000
     })
@@ -521,31 +724,46 @@ onMounted(() => {
       </div>
 
       <!-- 操作栏 -->
-      <div class="flex gap-3 mb-6">
+      <div class="flex flex-wrap gap-3 mb-6">
         <button
           @click="openCreateForm"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
         >
           <i class="pi pi-plus mr-2"></i>新建题目
         </button>
-        
+
+        <button
+          @click="toggleTagManager"
+          class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
+        >
+          <i class="pi pi-tags mr-2"></i>管理标签
+        </button>
+
         <button
           @click="loadQuestions"
           :disabled="loading"
-          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 
+          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600
                  text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <i class="pi pi-refresh mr-2" :class="{ 'pi-spin': loading }"></i>刷新
         </button>
-        
+
         <button
           @click="exportQuestions"
           :disabled="loading"
           class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
         >
-          <i class="pi pi-download mr-2"></i>导出JSON
+          <i class="pi pi-download mr-2"></i>导出题目JSON
         </button>
-        
+
+        <button
+          @click="exportTags"
+          :disabled="loading"
+          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg"
+        >
+          <i class="pi pi-download mr-2"></i>导出标签JSON
+        </button>
+
         <button
           @click="clearAll"
           :disabled="loading"
@@ -553,6 +771,66 @@ onMounted(() => {
         >
           <i class="pi pi-trash mr-2"></i>清空所有
         </button>
+      </div>
+
+      <!-- 🔥 标签管理器（可折叠） -->
+      <div v-if="showTagManager" class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+            <i class="pi pi-tags mr-2"></i>标签管理
+          </h2>
+          <button @click="showTagManager = false" class="text-gray-400 hover:text-gray-600">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <!-- 创建标签表单 -->
+        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded">
+          <div class="flex gap-2 items-end">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">标签名称</label>
+              <input v-model="newTag.name" type="text" placeholder="例如：协调型"
+                     class="w-full px-3 py-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+            </div>
+            <div class="w-40">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">分类</label>
+              <select v-model="newTag.category"
+                      class="w-full px-3 py-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <option value="mechanism">博弈机制</option>
+                <option value="strategy">策略特性</option>
+              </select>
+            </div>
+            <div class="w-32">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">颜色</label>
+              <input v-model="newTag.color" type="color"
+                     class="w-full px-1 py-1 border rounded h-[38px] dark:bg-gray-700 dark:border-gray-600"/>
+            </div>
+            <button @click="createTag"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">
+              <i class="pi pi-plus mr-1"></i>创建
+            </button>
+          </div>
+        </div>
+
+        <!-- 标签列表 -->
+        <div class="space-y-2">
+          <div v-for="category in ['mechanism', 'strategy']" :key="category">
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              {{ category === 'mechanism' ? '博弈机制' : '策略特性' }}
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <div v-for="tag in allTags[category]" :key="tag.id"
+                   class="flex items-center gap-2 px-3 py-1 rounded border"
+                   :style="{ backgroundColor: tag.color + '20', borderColor: tag.color }">
+                <span class="text-sm" :style="{ color: tag.color }">{{ tag.name }}</span>
+                <button @click="deleteTag(tag.id)"
+                        class="text-red-500 hover:text-red-700 text-xs">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 题目列表 -->
@@ -589,17 +867,16 @@ onMounted(() => {
                   {{ q.minPlayers }}-{{ q.maxPlayers }}
                 </td>
                 <td class="px-4 py-3 text-sm">
-                  <div class="flex gap-1">
-                    <span v-if="q.isRepeatable" 
-                          class="px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                          :title="`重复${q.repeatTimes}次`">
-                      🔁 x{{ q.repeatTimes }}
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="tag in (q.tags || [])" :key="tag.id"
+                          class="px-2 py-0.5 text-xs rounded border"
+                          :style="{ backgroundColor: tag.color + '30', color: tag.color, borderColor: tag.color }">
+                      {{ tag.name }}
                     </span>
-                    <span v-if="q.sequenceGroupId" 
-                          class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                          :title="`序列 ${q.sequenceOrder}/${q.totalSequenceCount}`">
-                      📋 {{ q.sequenceOrder }}/{{ q.totalSequenceCount }}
-                    </span>
+                    <button @click="openTagEditor(q)"
+                            class="px-2 py-0.5 text-xs rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-blue-600 hover:border-blue-600">
+                      <i class="pi pi-plus"></i>
+                    </button>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-right">
@@ -947,6 +1224,67 @@ onMounted(() => {
             </button>
           </div>
 
+        </div>
+      </div>
+
+      <!-- 🔥 标签编辑弹窗 -->
+      <div v-if="showTagEditor" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-2xl">
+          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              管理标签：{{ editingTagQuestion?.text?.substring(0, 20) }}...
+            </h3>
+            <button @click="showTagEditor = false" class="text-gray-400 hover:text-gray-600">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <div class="px-4 py-4">
+            <!-- 当前标签 -->
+            <div class="mb-4">
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">当前标签</div>
+              <div class="flex flex-wrap gap-2">
+                <span v-for="tag in (editingTagQuestion?.tags || [])" :key="tag.id"
+                      class="flex items-center gap-1 px-2 py-1 text-xs rounded border"
+                      :style="{ backgroundColor: tag.color + '30', color: tag.color, borderColor: tag.color }">
+                  {{ tag.name }}
+                  <button @click="removeTagFromQuestion(editingTagQuestion.id, tag.id)"
+                          class="text-red-500 hover:text-red-700">
+                    <i class="pi pi-times text-xs"></i>
+                  </button>
+                </span>
+                <span v-if="!(editingTagQuestion?.tags || []).length" class="text-sm text-gray-400">暂无标签</span>
+              </div>
+            </div>
+
+            <!-- 添加标签 -->
+            <div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">添加标签</div>
+              <div class="space-y-2">
+                <div v-for="category in ['mechanism', 'strategy']" :key="category">
+                  <div class="text-xs text-gray-500 mb-1">
+                    {{ category === 'mechanism' ? '博弈机制' : '策略特性' }}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button v-for="tag in allTags[category]" :key="tag.id"
+                            @click="addTagToQuestion(editingTagQuestion.id, tag.id)"
+                            :disabled="(editingTagQuestion?.tags || []).some(t => t.id === tag.id)"
+                            class="px-2 py-1 text-xs rounded border disabled:opacity-30"
+                            :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }">
+                      {{ tag.name }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <button @click="showTagEditor = false"
+                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">
+              完成
+            </button>
+          </div>
         </div>
       </div>
 

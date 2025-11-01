@@ -526,13 +526,16 @@ const toggleTagManager = () => {
 const loadTags = async () => {
   try {
     const response = await api.get('/tags')
-    const tags = response.data
-
-    // 按类别分组
+    
+    // API已经返回分组好的数据，直接使用即可
+    allTags.value = response.data
+    
+    // 或者如果你想确保结构正确
     allTags.value = {
-      mechanism: tags.filter(t => t.category === 'mechanism'),
-      strategy: tags.filter(t => t.category === 'strategy')
+      mechanism: response.data.mechanism || [],
+      strategy: response.data.strategy || []
     }
+    
   } catch (error) {
     logger.error('加载标签失败', error)
     toast.add({

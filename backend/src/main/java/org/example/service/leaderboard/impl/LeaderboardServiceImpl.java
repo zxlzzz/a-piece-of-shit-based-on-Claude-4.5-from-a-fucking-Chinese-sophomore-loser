@@ -46,8 +46,9 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             }
         }
 
-        // 1️⃣ 构建玩家列表
+        // 1️⃣ 构建玩家列表（🔥 排除观战者）
         List<PlayerRankDTO> leaderboard = gameRoom.getPlayers().stream()
+                .filter(player -> !Boolean.TRUE.equals(player.getSpectator()))  // 🔥 过滤观战者
                 .map(player -> PlayerRankDTO.builder()
                         .playerId(player.getPlayerId())
                         .playerName(player.getName())

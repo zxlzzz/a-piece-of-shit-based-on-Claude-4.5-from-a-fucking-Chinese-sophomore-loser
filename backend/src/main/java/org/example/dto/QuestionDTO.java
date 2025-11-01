@@ -44,4 +44,7 @@ public class QuestionDTO {
     private Integer minPlayers;
     private Integer maxPlayers;
 
+    // 标签
+    private List<TagDTO> tags;     // 题目的标签列表
+
 }

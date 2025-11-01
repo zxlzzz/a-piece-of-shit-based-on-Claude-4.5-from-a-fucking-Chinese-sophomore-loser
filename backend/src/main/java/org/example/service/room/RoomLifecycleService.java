@@ -6,6 +6,8 @@ import org.example.entity.RoomEntity;
 import org.example.pojo.GameRoom;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 房间生命周期服务
  * 负责房间的创建、加入、离开、设置等操作
@@ -16,6 +18,9 @@ public interface RoomLifecycleService {
      * 初始化房间（创建数据库实体 + 内存房间）
      */
     RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, GameRoom gameRoom);
+
+    @Transactional
+    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, List<Long> questionTagIds);
 
     /**
      * 加入房间

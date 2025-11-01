@@ -92,18 +92,11 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
                     .map(Map.Entry::getKey)
                     .toList();
 
-            // 距离信息（用于日志）
-            String distanceInfo = distances.entrySet().stream()
-                    .map(e -> e.getKey() + ":距离" + e.getValue())
-                    .collect(Collectors.joining(", "));
-
             // 根据最近玩家数量分配分数
             if (closestPlayers.size() == 1) {
                 // 唯一最近：独得全部价值
                 String playerId = closestPlayers.get(0);
                 scores.put(playerId, scores.get(playerId) + value);
-                log.info("房子{}（价值{}）：{} → 玩家 {} 唯一最近，独得 {} 分",
-                        house, value, distanceInfo, playerId, value);
 
             } else if (closestPlayers.size() == 2) {
                 // 两人并列：平分（向下取整）
@@ -111,14 +104,6 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
                 for (String playerId : closestPlayers) {
                     scores.put(playerId, scores.get(playerId) + shareValue);
                 }
-                log.info("房子{}（价值{}）：{} → {} 和 {} 并列最近，各得 {} 分",
-                        house, value, distanceInfo,
-                        closestPlayers.get(0), closestPlayers.get(1), shareValue);
-
-            } else {
-                // 三人及以上一样近：价值作废
-                log.info("房子{}（价值{}）：{} → {}人距离相同，价值作废",
-                        house, value, distanceInfo, closestPlayers.size());
             }
         }
 

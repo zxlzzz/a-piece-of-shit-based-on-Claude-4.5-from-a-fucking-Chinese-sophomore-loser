@@ -1,5 +1,6 @@
 <script setup>
 import { login, register, guestLogin } from '@/api'
+import { logger } from '@/utils/logger'
 import { usePlayerStore } from '@/stores/player'
 import { validateUsername, validatePassword, validatePlayerName } from '@/utils/player'
 import { useToast } from 'primevue/usetoast'
@@ -35,7 +36,7 @@ const handleSubmit = async () => {
     })
     return
   }
-  
+
   // 验证密码
   const passwordValidation = validatePassword(password.value)
   if (!passwordValidation.valid) {
@@ -47,7 +48,7 @@ const handleSubmit = async () => {
     })
     return
   }
-  
+
   // 如果是注册，验证昵称
   if (!isLogin.value) {
     const nameValidation = validatePlayerName(name.value)
@@ -61,11 +62,11 @@ const handleSubmit = async () => {
       return
     }
   }
-  
+
   loading.value = true
   try {
     let resp
-    
+
     if (isLogin.value) {
       // 登录
       resp = await login(username.value.trim().toLowerCase(), password.value)
@@ -77,32 +78,31 @@ const handleSubmit = async () => {
         name.value.trim()
       )
     }
-    
+
     const authData = resp.data
-    console.log('🔍 认证成功:', authData)
-    
+
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
-    
+
     toast.add({
       severity: 'success',
       summary: isLogin.value ? '登录成功' : '注册成功',
       detail: `欢迎，${authData.name}!`,
       life: 2000
     })
-    
+
     // 跳转到主页
     setTimeout(() => {
       router.push('/find')
     }, 500)
-    
+
   } catch (err) {
-    console.error('操作失败:', err)
-    
-    const errorMsg = err.response?.data?.message || 
-                     err.response?.data || 
+    logger.error('操作失败:', err)
+
+    const errorMsg = err.response?.data?.message ||
+                     err.response?.data ||
                      (isLogin.value ? '登录失败' : '注册失败')
-    
+
     toast.add({
       severity: 'error',
       summary: '操作失败',
@@ -187,14 +187,14 @@ const handleGuestLogin = async () => {
 
       <!-- 主卡片 -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
-        
+
         <!-- 切换按钮 -->
         <div class="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
           <button
             @click="switchMode"
             class="flex-1 py-2 rounded-md font-medium transition-all"
-            :class="isLogin 
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+            :class="isLogin
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
           >
             登录
@@ -202,8 +202,8 @@ const handleGuestLogin = async () => {
           <button
             @click="switchMode"
             class="flex-1 py-2 rounded-md font-medium transition-all"
-            :class="!isLogin 
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+            :class="!isLogin
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
           >
             注册
@@ -214,18 +214,18 @@ const handleGuestLogin = async () => {
         <div class="space-y-4">
           <!-- 用户名 -->
           <div>
-            <label 
-              for="username" 
+            <label
+              for="username"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               用户名
             </label>
-            <input 
+            <input
               id="username"
               v-model="username"
               type="text"
               placeholder="请输入用户名"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -237,18 +237,18 @@ const handleGuestLogin = async () => {
 
           <!-- 密码 -->
           <div>
-            <label 
-              for="password" 
+            <label
+              for="password"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               密码
             </label>
-            <input 
+            <input
               id="password"
               v-model="password"
               type="password"
               placeholder="请输入密码（至少6位）"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -259,18 +259,18 @@ const handleGuestLogin = async () => {
 
           <!-- 昵称（仅注册时显示）-->
           <div v-if="!isLogin">
-            <label 
-              for="name" 
+            <label
+              for="name"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               游戏昵称
             </label>
-            <input 
+            <input
               id="name"
               v-model="name"
               type="text"
               placeholder="请输入游戏昵称"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -328,7 +328,7 @@ const handleGuestLogin = async () => {
 
       <!-- 底部链接 -->
       <div class="mt-6 text-center">
-        <button 
+        <button
           @click="router.push('/')"
           class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
         >

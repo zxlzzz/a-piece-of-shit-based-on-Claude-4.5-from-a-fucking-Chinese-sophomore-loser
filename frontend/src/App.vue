@@ -1,7 +1,8 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, onUnmounted } from 'vue'
-import WebSocketStatus from './components/WebSocketStatus.vue'
+import WebSocketStatus from './components/common/WebSocketStatus.vue'
 const toast = useToast()
 
 // 监听 API 错误（api.js 触发的）
@@ -71,17 +72,15 @@ onMounted(() => {
       const roomData = JSON.parse(savedRoom)
       // 如果房间数据超过1小时，清除
       if (roomData._savedAt && Date.now() - roomData._savedAt > 60 * 60 * 1000) {
-        console.log('🧹 清理过期房间数据')
         localStorage.removeItem('currentRoom')
       }
     }
   } catch (error) {
-    console.error('清理 localStorage 失败:', error)
+    logger.error('清理 localStorage 失败:', error)
     localStorage.removeItem('currentRoom')
   }
   // 🔥 新增：页面加载时清理旧连接状态（注册在 onMounted 而不是 window.load）
   import('@/websocket/ws').then(({ disconnect }) => {
-    console.log('🧹 App 挂载：清理可能的旧连接')
     disconnect()
   })
 })

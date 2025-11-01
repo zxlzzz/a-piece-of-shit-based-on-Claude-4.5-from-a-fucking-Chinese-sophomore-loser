@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
-import org.example.service.GameService;
+import org.example.service.game.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.room.RoomLifecycleService;
@@ -33,10 +33,11 @@ public class GameController {
             @RequestParam(defaultValue = "4") Integer maxPlayers,
             @RequestParam(defaultValue = "10") Integer questionCount,
             @RequestParam(defaultValue = "30") Integer timeLimit,
-            @RequestParam(required = false) String password) {
+            @RequestParam(required = false) String password,
+            @RequestParam(required = false) List<Long> questionTagIds) {
         try {
-            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password);
-            log.info("✅ 创建房间成功: {} (密码保护: {})", room.getRoomCode(), password != null && !password.isEmpty());
+            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds);
+            log.info("✅ 创建房间成功: {}", room.getRoomCode());
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
             log.error("❌ 创建房间失败: {}", e.getMessage());

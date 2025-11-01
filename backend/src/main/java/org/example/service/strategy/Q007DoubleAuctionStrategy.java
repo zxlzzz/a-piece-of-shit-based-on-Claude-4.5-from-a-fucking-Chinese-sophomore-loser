@@ -1,28 +1,18 @@
 package org.example.service.strategy;
 
-import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
- * Q007: 双拍品拍卖
- * 题目：你们二人拍两件拍品：第一件价值10分，第二件价值13分。
- *      每人只有 10 分预算，第二件的出价为 10-第一件出价。
- * 类型：bid (0-10) - 这里bid的是第一件的出价
+ * 你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。
+ * 0-10
  *
- * 规则：
- * - 第一件出价高者获得第一件（10 - 第一件出价）
- * - 第二件出价高者获得第二件（13 - 第二件出价）
- * - 第二件出价 = 10 - 第一件出价
- * - 若某件出价相同，都不获得该件
  */
-@Component
-@Slf4j
-public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
 
+@Component
+public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
     public Q007DoubleAuctionStrategy(BuffApplier buffApplier) {
         super(buffApplier);
     }
@@ -30,39 +20,21 @@ public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
-        var players = getTwoPlayers(submissions);
+        Iterator<Map.Entry<String, String>> it = submissions.entrySet().iterator();
+        Map.Entry<String, String> p1 = it.next(), p2 = it.next();
 
-        String p1Id = players[0].getKey();
-        String p2Id = players[1].getKey();
-        int bid1_item1 = Integer.parseInt(players[0].getValue());  // 玩家1对第一件的出价
-        int bid2_item1 = Integer.parseInt(players[1].getValue());  // 玩家2对第一件的出价
+        int b1 = Integer.parseInt(p1.getValue()), b2 = Integer.parseInt(p2.getValue());
+        int s1 = 0, s2 = 0;
 
-        // 计算第二件的出价（预算10分）
-        int bid1_item2 = 10 - bid1_item1;  // 玩家1对第二件的出价
-        int bid2_item2 = 10 - bid2_item1;  // 玩家2对第二件的出价
+        if (b1 > b2) s1 += 10 - b1;
+        else if (b2 > b1) s2 += 10 - b2;
 
-        int score1 = 0;
-        int score2 = 0;
+        int b12 = 10 - b1, b22 = 10 - b2;
+        if (b12 > b22) s1 += 13 - b12;
+        else if (b22 > b12) s2 += 13 - b22;
 
-        // 处理第一件拍品（价值10分）
-        if (bid1_item1 > bid2_item1) {
-            score1 += 10 - bid1_item1;  // 玩家1拍得第一件
-        } else if (bid2_item1 > bid1_item1) {
-            score2 += 10 - bid2_item1;  // 玩家2拍得第一件
-        }
-        // 出价相同：都不获得
-
-        // 处理第二件拍品（价值13分）
-        if (bid1_item2 > bid2_item2) {
-            score1 += 13 - bid1_item2;  // 玩家1拍得第二件
-        } else if (bid2_item2 > bid1_item2) {
-            score2 += 13 - bid2_item2;  // 玩家2拍得第二件
-        }
-        // 出价相同：都不获得
-
-        scores.put(p1Id, score1);
-        scores.put(p2Id, score2);
-
+        scores.put(p1.getKey(), s1);
+        scores.put(p2.getKey(), s2);
         return scores;
     }
 

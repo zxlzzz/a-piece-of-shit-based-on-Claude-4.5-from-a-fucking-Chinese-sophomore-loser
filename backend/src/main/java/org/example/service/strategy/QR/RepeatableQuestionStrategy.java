@@ -2,7 +2,7 @@ package org.example.service.strategy.QR;
 
 import org.example.dto.QuestionDetailDTO;
 import org.example.pojo.GameContext;
-import org.example.service.QuestionScoringStrategy;
+import org.example.service.question.QuestionScoringStrategy;
 
 /**
  * 重复题目计分策略接口

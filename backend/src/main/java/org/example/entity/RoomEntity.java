@@ -59,6 +59,13 @@ public class RoomEntity implements Serializable {
     private Integer questionCount;
 
     /**
+     * 每题时长限制（秒）
+     */
+    @Column
+    @Builder.Default
+    private Integer timeLimit = 30;
+
+    /**
      * 房主玩家ID
      */
     @Column(length = 50)

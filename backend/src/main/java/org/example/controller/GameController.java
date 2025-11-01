@@ -31,9 +31,10 @@ public class GameController {
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
-            @RequestParam(defaultValue = "10") Integer questionCount) {
+            @RequestParam(defaultValue = "10") Integer questionCount,
+            @RequestParam(defaultValue = "30") Integer timeLimit) {
         try {
-            RoomDTO room = gameService.createRoom(maxPlayers, questionCount);
+            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit);
             log.info("✅ 创建房间成功: {}", room.getRoomCode());
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
@@ -186,6 +187,7 @@ public class GameController {
     @NoArgsConstructor
     public static class UpdateRoomSettingsRequest {
         private Integer questionCount;
+        private Integer timeLimit;
         private String rankingMode;
         private Integer targetScore;
         private RoomDTO.WinConditions winConditions;

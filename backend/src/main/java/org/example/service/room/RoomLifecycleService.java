@@ -15,7 +15,7 @@ public interface RoomLifecycleService {
     /**
      * 初始化房间（创建数据库实体 + 内存房间）
      */
-    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom);
+    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom);
 
     /**
      * 加入房间

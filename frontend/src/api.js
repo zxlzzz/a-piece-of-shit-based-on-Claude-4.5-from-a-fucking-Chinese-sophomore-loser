@@ -103,9 +103,9 @@ export const guestLogin = (name) =>
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers, questionCount) =>
+export const createRoom = (maxPlayers, questionCount, timeLimit = 30) =>
   api.post('/rooms', null, {
-    params: {maxPlayers, questionCount}
+    params: {maxPlayers, questionCount, timeLimit}
   });
 
 export const joinRoom = (roomCode, playerId, playerName, spectator = false) =>

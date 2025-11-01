@@ -13,7 +13,7 @@ import java.util.List;
 
 public interface GameService {
     // 🔥 恢复原版签名
-    RoomDTO createRoom(Integer maxPlayers, Integer questionCount);
+    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit);
 
     // 🔥 新增：更新房间设置
     RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);

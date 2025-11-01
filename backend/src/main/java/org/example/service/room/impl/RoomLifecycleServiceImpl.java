@@ -39,7 +39,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom) {
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom) {
         String roomCode = generateRoomCode();
 
         // 🔥 创建房间实体（只有基础字段）
@@ -48,6 +48,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .status(RoomStatus.WAITING)
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
+                .timeLimit(timeLimit != null ? timeLimit : 30)
                 // 🔥 高级规则使用默认值
                 .rankingMode("standard")
                 .targetScore(null)
@@ -258,6 +259,12 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             if (request.getQuestionCount() != null && request.getQuestionCount() > 0) {
                 room.setQuestionCount(request.getQuestionCount());
                 log.info("📝 房间 {} 题目数量更新为: {}", roomCode, request.getQuestionCount());
+            }
+
+            // 更新每题时长（可选）
+            if (request.getTimeLimit() != null && request.getTimeLimit() >= 20 && request.getTimeLimit() <= 120) {
+                room.setTimeLimit(request.getTimeLimit());
+                log.info("⏱️ 房间 {} 每题时长更新为: {}秒", roomCode, request.getTimeLimit());
             }
 
             // 更新排名模式

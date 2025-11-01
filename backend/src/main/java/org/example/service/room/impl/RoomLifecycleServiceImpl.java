@@ -84,8 +84,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (getInternedRoomCode(roomCode)) {
-            // 检查房间密码
-            if (room.getPassword() != null && !room.getPassword().isEmpty()) {
+            // 检查房间密码（观战者不需要密码）
+            if (!spectator && room.getPassword() != null && !room.getPassword().isEmpty()) {
                 if (password == null || !room.getPassword().equals(password)) {
                     throw new BusinessException("房间密码错误");
                 }

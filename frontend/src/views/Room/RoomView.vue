@@ -80,14 +80,15 @@ const handleCreate = async ({ questionCount, maxPlayers, password }) => {
   try {
     const createResponse = await createRoom(maxPlayers, questionCount, 30, password)
     const roomData = createResponse.data
-    
+
     console.log('房间创建成功:', roomData)
-    
+
     const joinResponse = await joinRoom(
       roomData.roomCode,
       playerStore.playerId,
       playerStore.playerName,
-      false  // 房主不能是观战者
+      false,  // 房主不能是观战者
+      password  // 房主加入时传入密码
     )
 
     currentRoom.value = joinResponse.data

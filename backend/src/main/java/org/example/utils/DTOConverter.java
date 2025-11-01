@@ -106,9 +106,15 @@ public class DTOConverter {
             return null;
         }
 
+        // 处理已删除账号的显示名称
+        String displayName = entity.getName();
+        if (entity.getDeleted() != null && entity.getDeleted()) {
+            displayName = entity.getName() + " [已删除]";
+        }
+
         return PlayerDTO.builder()
                 .playerId(entity.getPlayerId())
-                .name(entity.getName())
+                .name(displayName)
                 .score(0)
                 .ready(entity.getReady())
                 .build();

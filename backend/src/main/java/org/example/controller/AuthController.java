@@ -3,6 +3,7 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.AuthResponseDTO;
+import org.example.dto.GuestLoginRequestDTO;
 import org.example.dto.LoginRequestDTO;
 import org.example.dto.RegisterRequestDTO;
 import org.example.exception.BusinessException;
@@ -44,6 +45,21 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (BusinessException e) {
             log.error("登录失败: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(null);
+        }
+    }
+
+    /**
+     * 游客快速试玩（无需注册）
+     * POST /api/auth/guest
+     */
+    @PostMapping("/guest")
+    public ResponseEntity<AuthResponseDTO> guestLogin(@RequestBody GuestLoginRequestDTO request) {
+        try {
+            AuthResponseDTO response = authService.guestLogin(request);
+            return ResponseEntity.ok(response);
+        } catch (BusinessException e) {
+            log.error("游客登录失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }

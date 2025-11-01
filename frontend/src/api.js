@@ -98,6 +98,9 @@ export const register = (username, password, name) =>
 export const login = (username, password) =>
   api.post('/auth/login', { username, password });
 
+export const guestLogin = (name) =>
+  api.post('/auth/guest', { name });
+
 // ============ 房间相关API ============
 
 export const createRoom = (maxPlayers, questionCount) =>

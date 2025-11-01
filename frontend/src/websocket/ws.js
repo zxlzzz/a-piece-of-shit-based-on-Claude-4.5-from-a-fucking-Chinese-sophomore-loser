@@ -240,32 +240,42 @@ export function safeSubscribe(destination, onMessage) {
 /**
  * 房间统一订阅
  */
-export function subscribeRoom(roomCode, onRoomUpdate, onRoomError) {
+export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
   const subscriptions = [];
-  
+
   const roomUpdateSub = safeSubscribe(`/topic/room/${roomCode}`, (data) => {
     if (data && onRoomUpdate) {
       onRoomUpdate(data);
     }
   });
-  
+
   const roomErrorSub = safeSubscribe(`/topic/room/${roomCode}/error`, (data) => {
     console.error("🔥 房间错误:", data);
     if (onRoomError) {
       onRoomError(data);
     }
   });
-  
+
   const roomDeletedSub = safeSubscribe(`/topic/room/${roomCode}/deleted`, (data) => {
     console.warn("🗑️ 房间已被删除:", data);
     window.dispatchEvent(new CustomEvent('room-deleted', { detail: data }));
   });
-  
+
+  // 订阅被踢事件（用户专属队列）
+  let kickedSub = null;
+  if (playerId) {
+    kickedSub = safeSubscribe(`/user/queue/kicked`, (data) => {
+      console.warn("👢 您已被踢出房间:", data);
+      window.dispatchEvent(new CustomEvent('player-kicked', { detail: data }));
+    });
+  }
+
   // 修改：只添加成功的订阅
   if (roomUpdateSub) subscriptions.push(roomUpdateSub);
   if (roomErrorSub) subscriptions.push(roomErrorSub);
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
-  
+  if (kickedSub) subscriptions.push(kickedSub);
+
   return subscriptions;
 }
 

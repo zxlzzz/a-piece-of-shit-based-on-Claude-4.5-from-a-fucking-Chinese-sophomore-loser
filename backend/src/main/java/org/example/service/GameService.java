@@ -13,7 +13,7 @@ import java.util.List;
 
 public interface GameService {
     // 🔥 恢复原版签名
-    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit);
+    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password);
 
     // 🔥 新增：更新房间设置
     RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);
@@ -21,8 +21,9 @@ public interface GameService {
     /**
      * 加入房间
      * @param spectator 是否为观战者（观战者不参与答题，不计分）
+     * @param password 房间密码（如果房间有密码保护）
      */
-    RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator);
+    RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator, String password);
     /**
      * 开始游戏
      */
@@ -80,6 +81,10 @@ public interface GameService {
      */
     GameHistoryDTO getHistoryDetail(Long gameId);
 
+    /**
+     * 踢出玩家（仅房主可用）
+     */
+    RoomDTO kickPlayer(String roomCode, String ownerId, String targetPlayerId);
 
 }
 

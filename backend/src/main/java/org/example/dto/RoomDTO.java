@@ -25,6 +25,7 @@ public class RoomDTO {
     private Integer currentIndex;
     private QuestionDTO currentQuestion;
     private Integer questionCount;
+    private Boolean hasPassword;         // 是否有密码保护
 
     private String rankingMode;          // 排名模式
     private Integer targetScore;         // 目标分数

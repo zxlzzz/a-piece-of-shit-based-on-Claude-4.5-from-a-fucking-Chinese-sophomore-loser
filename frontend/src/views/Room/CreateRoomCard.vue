@@ -67,13 +67,37 @@
             max="10"
             placeholder="2-10"
           />
-          <span class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 
+          <span class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2
                        text-xs sm:text-sm text-gray-400 dark:text-gray-500">
             <i class="pi pi-users"></i>
           </span>
         </div>
         <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
           推荐 2-6 人
+        </p>
+      </div>
+
+      <!-- 房间密码 -->
+      <div>
+        <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+          房间密码（可选）
+        </label>
+        <input
+          type="text"
+          v-model="password"
+          class="w-full px-3 sm:px-4 py-2 sm:py-2.5
+                 bg-gray-50 dark:bg-gray-700
+                 border border-gray-300 dark:border-gray-600
+                 text-gray-800 dark:text-white
+                 text-sm sm:text-base
+                 rounded-lg
+                 focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                 transition-all"
+          placeholder="留空表示公开房间"
+          maxlength="50"
+        />
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          设置后仅知道密码的玩家可加入
         </p>
       </div>
     </div>
@@ -115,11 +139,13 @@ const emit = defineEmits(['create'])
 
 const questionCount = ref(10)
 const maxPlayers = ref(4)
+const password = ref('')
 
 const handleCreate = () => {
   emit('create', {
     maxPlayers: maxPlayers.value,
-    questionCount: questionCount.value
+    questionCount: questionCount.value,
+    password: password.value || null
   })
 }
 </script>

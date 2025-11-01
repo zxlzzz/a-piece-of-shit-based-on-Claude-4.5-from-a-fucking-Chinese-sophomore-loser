@@ -39,7 +39,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom) {
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, GameRoom gameRoom) {
         String roomCode = generateRoomCode();
 
         // 🔥 创建房间实体（只有基础字段）
@@ -49,6 +49,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
                 .timeLimit(timeLimit != null ? timeLimit : 30)
+                .password(password != null && !password.trim().isEmpty() ? password : null)
                 // 🔥 高级规则使用默认值
                 .rankingMode("standard")
                 .targetScore(null)
@@ -76,13 +77,20 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator) {
+    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (getInternedRoomCode(roomCode)) {
+            // 检查房间密码
+            if (room.getPassword() != null && !room.getPassword().isEmpty()) {
+                if (password == null || !room.getPassword().equals(password)) {
+                    throw new BusinessException("房间密码错误");
+                }
+            }
+
             // 检查房间状态
             if (room.getStatus() != RoomStatus.WAITING) {
                 throw new BusinessException("房间已开始游戏或已结束");
@@ -470,6 +478,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)
+                .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)

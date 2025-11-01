@@ -15,13 +15,14 @@ public interface RoomLifecycleService {
     /**
      * 初始化房间（创建数据库实体 + 内存房间）
      */
-    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom);
+    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, GameRoom gameRoom);
 
     /**
      * 加入房间
      * @param spectator 是否为观战者
+     * @param password 房间密码
      */
-    void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator);
+    void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator, String password);
 
     /**
      * 离开房间

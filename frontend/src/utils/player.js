@@ -1,4 +1,3 @@
-import { logger } from '@/utils/logger'
 /**
  * 验证用户名（登录用）
  * @param {string} username - 用户名

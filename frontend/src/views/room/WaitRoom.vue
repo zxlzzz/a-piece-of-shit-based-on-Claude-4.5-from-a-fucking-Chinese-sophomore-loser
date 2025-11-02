@@ -6,8 +6,8 @@ import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subs
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ChatRoom from './ChatRoom.vue'
-import CustomForm from './CustomForm.vue'
+import ChatRoom from '@/components/chat/ChatRoom.vue'
+import CustomForm from '@/components/room/CustomForm.vue'
 
 const playerStore = usePlayerStore()
 const route = useRoute()

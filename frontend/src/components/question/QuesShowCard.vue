@@ -25,6 +25,19 @@
         {{ text }}
       </p>
 
+      <!--计分规则-->
+      <div v-if="calculateRule" class="mb-8">
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
+                    rounded-xl p-4 border-l-4 border-purple-500">
+          <div class="flex items-center gap-2 mb-2">
+            <i class="pi pi-calculator text-purple-600 dark:text-purple-400"></i>
+            <span class="font-semibold text-purple-700 dark:text-purple-300 text-sm">计分规则</span>
+          </div>
+          <div class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed whitespace-pre-line">
+            {{ calculateRule }}
+          </div>
+        </div>
+      </div>
       <!-- 🔥 标签显示 -->
       <div v-if="tags && tags.length > 0" class="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
         <span
@@ -125,6 +138,7 @@ defineProps({
   tags: {
     type: Array,
     default: () => []
-  }
+  },
+  calculateRule: String,
 })
 </script>

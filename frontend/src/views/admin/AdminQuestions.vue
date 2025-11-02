@@ -115,7 +115,7 @@ const form = ref({
   strategyId: '',
   minPlayers: 2,
   maxPlayers: 2,
-  defaultCHOICE: '',
+  defaultChoice: '',
   
   // CHOICE 专用
   options: [
@@ -206,7 +206,7 @@ const openCreateForm = () => {
     strategyId: '',
     minPlayers: 2,
     maxPlayers: 2,
-    defaultCHOICE: '',
+    defaultChoice: '',
     options: [
       { key: 'A', text: '' },
       { key: 'B', text: '' }
@@ -270,7 +270,7 @@ const openEditForm = (question) => {
     strategyId: question.strategyId || '',
     minPlayers: question.minPlayers ?? 2,
     maxPlayers: question.maxPlayers ?? 2,
-    defaultCHOICE: question.defaultCHOICE || '',
+    defaultChoice: question.defaultChoice || '',
     
     // CHOICE 专用
     options: parsedOptions,
@@ -370,7 +370,8 @@ const submitForm = async () => {
     strategyId: form.value.strategyId,
     minPlayers: form.value.minPlayers,
     maxPlayers: form.value.maxPlayers,
-    defaultCHOICE: form.value.defaultCHOICE,
+    defaultChoice: form.value.defaultChoice,
+    calculateRule: form.value.calculateRule,
     
     // CHOICE 专用
     options: form.value.type === 'CHOICE' && form.value.options.length > 0 
@@ -1010,7 +1011,7 @@ onMounted(() => {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     默认选择（可选）
                   </label>
-                  <input v-model="form.defaultCHOICE"
+                  <input v-model="form.defaultChoice"
                          placeholder="默认答案"
                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">

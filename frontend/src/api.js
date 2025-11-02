@@ -1,5 +1,4 @@
 import axios from "axios";
-import { logger } from "@/utils/logger";
 
 const api = axios.create({
   baseURL: "/api",
@@ -18,7 +17,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    logger.error('Request Error:', error);
+
     return Promise.reject(error);
   }
 );
@@ -29,8 +28,6 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    logger.error('API Error:', error.response?.data || error.message);
-
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -167,6 +164,12 @@ export const updatePlayerReady = (playerId, ready) =>
 
 export const deletePlayer = (playerId) =>
   api.delete(`/players/${playerId}`);
+
+export const kickPlayer = (roomCode, ownerId, targetPlayerId) =>
+  api.post(`/rooms/${roomCode}/kick`, null, {
+    params: { ownerId, targetPlayerId }
+  });
+
 
 // ============ 题目相关API ============
 

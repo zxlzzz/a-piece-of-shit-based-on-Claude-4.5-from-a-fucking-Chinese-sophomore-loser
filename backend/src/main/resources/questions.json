@@ -3,6 +3,7 @@
     "id": 1,
     "type": "CHOICE",
     "text": "你们二人共同拥有一片土地，若种相同作物则收益减半。",
+    "calculateRule": null,
     "strategyId": "Q003",
     "options": [
       {
@@ -32,12 +33,20 @@
     "defaultChoice": "C",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
   },
   {
     "id": 2,
     "type": "BID",
     "text": "村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。",
+    "calculateRule": null,
     "strategyId": "Q004",
     "options": null,
     "min": 2,
@@ -54,12 +63,20 @@
     "defaultChoice": "4",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 5,
+        "name": "资源争夺型",
+        "category": "mechanism",
+        "color": "#fbbf24"
+      }
+    ]
   },
   {
     "id": 3,
     "type": "BID",
     "text": "你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。",
+    "calculateRule": null,
     "strategyId": "Q005",
     "options": null,
     "min": 2,
@@ -76,12 +93,20 @@
     "defaultChoice": "2",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 3,
+        "name": "竞争型",
+        "category": "mechanism",
+        "color": "#f87171"
+      }
+    ]
   },
   {
     "id": 4,
     "type": "BID",
     "text": "你们二人共同修路，总共需要 6 分。出分较高的人得 8 分，较低的得 4 分，相同则均得 4 分。",
+    "calculateRule": null,
     "strategyId": "Q006",
     "options": null,
     "min": 0,
@@ -98,12 +123,20 @@
     "defaultChoice": "3",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 4,
+        "name": "公共资源型",
+        "category": "mechanism",
+        "color": "#34d399"
+      }
+    ]
   },
   {
     "id": 5,
     "type": "CHOICE",
     "text": "你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10）2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择",
+    "calculateRule": null,
     "strategyId": "Q008",
     "options": [
       {
@@ -133,12 +166,20 @@
     "defaultChoice": "C",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
   },
   {
     "id": 6,
     "type": "CHOICE",
     "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",
+    "calculateRule": null,
     "strategyId": "Q002",
     "options": [
       {
@@ -168,12 +209,20 @@
     "defaultChoice": "C",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 1,
+        "name": "协调型",
+        "category": "mechanism",
+        "color": "#60a5fa"
+      }
+    ]
   },
   {
     "id": 7,
     "type": "BID",
     "text": "你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。",
+    "calculateRule": null,
     "strategyId": "Q007",
     "options": null,
     "min": 0,
@@ -190,12 +239,26 @@
     "defaultChoice": "5",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 5,
+        "name": "资源争夺型",
+        "category": "mechanism",
+        "color": "#fbbf24"
+      },
+      {
+        "id": 7,
+        "name": "嵌套博弈",
+        "category": "strategy",
+        "color": "#c084fc"
+      }
+    ]
   },
   {
     "id": 8,
     "type": "BID",
     "text": "现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除",
+    "calculateRule": null,
     "strategyId": "Q001",
     "options": null,
     "min": 1,
@@ -212,12 +275,20 @@
     "defaultChoice": "4",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 1,
+        "name": "协调型",
+        "category": "mechanism",
+        "color": "#60a5fa"
+      }
+    ]
   },
   {
     "id": 9,
     "type": "BID",
     "text": "你们二人都想要一个物品（得到后可以十分的价格出售），现从第三人手里购买（均可购买），物品的价格由分别报价，如果你们的报价相差大于等于3分，则出价较低的人无法购买，否则都按自己的出价购买，则你的报价为",
+    "calculateRule": null,
     "strategyId": "Q009",
     "options": null,
     "min": 1,
@@ -234,12 +305,20 @@
     "defaultChoice": "5",
     "minPlayers": 2,
     "maxPlayers": 2,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
   },
   {
     "id": 10,
     "type": "BID",
     "text": "选择一项（本题共进行3次），选完3个数后，会将所选数字之和加起来，和最小的玩家额外获得5分，最后计分时，如果你们所选的数有唯一众数（出现次数最多的），则这个数不计分（只不计入最后得分，求和时会算入）",
+    "calculateRule": null,
     "strategyId": "QR002",
     "options": null,
     "min": 2,
@@ -256,12 +335,26 @@
     "defaultChoice": "4",
     "minPlayers": 3,
     "maxPlayers": 4,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 3,
+        "name": "竞争型",
+        "category": "mechanism",
+        "color": "#f87171"
+      },
+      {
+        "id": 6,
+        "name": "重复博弈",
+        "category": "strategy",
+        "color": "#fb923c"
+      }
+    ]
   },
   {
     "id": 11,
     "type": "BID",
-    "text": "你们三人分别有一支小偷团队，现在计划偷7家连续的无人的房子（编号左起1-7），每团队选择一个房子开始，并计算与其他房子的距离，计分规则如下，离你唯一最近的房子的积分你一人获得，若两人最近则平分，三人一样近则都不获得，房子的价值为 6 5 5 4 4 4 3，则你的选择开始的房子为",
+    "text": "你们三人分别有一支小偷团队，现在计划偷7家连续的无人的房子（编号左起1-7），每团队选择一个房子开始，并计算与其他房子的距离，房子的价值为 6 5 5 4 4 4 3",
+    "calculateRule": null,
     "strategyId": "Q010",
     "options": null,
     "min": 1,
@@ -271,19 +364,27 @@
     "sequenceOrder": null,
     "totalSequenceCount": null,
     "prerequisiteQuestionIds": null,
-    "isRepeatable": null,
+    "isRepeatable": false,
     "repeatTimes": null,
     "repeatInterval": null,
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 3,
     "maxPlayers": 3,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 3,
+        "name": "竞争型",
+        "category": "mechanism",
+        "color": "#f87171"
+      }
+    ]
   },
   {
     "id": 12,
     "type": "BID",
     "text": "你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为",
+    "calculateRule": null,
     "strategyId": "Q011",
     "options": null,
     "min": 0,
@@ -300,12 +401,20 @@
     "defaultChoice": "4",
     "minPlayers": 3,
     "maxPlayers": 3,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 4,
+        "name": "公共资源型",
+        "category": "mechanism",
+        "color": "#34d399"
+      }
+    ]
   },
   {
     "id": 13,
     "type": "CHOICE",
-    "text": "选择一项（x初始为0，偶数次取反后为正数",
+    "text": "选择一项（x初始为0，偶数次取反后为正数）",
+    "calculateRule": null,
     "strategyId": "Q012",
     "options": [
       {
@@ -335,6 +444,13 @@
     "defaultChoice": null,
     "minPlayers": 4,
     "maxPlayers": 4,
-    "calculateRule": null
+    "tags": [
+      {
+        "id": 1,
+        "name": "协调型",
+        "category": "mechanism",
+        "color": "#60a5fa"
+      }
+    ]
   }
 ]

@@ -42,7 +42,6 @@
           :max="q.max"
           :step="q.step"
           :tags="q.tags"
-          :calculateRule="q.calculateRule"
         />
       </div>
     </div>

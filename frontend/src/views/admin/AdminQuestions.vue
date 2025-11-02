@@ -374,24 +374,24 @@ const submitForm = async () => {
     minPlayers: form.value.minPlayers,
     maxPlayers: form.value.maxPlayers,
     defaultChoice: form.value.defaultChoice,
-    calculateRule: form.value.calculateRule,
-    
+    calculateRule: form.value.calculateRule?.trim() || null,  // 🔥 空字符串转为 null
+
     // CHOICE 专用
-    options: form.value.type === 'CHOICE' && form.value.options.length > 0 
-      ? form.value.options 
+    options: form.value.type === 'CHOICE' && form.value.options.length > 0
+      ? form.value.options
       : null,
-    
+
     // BID 专用
     min: form.value.type === 'BID' ? form.value.min : null,
     max: form.value.type === 'BID' ? form.value.max : null,
     step: form.value.type === 'BID' ? form.value.step : null,
-    
+
     // 序列配置
     sequenceGroupId: form.value.isSequence ? form.value.sequenceGroupId : null,
     sequenceOrder: form.value.isSequence ? form.value.sequenceOrder : null,
     totalSequenceCount: form.value.isSequence ? form.value.totalSequenceCount : null,
     prerequisiteQuestionIds: form.value.isSequence ? form.value.prerequisiteQuestionIds : null,
-    
+
     // 重复配置
     isRepeatable: form.value.isRepeatable,
     repeatTimes: form.value.isRepeatable ? form.value.repeatTimes : null,

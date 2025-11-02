@@ -25,6 +25,34 @@
         {{ text }}
       </p>
 
+      <!-- 🔥 计分规则（如果有） -->
+      <div v-if="calculateRule" class="mb-3 sm:mb-4">
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
+                    rounded-lg p-3 sm:p-4 border-l-4 border-purple-500">
+          <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <i class="pi pi-calculator text-purple-600 dark:text-purple-400 text-xs sm:text-sm"></i>
+            <span class="font-semibold text-purple-700 dark:text-purple-300 text-xs sm:text-sm">计分规则</span>
+          </div>
+          <div class="text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+            {{ calculateRule }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 🔥 计分规则（如果有） -->
+      <div v-if="calculateRule" class="mb-3 sm:mb-4">
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
+                    rounded-lg p-3 sm:p-4 border-l-4 border-purple-500">
+          <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <i class="pi pi-calculator text-purple-600 dark:text-purple-400 text-xs sm:text-sm"></i>
+            <span class="font-semibold text-purple-700 dark:text-purple-300 text-xs sm:text-sm">计分规则</span>
+          </div>
+          <div class="text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+            {{ calculateRule }}
+          </div>
+        </div>
+      </div>
+
       <!--计分规则-->
       <div v-if="calculateRule" class="mb-8">
         <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
@@ -123,6 +151,7 @@
 <script setup>
 defineProps({
   text: String,
+  calculateRule: String,  // 🔥 计分规则（可选）
   type: {
     type: String,
     default: 'choice' // choice 或 bid

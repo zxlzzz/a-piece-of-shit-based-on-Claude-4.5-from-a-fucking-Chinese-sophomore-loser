@@ -332,7 +332,6 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
   let kickedSub = null;
   if (playerId) {
     kickedSub = safeSubscribe(`/topic/player/${playerId}/kicked`, (data) => {
-      logger.warn("👢 您已被踢出房间:", data);
       window.dispatchEvent(new CustomEvent('player-kicked', { detail: data }));
     });
   }

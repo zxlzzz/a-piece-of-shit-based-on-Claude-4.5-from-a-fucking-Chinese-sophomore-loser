@@ -129,6 +129,18 @@ onMounted(() => {
     room.value = savedRoom
     question.value = savedRoom.currentQuestion
 
+    // 🔥 新增：如果游戏已经结束，自动跳转到结果页面
+    if (savedRoom.status === 'FINISHED' || savedRoom.finished === true) {
+      toast.add({
+        severity: 'info',
+        summary: '游戏已结束',
+        detail: '正在跳转到结果页面...',
+        life: 2000
+      })
+      router.push(`/result/${roomCode.value}`)
+      return
+    }
+
     if (question.value) {
       restoreSubmitState()
     }
@@ -192,6 +204,16 @@ onUnmounted(() => {
             :hasUnreadMessages="hasUnreadMessages"
             @toggleChat="toggleChat"
           />
+
+          <!-- 🔥 新增：观战模式提示 -->
+          <div v-if="playerStore.isSpectator"
+               class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200
+                      dark:border-purple-800 rounded-lg p-3 sm:p-4 text-center">
+            <i class="pi pi-eye text-purple-600 dark:text-purple-400"></i>
+            <span class="ml-2 text-sm sm:text-base text-purple-700 dark:text-purple-400 font-medium">
+              观战模式 - 您可以观看但不能答题
+            </span>
+          </div>
 
           <!-- 游戏内容 -->
           <GameContent

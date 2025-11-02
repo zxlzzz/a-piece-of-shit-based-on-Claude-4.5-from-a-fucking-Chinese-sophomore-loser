@@ -231,6 +231,7 @@ public class QuesServiceImpl implements QuesService {
         dto.setId(entity.getId());
         dto.setType(entity.getType());
         dto.setText(entity.getText());
+        dto.setCalculateRule(entity.getCalculateRule());  // 🔥 添加计分规则
         dto.setStrategyId(entity.getStrategyId());
         dto.setDefaultChoice(entity.getDefaultChoice());
         dto.setMinPlayers(entity.getMinPlayers());

@@ -43,6 +43,7 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
+                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())
@@ -63,6 +64,7 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
+                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())

@@ -36,6 +36,7 @@
             ? (q.minPlayers || '?')
             : `${q.minPlayers || '?'} ~ ${q.maxPlayers || '?'}`"
           :text="q.text"
+          :calculate-rule="q.calculateRule"
           :choice="q.options"
           :min="q.min"
           :max="q.max"

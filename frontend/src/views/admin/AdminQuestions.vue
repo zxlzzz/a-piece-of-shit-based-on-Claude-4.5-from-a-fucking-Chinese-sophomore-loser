@@ -112,29 +112,30 @@ function isIgnorableError(error) {
 const form = ref({
   type: 'CHOICE',
   text: '',
+  calculateRule: '',  // 🔥 计分规则（可选）
   strategyId: '',
   minPlayers: 2,
   maxPlayers: 2,
   defaultCHOICE: '',
-  
+
   // CHOICE 专用
   options: [
     { key: 'A', text: '' },
     { key: 'B', text: '' }
   ],
-  
+
   // BID 专用
   min: 0,
   max: 100,
   step: 1,
-  
+
   // 序列配置（复选框控制）
   isSequence: false,
   sequenceGroupId: '',
   sequenceOrder: 1,
   totalSequenceCount: 1,
   prerequisiteQuestionIds: '',
-  
+
   // 重复配置（复选框控制）
   isRepeatable: false,
   repeatTimes: 1,
@@ -203,6 +204,7 @@ const openCreateForm = () => {
   form.value = {
     type: 'CHOICE',
     text: '',
+    calculateRule: '',  // 🔥 计分规则（可选）
     strategyId: '',
     minPlayers: 2,
     maxPlayers: 2,
@@ -267,26 +269,27 @@ const openEditForm = (question) => {
     // 基础信息
     type: question.type || 'CHOICE',
     text: question.text || '',
+    calculateRule: question.calculateRule || '',  // 🔥 计分规则（可选）
     strategyId: question.strategyId || '',
     minPlayers: question.minPlayers ?? 2,
     maxPlayers: question.maxPlayers ?? 2,
     defaultCHOICE: question.defaultCHOICE || '',
-    
+
     // CHOICE 专用
     options: parsedOptions,
-    
+
     // BID 专用
     min: question.min ?? 0,
     max: question.max ?? 100,
     step: question.step ?? 1,
-    
+
     // 序列配置
     isSequence: !!(question.sequenceGroupId),
     sequenceGroupId: question.sequenceGroupId || '',
     sequenceOrder: question.sequenceOrder ?? 1,
     totalSequenceCount: question.totalSequenceCount ?? 1,
     prerequisiteQuestionIds: question.prerequisiteQuestionIds || '',
-    
+
     // 重复配置
     isRepeatable: !!question.isRepeatable,
     repeatTimes: question.repeatTimes ?? 1,

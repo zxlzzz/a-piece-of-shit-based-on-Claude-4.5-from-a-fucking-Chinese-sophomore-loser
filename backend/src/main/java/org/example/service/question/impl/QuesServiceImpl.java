@@ -64,6 +64,7 @@ public class QuesServiceImpl implements QuesService {
             QuestionEntity entity = QuestionEntity.builder()
                     .type(dto.getType())
                     .text(dto.getText())
+                    .calculateRule(dto.getCalculateRule())  // 🔥 添加计分规则
                     .strategyId(dto.getStrategyId())
                     .minPlayers(dto.getMinPlayers())
                     .maxPlayers(dto.getMaxPlayers())
@@ -321,6 +322,10 @@ public class QuesServiceImpl implements QuesService {
         }
         if (dto.getText() != null) {
             existingEntity.setText(dto.getText());
+        }
+        // 🔥 支持更新或清空 calculateRule（传空字符串或null都可以清空）
+        if (dto.getCalculateRule() != null) {
+            existingEntity.setCalculateRule(dto.getCalculateRule().isEmpty() ? null : dto.getCalculateRule());
         }
         if (dto.getStrategyId() != null) {
             existingEntity.setStrategyId(dto.getStrategyId());

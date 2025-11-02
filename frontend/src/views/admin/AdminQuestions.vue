@@ -956,9 +956,22 @@ onMounted(() => {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     题目文本 *
                   </label>
-                  <textarea v-model="form.text" 
+                  <textarea v-model="form.text"
                             rows="3"
                             placeholder="输入题目描述"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                </div>
+
+                <!-- 🔥 计分规则（可选） -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    计分规则（可选）
+                    <span class="text-xs text-gray-500">- 用于分离情景描述和计分规则</span>
+                  </label>
+                  <textarea v-model="form.calculateRule"
+                            rows="3"
+                            placeholder="例如：&#10;• 唯一最近 → 独得该房价值&#10;• 多人最近 → 平分价值&#10;• 三人等距 → 无人得分"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
                 </div>

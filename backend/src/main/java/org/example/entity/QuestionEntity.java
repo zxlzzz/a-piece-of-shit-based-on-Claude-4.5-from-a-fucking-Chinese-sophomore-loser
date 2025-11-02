@@ -26,6 +26,9 @@ public class QuestionEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
 
+    @Column(columnDefinition = "TEXT")
+    private String calculateRule;  // 🔥 计分规则（可选，用于分离情景描述和规则）
+
     @Column(nullable = false)
     private String strategyId;
 

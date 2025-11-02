@@ -49,10 +49,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/app");
 
         // 启用简单消息代理，支持主题和队列
-        // 🔥 添加 TaskScheduler 以支持心跳和用户目的地路由
+        // 🔥 优化心跳间隔，减少不必要的心跳消息（从10秒改为25秒）
         registry.enableSimpleBroker("/topic", "/queue", "/user")
                 .setTaskScheduler(taskScheduler())
-                .setHeartbeatValue(new long[]{10000, 10000});
+                .setHeartbeatValue(new long[]{25000, 25000});
 
         // 用户目标消息前缀
         registry.setUserDestinationPrefix("/user");
@@ -62,19 +62,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new WebSocketChannelInterceptor());
 
-        // 🔥 添加线程池配置
+        // 🔥 大幅增加队列容量和线程池，防止消息队列满导致断连
+        // 这是防止 "Failed to send message to ExecutorSubscribableChannel" 错误的关键
         registration.taskExecutor()
-                .corePoolSize(8)
-                .maxPoolSize(16)
-                .queueCapacity(1000);
+                .corePoolSize(32)       // 🔥 从 8 增加到 32
+                .maxPoolSize(64)        // 🔥 从 16 增加到 64
+                .queueCapacity(50000);  // 🔥 从 1000 增加到 50000 - 最关键！
     }
 
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
+        // 🔥 出站通道也需要大容量，防止广播消息时队列满
         registration.taskExecutor()
-                .corePoolSize(8)      // 🔥 增加到8
-                .maxPoolSize(16)      // 🔥 增加到16
-                .queueCapacity(1000); // 🔥 添加队列容量
+                .corePoolSize(32)       // 🔥 从 8 增加到 32
+                .maxPoolSize(64)        // 🔥 从 16 增加到 64
+                .queueCapacity(50000);  // 🔥 从 1000 增加到 50000
     }
 
     // WebSocket通道拦截器，用于处理连接和断开事件

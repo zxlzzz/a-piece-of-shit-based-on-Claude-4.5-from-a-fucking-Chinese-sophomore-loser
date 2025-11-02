@@ -43,8 +43,9 @@ public class QuestionDataInitializer {
                 throw new FileNotFoundException("questions.json not found in classpath");
             }
 
-            List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<List<QuestionDTO>>() {});
+            List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<>() {});
             log.info("从 questions.json 读取到 {} 道题目", dtos.size());
+            System.out.println(dtos);
 
             int successCount = 0;
             for (QuestionDTO dto : dtos) {

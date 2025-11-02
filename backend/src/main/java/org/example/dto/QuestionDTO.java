@@ -17,9 +17,8 @@ public class QuestionDTO {
     private Long id;
     private QuestionType type;           // "choice" 或 "bid"
     private String text;           // 题目描述
-    private String strategyId;     // 计分策略ID
-
     private String calculateRule;
+    private String strategyId;     // 计分策略ID
 
     // choice题专用
     private List<QuestionOption> options; // 选项列表

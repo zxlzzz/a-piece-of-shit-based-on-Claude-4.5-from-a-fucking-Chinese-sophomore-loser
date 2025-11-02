@@ -19,6 +19,7 @@ public class RoomDTO {
     private int maxPlayers;
     private int currentPlayers;
     private RoomStatus status;
+    private Boolean finished;            // 游戏是否结束
     private List<PlayerDTO> players;
     private LocalDateTime questionStartTime;
     private Integer timeLimit;

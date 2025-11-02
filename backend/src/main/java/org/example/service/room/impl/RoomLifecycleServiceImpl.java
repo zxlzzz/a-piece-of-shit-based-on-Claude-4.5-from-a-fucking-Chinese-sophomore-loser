@@ -539,6 +539,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         (roomEntity != null ? roomEntity.getMaxPlayers() : gameRoom.getPlayers().size()))
                 .currentPlayers(currentNonSpectators)  // 🔥 只计算非观战者
                 .status(status)
+                .finished(gameRoom.isFinished())  // 🔥 添加 finished 字段
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())
                 .timeLimit(gameRoom.getTimeLimit())

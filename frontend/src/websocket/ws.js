@@ -303,8 +303,12 @@ export function safeSubscribe(destination, onMessage) {
 
 /**
  * 房间统一订阅
+ * @param {string} roomCode - 房间码
+ * @param {function} onRoomUpdate - 房间更新回调
+ * @param {function} onRoomError - 房间错误回调
+ * @param {string} playerId - 玩家ID（可选，用于订阅被踢事件）
  */
-export function subscribeRoom(roomCode, onRoomUpdate, onRoomError) {
+export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
   const subscriptions = [];
 
   const roomUpdateSub = safeSubscribe(`/topic/room/${roomCode}`, (data) => {
@@ -324,10 +328,20 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError) {
     window.dispatchEvent(new CustomEvent('room-deleted', { detail: data }));
   });
 
+  // 🔥 订阅被踢事件（用户专属队列）
+  let kickedSub = null;
+  if (playerId) {
+    kickedSub = safeSubscribe(`/user/queue/kicked`, (data) => {
+      logger.warn("👢 您已被踢出房间:", data);
+      window.dispatchEvent(new CustomEvent('player-kicked', { detail: data }));
+    });
+  }
+
   // 只添加成功的订阅
   if (roomUpdateSub) subscriptions.push(roomUpdateSub);
   if (roomErrorSub) subscriptions.push(roomErrorSub);
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
+  if (kickedSub) subscriptions.push(kickedSub);
 
   return subscriptions;
 }

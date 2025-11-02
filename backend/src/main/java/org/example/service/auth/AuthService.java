@@ -1,6 +1,7 @@
 package org.example.service.auth;
 
 import org.example.dto.AuthResponseDTO;
+import org.example.dto.GuestLoginRequestDTO;
 import org.example.dto.LoginRequestDTO;
 import org.example.dto.RegisterRequestDTO;
 
@@ -15,4 +16,9 @@ public interface AuthService {
      * 用户登录
      */
     AuthResponseDTO login(LoginRequestDTO request);
+
+    /**
+     * 游客快速试玩（无需注册）
+     */
+    AuthResponseDTO guestLogin(GuestLoginRequestDTO request);
 }

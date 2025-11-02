@@ -1,5 +1,7 @@
 package org.example.service.flow.impl;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
@@ -9,7 +11,7 @@ import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.pojo.RoomStatus;
 import org.example.repository.*;
-import org.example.service.QuestionSelectorService;
+import org.example.service.question.QuestionSelectorService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
 import org.example.service.flow.GameFlowService;
@@ -50,6 +52,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
     private final GamePersistenceService gamePersistenceService;
+    private final ObjectMapper objectMapper;
 
     /**
      * 推进锁（防止并发推进）
@@ -77,14 +80,25 @@ public class GameFlowServiceImpl implements GameFlowService {
             GameEntity game = GameEntity.builder()
                     .room(room)
                     .startTime(LocalDateTime.now())
+                    .isTest(gameRoom.isTestRoom())  // 标记测试游戏
                     .build();
             GameEntity savedGame = gameRepository.save(game);
 
             gameRoom.setRoomEntity(room);
             gameRoom.setGameId(savedGame.getId());
 
-            // 创建玩家游戏记录
+            // 🔥 创建玩家游戏记录（排除观战者和Bot）
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
+                // 🔥 跳过观战者
+                if (Boolean.TRUE.equals(playerDTO.getSpectator())) {
+                    continue;
+                }
+
+                // 🔥 跳过虚拟玩家（Bot）
+                if (playerDTO.getPlayerId().startsWith("BOT_")) {
+                    continue;
+                }
+
                 PlayerEntity player = playerRepository.findByPlayerId(playerDTO.getPlayerId())
                         .orElseThrow(() -> new BusinessException("玩家不存在: " + playerDTO.getPlayerId()));
 
@@ -96,10 +110,28 @@ public class GameFlowServiceImpl implements GameFlowService {
                 playerGameRepository.save(playerGame);
             }
 
-            // 🔥 选题（返回 DTO）
+            // 🔥 选题（返回 DTO）- 计算非观战者人数
+            int nonSpectatorCount = (int) gameRoom.getPlayers().stream()
+                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                    .count();
+
+            // 🔥 解析标签筛选
+            List<Long> questionTagIds = null;
+            if (room.getQuestionTagIdsJson() != null && !room.getQuestionTagIdsJson().isEmpty()) {
+                try {
+                    questionTagIds = objectMapper.readValue(
+                            room.getQuestionTagIdsJson(),
+                            new TypeReference<List<Long>>() {}
+                    );
+                } catch (Exception e) {
+                    log.error("解析questionTagIds失败", e);
+                }
+            }
+
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
-                    gameRoom.getPlayers().size()
+                    nonSpectatorCount,
+                    questionTagIds
             );
 
             // 初始化游戏房间状态
@@ -114,8 +146,9 @@ public class GameFlowServiceImpl implements GameFlowService {
             timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
-            log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {}",
-                    roomCode, questions.size(), gameRoom.getPlayers().size());
+            log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {} (观战者: {})",
+                    roomCode, questions.size(), nonSpectatorCount,
+                    gameRoom.getPlayers().size() - nonSpectatorCount);
 
             // 🔥 同步到 Redis
             roomCache.syncToRedis(roomCode);
@@ -129,7 +162,9 @@ public class GameFlowServiceImpl implements GameFlowService {
     public void advanceQuestion(String roomCode, String reason, boolean fillDefaults) {
         AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
         if (!isAdvancing.compareAndSet(false, true)) {
-            log.warn("⚠️ 房间 {} 正在推进中，跳过", roomCode);
+            log.warn("⚠️ 房间 {} 正在推进中，跳过（原因: {}）", roomCode, reason);
+            // 🔥 广播当前状态，避免客户端等待
+            broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             return;
         }
 
@@ -240,9 +275,26 @@ public class GameFlowServiceImpl implements GameFlowService {
                 game.setEndTime(LocalDateTime.now());
                 gameRepository.save(game);
 
-                // 3. 保存玩家最终分数
+                // 🔥 3. 保存玩家最终分数（排除观战者和Bot）
                 for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
                     String playerId = entry.getKey();
+
+                    // 🔥 检查是否是观战者
+                    boolean isSpectator = gameRoom.getPlayers().stream()
+                            .filter(p -> p.getPlayerId().equals(playerId))
+                            .findFirst()
+                            .map(PlayerDTO::getSpectator)
+                            .orElse(false);
+
+                    if (isSpectator) {
+                        continue;  // 🔥 跳过观战者
+                    }
+
+                    // 🔥 跳过 Bot 玩家（Bot 不保存到数据库）
+                    if (playerId.startsWith("BOT_")) {
+                        continue;
+                    }
+
                     PlayerEntity player = playerRepository.findByPlayerId(playerId)
                             .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 

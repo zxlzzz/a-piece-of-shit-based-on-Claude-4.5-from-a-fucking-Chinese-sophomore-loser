@@ -65,6 +65,11 @@ public class GameRoom implements Serializable {
     private boolean finished = false;
 
     /**
+     * 是否为测试房间（包含虚拟玩家）
+     */
+    private boolean testRoom = false;
+
+    /**
      * 提交记录
      * 外层键：题目索引（从0开始）
      * 内层键：playerId
@@ -182,8 +187,12 @@ public class GameRoom implements Serializable {
      * 题目得分详情
      */
     @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
     @lombok.Builder
-    public static class QuestionScoreDetail {
+    public static class QuestionScoreDetail implements Serializable {
+        private static final long serialVersionUID = 1L;
+
         /**
          * 基础得分（策略计算的原始分数）
          */

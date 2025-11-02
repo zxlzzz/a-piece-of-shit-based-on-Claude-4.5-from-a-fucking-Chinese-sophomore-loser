@@ -17,6 +17,7 @@ public class QuestionDTO {
     private Long id;
     private QuestionType type;           // "choice" 或 "bid"
     private String text;           // 题目描述
+    private String calculateRule;
     private String strategyId;     // 计分策略ID
 
     // choice题专用
@@ -43,5 +44,8 @@ public class QuestionDTO {
     private String defaultChoice;  // 默认选择
     private Integer minPlayers;
     private Integer maxPlayers;
+
+    // 标签
+    private List<TagDTO> tags;     // 题目的标签列表
 
 }

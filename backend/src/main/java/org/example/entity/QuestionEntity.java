@@ -26,6 +26,9 @@ public class QuestionEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String text;
 
+    @Column(columnDefinition = "TEXT")
+    private String calculateRule;
+
     @Column(nullable = false)
     private String strategyId;
 

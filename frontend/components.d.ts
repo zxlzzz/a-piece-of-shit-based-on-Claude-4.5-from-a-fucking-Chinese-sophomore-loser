@@ -7,9 +7,30 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Button: typeof import('primevue/button')['default']
+    ChatRoom: typeof import('./src/components/chat/ChatRoom.vue')['default']
+    ChooseBar: typeof import('./src/components/game/ChooseBar.vue')['default']
+    CreateRoomCard: typeof import('./src/components/room/CreateRoomCard.vue')['default']
+    CustomForm: typeof import('./src/components/room/CustomForm.vue')['default']
+    GameContent: typeof import('./src/components/game/GameContent.vue')['default']
+    GameHeader: typeof import('./src/components/game/GameHeader.vue')['default']
+    InputNumber: typeof import('primevue/inputnumber')['default']
+    MobileChatDrawer: typeof import('./src/components/game/MobileChatDrawer.vue')['default']
+    NumberBar: typeof import('./src/components/game/NumberBar.vue')['default']
+    PlayerListCard: typeof import('./src/components/room/PlayerListCard.vue')['default']
+    QuesShowCard: typeof import('./src/components/question/QuesShowCard.vue')['default']
+    Question: typeof import('./src/components/question/Question.vue')['default']
+    QuestionCard: typeof import('./src/components/game/QuestionCard.vue')['default']
+    ResultContent: typeof import('./src/components/result/ResultContent.vue')['default']
+    RoomCard: typeof import('./src/components/room/RoomCard.vue')['default']
+    RoomInfoCard: typeof import('./src/components/room/RoomInfoCard.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SkeletonHistoryCard: typeof import('./src/components/common/SkeletonHistoryCard.vue')['default']
+    SkeletonResult: typeof import('./src/components/common/SkeletonResult.vue')['default']
+    SkeletonRoomCard: typeof import('./src/components/common/SkeletonRoomCard.vue')['default']
     Toast: typeof import('primevue/toast')['default']
-    WebSocketStatus: typeof import('./src/components/WebSocketStatus.vue')['default']
+    WaitRoomActions: typeof import('./src/components/room/WaitRoomActions.vue')['default']
+    WebSocketStatus: typeof import('./src/components/common/WebSocketStatus.vue')['default']
   }
 }

@@ -6,7 +6,7 @@ import org.example.pojo.GameRoom;
 import org.example.pojo.JoinRequest;
 import org.example.dto.RoomDTO;
 import org.example.pojo.SubmitRequest;
-import org.example.service.GameService;
+import org.example.service.game.GameService;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.room.RoomLifecycleService;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -41,7 +41,7 @@ public class RoomWsController {
             } else {
                 // 🔥 正常加入逻辑（原有代码）
                 RoomDTO room = gameService.joinRoom(request.getRoomCode(),
-                        request.getPlayerId(), request.getPlayerName(), false);
+                        request.getPlayerId(), request.getPlayerName(), false, null);
                 log.info("✅ WebSocket: 玩家 {} 加入房间 {}", request.getPlayerName(), request.getRoomCode());
             }
 

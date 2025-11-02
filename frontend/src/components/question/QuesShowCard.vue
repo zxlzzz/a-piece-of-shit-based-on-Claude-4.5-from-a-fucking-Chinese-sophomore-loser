@@ -104,15 +104,6 @@
         暂无选项
       </div>
     </div>
-
-    <!-- 底部装饰线（hover 效果） -->
-    <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700
-                opacity-0 group-hover:opacity-100 transition-opacity">
-      <span class="text-xs text-gray-400 dark:text-gray-500">
-        <span class="hidden sm:inline">点击查看详情</span>
-        <span class="sm:hidden">查看详情</span>
-      </span>
-    </div>
   </div>
 </template>
 

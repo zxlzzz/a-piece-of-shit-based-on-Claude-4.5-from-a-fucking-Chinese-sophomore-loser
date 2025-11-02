@@ -399,6 +399,11 @@ const submitForm = async () => {
     repeatGroupId: form.value.isRepeatable ? form.value.repeatGroupId : null
   }
 
+  // 🔥 调试日志
+  logger.info('📤 提交的表单数据 form.value.calculateRule:', form.value.calculateRule)
+  logger.info('📤 提交的 payload.calculateRule:', payload.calculateRule)
+  logger.info('📤 完整 payload:', JSON.stringify(payload, null, 2))
+
   loading.value = true
   try {
     if (editingQuestion.value) {

@@ -25,6 +25,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
+
+    // 🔥 先定义 TaskScheduler bean
+    @Bean
+    public TaskScheduler taskScheduler() {
+        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(2);
+        scheduler.setThreadNamePrefix("websocket-heartbeat-");
+        scheduler.initialize();
+        return scheduler;
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
@@ -38,7 +49,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/app");
 
         // 启用简单消息代理，支持主题和队列
-        registry.enableSimpleBroker("/topic", "/queue");
+        // 🔥 添加 TaskScheduler 以支持心跳和用户目的地路由
+        registry.enableSimpleBroker("/topic", "/queue", "/user")
+                .setTaskScheduler(taskScheduler())
+                .setHeartbeatValue(new long[]{10000, 10000});
 
         // 用户目标消息前缀
         registry.setUserDestinationPrefix("/user");
@@ -98,15 +112,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
             return message;
         }
-    }
-
-    @Bean
-    public TaskScheduler taskScheduler() {
-        ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
-        scheduler.setPoolSize(2);
-        scheduler.setThreadNamePrefix("websocket-heartbeat-");
-        scheduler.initialize();
-        return scheduler;
     }
 
     // 简单的Principal实现，用于标识WebSocket用户

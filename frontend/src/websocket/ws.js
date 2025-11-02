@@ -328,10 +328,10 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
     window.dispatchEvent(new CustomEvent('room-deleted', { detail: data }));
   });
 
-  // 🔥 订阅被踢事件（用户专属队列）
+  // 🔥 订阅被踢事件（使用 topic 而不是 user queue）
   let kickedSub = null;
   if (playerId) {
-    kickedSub = safeSubscribe(`/user/queue/kicked`, (data) => {
+    kickedSub = safeSubscribe(`/topic/player/${playerId}/kicked`, (data) => {
       logger.warn("👢 您已被踢出房间:", data);
       window.dispatchEvent(new CustomEvent('player-kicked', { detail: data }));
     });

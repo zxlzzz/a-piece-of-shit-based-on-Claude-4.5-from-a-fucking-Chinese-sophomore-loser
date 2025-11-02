@@ -54,13 +54,13 @@ public class RoomStateBroadcaster {
 
     /**
      * 通知玩家被踢出
-     * 发送到: /user/{playerId}/queue/kicked
+     * 🔥 使用 topic 而不是 user queue，更简单可靠
+     * 发送到: /topic/player/{playerId}/kicked
      */
     public void sendPlayerKicked(String roomCode, String playerId) {
         try {
-            messagingTemplate.convertAndSendToUser(
-                    playerId,
-                    "/queue/kicked",
+            messagingTemplate.convertAndSend(
+                    "/topic/player/" + playerId + "/kicked",
                     Map.of("message", "您已被房主踢出房间", "roomCode", roomCode)
             );
             log.info("✅ 通知玩家 {} 被踢出房间 {}", playerId, roomCode);

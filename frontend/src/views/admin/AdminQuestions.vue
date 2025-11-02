@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import axios from "axios";
 import { useToast } from 'primevue/usetoast'
 import { onMounted, ref, watch } from 'vue'
@@ -9,7 +10,12 @@ const loading = ref(false)
 const showForm = ref(false)
 const editingQuestion = ref(null)
 
-const API_BASE = '/api/admin/questions'
+// 🔥 标签管理相关状态
+const showTagManager = ref(false)
+const showTagEditor = ref(false)
+const editingTagQuestion = ref(null)
+const allTags = ref({ mechanism: [], strategy: [] })
+const newTag = ref({ name: '', category: 'mechanism', color: '#60a5fa' })
 
 /* ================================================
    🔥 axios 实例配置
@@ -22,7 +28,6 @@ const api = axios.create({
 // ============ 请求拦截器（添加 token）============
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.params);
     
     // 🔥 自动添加 token 到请求头
     const token = localStorage.getItem('token');
@@ -33,7 +38,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    logger.error('❌ Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -41,11 +46,10 @@ api.interceptors.request.use(
 // ============ 响应拦截器 ============
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.data);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.response?.data || error.message);
+    logger.error('❌ API Error:', error.response?.data || error.message);
     
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {
@@ -108,29 +112,30 @@ function isIgnorableError(error) {
 const form = ref({
   type: 'CHOICE',
   text: '',
+  calculateRule: '',  // 🔥 计分规则（可选）
   strategyId: '',
   minPlayers: 2,
   maxPlayers: 2,
   defaultCHOICE: '',
-  
+
   // CHOICE 专用
   options: [
     { key: 'A', text: '' },
     { key: 'B', text: '' }
   ],
-  
+
   // BID 专用
   min: 0,
   max: 100,
   step: 1,
-  
+
   // 序列配置（复选框控制）
   isSequence: false,
   sequenceGroupId: '',
   sequenceOrder: 1,
   totalSequenceCount: 1,
   prerequisiteQuestionIds: '',
-  
+
   // 重复配置（复选框控制）
   isRepeatable: false,
   repeatTimes: 1,
@@ -181,7 +186,7 @@ const loadQuestions = async () => {
       life: 2000
     })
   } catch (error) {
-    console.error('加载失败', error)
+    logger.error('加载失败', error)
     toast.add({
       severity: 'error',
       summary: '加载失败',
@@ -199,10 +204,11 @@ const openCreateForm = () => {
   form.value = {
     type: 'CHOICE',
     text: '',
+    calculateRule: '',  // 🔥 计分规则（可选）
     strategyId: '',
     minPlayers: 2,
     maxPlayers: 2,
-    defaultCHOICE: '',
+    defaultChoice: '',
     options: [
       { key: 'A', text: '' },
       { key: 'B', text: '' }
@@ -226,8 +232,6 @@ const openCreateForm = () => {
 // 打开编辑表单
 const openEditForm = (question) => {
   editingQuestion.value = question
-  console.log('🔍 question 所有字段:', Object.keys(question))
-  console.log('🔍 question 完整数据:', question)
   
   // 🔥 解析 options（支持多种格式）
   let parsedOptions = []
@@ -235,15 +239,13 @@ const openEditForm = (question) => {
   // 情况1：后端直接返回 options 数组
   if (Array.isArray(question.options) && question.options.length > 0) {
     parsedOptions = question.options
-    console.log('✅ 使用 question.options:', parsedOptions)
   }
   // 情况2：后端返回 optionsJson 字符串
   else if (question.optionsJson) {
     try {
       parsedOptions = JSON.parse(question.optionsJson)
-      console.log('✅ 解析 question.optionsJson:', parsedOptions)
     } catch (e) {
-      console.error('❌ 解析 optionsJson 失败:', e)
+      logger.error('❌ 解析 optionsJson 失败:', e)
       parsedOptions = []
     }
   }
@@ -251,9 +253,8 @@ const openEditForm = (question) => {
   else if (typeof question.options === 'string') {
     try {
       parsedOptions = JSON.parse(question.options)
-      console.log('✅ 解析字符串 question.options:', parsedOptions)
     } catch (e) {
-      console.error('❌ 解析字符串 options 失败:', e)
+      logger.error('❌ 解析字符串 options 失败:', e)
       parsedOptions = []
     }
   }
@@ -261,7 +262,6 @@ const openEditForm = (question) => {
   // 情况4：CHOICE 类型但没有 options，给个默认值
   if (parsedOptions.length === 0 && question.type === 'CHOICE') {
     parsedOptions = [{ key: 'A', text: '' }]
-    console.warn('⚠️ CHOICE 类型但没有 options，使用默认值')
   }
   
   // 🔥 填充表单
@@ -269,26 +269,27 @@ const openEditForm = (question) => {
     // 基础信息
     type: question.type || 'CHOICE',
     text: question.text || '',
+    calculateRule: question.calculateRule || '',  // 🔥 计分规则（可选）
     strategyId: question.strategyId || '',
     minPlayers: question.minPlayers ?? 2,
     maxPlayers: question.maxPlayers ?? 2,
     defaultCHOICE: question.defaultCHOICE || '',
-    
+
     // CHOICE 专用
     options: parsedOptions,
-    
+
     // BID 专用
     min: question.min ?? 0,
     max: question.max ?? 100,
     step: question.step ?? 1,
-    
+
     // 序列配置
     isSequence: !!(question.sequenceGroupId),
     sequenceGroupId: question.sequenceGroupId || '',
     sequenceOrder: question.sequenceOrder ?? 1,
     totalSequenceCount: question.totalSequenceCount ?? 1,
     prerequisiteQuestionIds: question.prerequisiteQuestionIds || '',
-    
+
     // 重复配置
     isRepeatable: !!question.isRepeatable,
     repeatTimes: question.repeatTimes ?? 1,
@@ -296,7 +297,6 @@ const openEditForm = (question) => {
     repeatGroupId: question.repeatGroupId || ''
   }
   
-  console.log('✅ 表单已填充:', form.value)
   
   showForm.value = true
 }
@@ -373,24 +373,25 @@ const submitForm = async () => {
     strategyId: form.value.strategyId,
     minPlayers: form.value.minPlayers,
     maxPlayers: form.value.maxPlayers,
-    defaultCHOICE: form.value.defaultCHOICE,
-    
+    defaultChoice: form.value.defaultChoice,
+    calculateRule: form.value.calculateRule?.trim() || null,  // 🔥 空字符串转为 null
+
     // CHOICE 专用
-    options: form.value.type === 'CHOICE' && form.value.options.length > 0 
-      ? form.value.options 
+    options: form.value.type === 'CHOICE' && form.value.options.length > 0
+      ? form.value.options
       : null,
-    
+
     // BID 专用
     min: form.value.type === 'BID' ? form.value.min : null,
     max: form.value.type === 'BID' ? form.value.max : null,
     step: form.value.type === 'BID' ? form.value.step : null,
-    
+
     // 序列配置
     sequenceGroupId: form.value.isSequence ? form.value.sequenceGroupId : null,
     sequenceOrder: form.value.isSequence ? form.value.sequenceOrder : null,
     totalSequenceCount: form.value.isSequence ? form.value.totalSequenceCount : null,
     prerequisiteQuestionIds: form.value.isSequence ? form.value.prerequisiteQuestionIds : null,
-    
+
     // 重复配置
     isRepeatable: form.value.isRepeatable,
     repeatTimes: form.value.isRepeatable ? form.value.repeatTimes : null,
@@ -398,7 +399,11 @@ const submitForm = async () => {
     repeatGroupId: form.value.isRepeatable ? form.value.repeatGroupId : null
   }
 
-  console.log('🔍 提交的 payload:', payload)
+  // 🔥 调试日志
+  logger.info('📤 提交的表单数据 form.value.calculateRule:', form.value.calculateRule)
+  logger.info('📤 提交的 payload.calculateRule:', payload.calculateRule)
+  logger.info('📤 完整 payload:', JSON.stringify(payload, null, 2))
+
   loading.value = true
   try {
     if (editingQuestion.value) {
@@ -416,7 +421,7 @@ const submitForm = async () => {
     showForm.value = false
     loadQuestions()
   } catch (error) {
-    console.error('操作失败', error)
+    logger.error('操作失败', error)
     toast.add({
       severity: 'error',
       summary: '操作失败',
@@ -443,7 +448,7 @@ const deleteQuestion = async (id) => {
     })
     loadQuestions()
   } catch (error) {
-    console.error('删除失败', error)
+    logger.error('删除失败', error)
     toast.add({
       severity: 'error',
       summary: '删除失败',
@@ -477,7 +482,7 @@ const exportQuestions = async () => {
       life: 2000
     })
   } catch (error) {
-    console.error('导出失败', error)
+    logger.error('导出失败', error)
     toast.add({
       severity: 'error',
       summary: '导出失败',
@@ -492,11 +497,11 @@ const exportQuestions = async () => {
 // 清空所有题目
 const clearAll = async () => {
   if (!confirm('确定清空所有题目吗？此操作不可恢复！')) return
-  
+
   loading.value = true
   try {
     await api.delete('/admin/questions/all')
-    
+
     toast.add({
       severity: 'success',
       summary: '已清空',
@@ -504,10 +509,209 @@ const clearAll = async () => {
     })
     loadQuestions()
   } catch (error) {
-    console.error('清空失败', error)
+    logger.error('清空失败', error)
     toast.add({
       severity: 'error',
       summary: '清空失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  } finally {
+    loading.value = false
+  }
+}
+
+// ==================== 🔥 标签管理功能 ====================
+
+// 切换标签管理面板
+const toggleTagManager = () => {
+  showTagManager.value = !showTagManager.value
+  if (showTagManager.value) {
+    loadTags()
+  }
+}
+
+// 加载所有标签
+const loadTags = async () => {
+  try {
+    const response = await api.get('/tags')
+    
+    // API已经返回分组好的数据，直接使用即可
+    allTags.value = response.data
+    
+    // 或者如果你想确保结构正确
+    allTags.value = {
+      mechanism: response.data.mechanism || [],
+      strategy: response.data.strategy || []
+    }
+    
+  } catch (error) {
+    logger.error('加载标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '加载标签失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 创建标签
+const createTag = async () => {
+  if (!newTag.value.name.trim()) {
+    toast.add({
+      severity: 'warn',
+      summary: '请输入标签名称',
+      life: 2000
+    })
+    return
+  }
+
+  try {
+    await api.post('/admin/tags', newTag.value)
+
+    toast.add({
+      severity: 'success',
+      summary: '创建成功',
+      detail: `标签 "${newTag.value.name}" 已创建`,
+      life: 2000
+    })
+
+    // 重置表单
+    newTag.value = { name: '', category: 'mechanism', color: '#60a5fa' }
+
+    // 重新加载标签和题目列表
+    await loadTags()
+    await loadQuestions()
+  } catch (error) {
+    logger.error('创建标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '创建失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 删除标签（级联删除所有题目关联）
+const deleteTag = async (tagId) => {
+  if (!confirm('确定删除该标签吗？将同时移除所有题目上的该标签！')) return
+
+  try {
+    await api.delete(`/admin/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '删除成功',
+      life: 2000
+    })
+
+    // 重新加载标签和题目列表
+    await loadTags()
+    await loadQuestions()
+  } catch (error) {
+    logger.error('删除标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '删除失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 打开标签编辑器
+const openTagEditor = (question) => {
+  editingTagQuestion.value = question
+  showTagEditor.value = true
+  loadTags()
+}
+
+// 为题目添加标签
+const addTagToQuestion = async (questionId, tagId) => {
+  try {
+    await api.post(`/admin/tags/questions/${questionId}/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '添加成功',
+      life: 1500
+    })
+
+    // 重新加载题目列表
+    await loadQuestions()
+
+    // 更新编辑器中的题目信息
+    editingTagQuestion.value = questions.value.find(q => q.id === questionId)
+  } catch (error) {
+    logger.error('添加标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '添加失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 从题目移除标签
+const removeTagFromQuestion = async (questionId, tagId) => {
+  try {
+    await api.delete(`/admin/tags/questions/${questionId}/tags/${tagId}`)
+
+    toast.add({
+      severity: 'success',
+      summary: '移除成功',
+      life: 1500
+    })
+
+    // 重新加载题目列表
+    await loadQuestions()
+
+    // 更新编辑器中的题目信息
+    editingTagQuestion.value = questions.value.find(q => q.id === questionId)
+  } catch (error) {
+    logger.error('移除标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '移除失败',
+      detail: error.response?.data?.message || error.message,
+      life: 3000
+    })
+  }
+}
+
+// 导出标签JSON
+const exportTags = async () => {
+  loading.value = true
+  try {
+    const response = await api.get('/admin/tags/export', {
+      responseType: 'text'
+    })
+
+    const jsonData = response.data
+
+    // 创建下载
+    const blob = new Blob([jsonData], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `question-tags_${Date.now()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    toast.add({
+      severity: 'success',
+      summary: '导出成功',
+      detail: '标签配置已导出',
+      life: 2000
+    })
+  } catch (error) {
+    logger.error('导出标签失败', error)
+    toast.add({
+      severity: 'error',
+      summary: '导出失败',
       detail: error.response?.data?.message || error.message,
       life: 3000
     })
@@ -532,31 +736,46 @@ onMounted(() => {
       </div>
 
       <!-- 操作栏 -->
-      <div class="flex gap-3 mb-6">
+      <div class="flex flex-wrap gap-3 mb-6">
         <button
           @click="openCreateForm"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
         >
           <i class="pi pi-plus mr-2"></i>新建题目
         </button>
-        
+
+        <button
+          @click="toggleTagManager"
+          class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium"
+        >
+          <i class="pi pi-tags mr-2"></i>管理标签
+        </button>
+
         <button
           @click="loadQuestions"
           :disabled="loading"
-          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 
+          class="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600
                  text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
         >
           <i class="pi pi-refresh mr-2" :class="{ 'pi-spin': loading }"></i>刷新
         </button>
-        
+
         <button
           @click="exportQuestions"
           :disabled="loading"
           class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg"
         >
-          <i class="pi pi-download mr-2"></i>导出JSON
+          <i class="pi pi-download mr-2"></i>导出题目JSON
         </button>
-        
+
+        <button
+          @click="exportTags"
+          :disabled="loading"
+          class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg"
+        >
+          <i class="pi pi-download mr-2"></i>导出标签JSON
+        </button>
+
         <button
           @click="clearAll"
           :disabled="loading"
@@ -564,6 +783,66 @@ onMounted(() => {
         >
           <i class="pi pi-trash mr-2"></i>清空所有
         </button>
+      </div>
+
+      <!-- 🔥 标签管理器（可折叠） -->
+      <div v-if="showTagManager" class="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-semibold text-gray-900 dark:text-white">
+            <i class="pi pi-tags mr-2"></i>标签管理
+          </h2>
+          <button @click="showTagManager = false" class="text-gray-400 hover:text-gray-600">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+
+        <!-- 创建标签表单 -->
+        <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded">
+          <div class="flex gap-2 items-end">
+            <div class="flex-1">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">标签名称</label>
+              <input v-model="newTag.name" type="text" placeholder="例如：协调型"
+                     class="w-full px-3 py-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"/>
+            </div>
+            <div class="w-40">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">分类</label>
+              <select v-model="newTag.category"
+                      class="w-full px-3 py-2 border rounded text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                <option value="mechanism">博弈机制</option>
+                <option value="strategy">策略特性</option>
+              </select>
+            </div>
+            <div class="w-32">
+              <label class="block text-xs text-gray-600 dark:text-gray-400 mb-1">颜色</label>
+              <input v-model="newTag.color" type="color"
+                     class="w-full px-1 py-1 border rounded h-[38px] dark:bg-gray-700 dark:border-gray-600"/>
+            </div>
+            <button @click="createTag"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm">
+              <i class="pi pi-plus mr-1"></i>创建
+            </button>
+          </div>
+        </div>
+
+        <!-- 标签列表 -->
+        <div class="space-y-2">
+          <div v-for="category in ['mechanism', 'strategy']" :key="category">
+            <div class="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              {{ category === 'mechanism' ? '博弈机制' : '策略特性' }}
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <div v-for="tag in allTags[category]" :key="tag.id"
+                   class="flex items-center gap-2 px-3 py-1 rounded border"
+                   :style="{ backgroundColor: tag.color + '20', borderColor: tag.color }">
+                <span class="text-sm" :style="{ color: tag.color }">{{ tag.name }}</span>
+                <button @click="deleteTag(tag.id)"
+                        class="text-red-500 hover:text-red-700 text-xs">
+                  <i class="pi pi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- 题目列表 -->
@@ -600,17 +879,16 @@ onMounted(() => {
                   {{ q.minPlayers }}-{{ q.maxPlayers }}
                 </td>
                 <td class="px-4 py-3 text-sm">
-                  <div class="flex gap-1">
-                    <span v-if="q.isRepeatable" 
-                          class="px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
-                          :title="`重复${q.repeatTimes}次`">
-                      🔁 x{{ q.repeatTimes }}
+                  <div class="flex flex-wrap gap-1">
+                    <span v-for="tag in (q.tags || [])" :key="tag.id"
+                          class="px-2 py-0.5 text-xs rounded border"
+                          :style="{ backgroundColor: tag.color + '30', color: tag.color, borderColor: tag.color }">
+                      {{ tag.name }}
                     </span>
-                    <span v-if="q.sequenceGroupId" 
-                          class="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                          :title="`序列 ${q.sequenceOrder}/${q.totalSequenceCount}`">
-                      📋 {{ q.sequenceOrder }}/{{ q.totalSequenceCount }}
-                    </span>
+                    <button @click="openTagEditor(q)"
+                            class="px-2 py-0.5 text-xs rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 hover:text-blue-600 hover:border-blue-600">
+                      <i class="pi pi-plus"></i>
+                    </button>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-right">
@@ -687,9 +965,22 @@ onMounted(() => {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     题目文本 *
                   </label>
-                  <textarea v-model="form.text" 
+                  <textarea v-model="form.text"
                             rows="3"
                             placeholder="输入题目描述"
+                            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
+                                   bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
+                </div>
+
+                <!-- 🔥 计分规则（可选） -->
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    计分规则（可选）
+                    <span class="text-xs text-gray-500">- 用于分离情景描述和计分规则</span>
+                  </label>
+                  <textarea v-model="form.calculateRule"
+                            rows="3"
+                            placeholder="例如：&#10;• 唯一最近 → 独得该房价值&#10;• 多人最近 → 平分价值&#10;• 三人等距 → 无人得分"
                             class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                    bg-white dark:bg-gray-700 text-gray-900 dark:text-white"></textarea>
                 </div>
@@ -728,7 +1019,7 @@ onMounted(() => {
                   <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     默认选择（可选）
                   </label>
-                  <input v-model="form.defaultCHOICE"
+                  <input v-model="form.defaultChoice"
                          placeholder="默认答案"
                          class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg
                                 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
@@ -958,6 +1249,67 @@ onMounted(() => {
             </button>
           </div>
 
+        </div>
+      </div>
+
+      <!-- 🔥 标签编辑弹窗 -->
+      <div v-if="showTagEditor" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 w-full max-w-md shadow-2xl">
+          <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
+              管理标签：{{ editingTagQuestion?.text?.substring(0, 20) }}...
+            </h3>
+            <button @click="showTagEditor = false" class="text-gray-400 hover:text-gray-600">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
+
+          <div class="px-4 py-4">
+            <!-- 当前标签 -->
+            <div class="mb-4">
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">当前标签</div>
+              <div class="flex flex-wrap gap-2">
+                <span v-for="tag in (editingTagQuestion?.tags || [])" :key="tag.id"
+                      class="flex items-center gap-1 px-2 py-1 text-xs rounded border"
+                      :style="{ backgroundColor: tag.color + '30', color: tag.color, borderColor: tag.color }">
+                  {{ tag.name }}
+                  <button @click="removeTagFromQuestion(editingTagQuestion.id, tag.id)"
+                          class="text-red-500 hover:text-red-700">
+                    <i class="pi pi-times text-xs"></i>
+                  </button>
+                </span>
+                <span v-if="!(editingTagQuestion?.tags || []).length" class="text-sm text-gray-400">暂无标签</span>
+              </div>
+            </div>
+
+            <!-- 添加标签 -->
+            <div>
+              <div class="text-sm text-gray-600 dark:text-gray-400 mb-2">添加标签</div>
+              <div class="space-y-2">
+                <div v-for="category in ['mechanism', 'strategy']" :key="category">
+                  <div class="text-xs text-gray-500 mb-1">
+                    {{ category === 'mechanism' ? '博弈机制' : '策略特性' }}
+                  </div>
+                  <div class="flex flex-wrap gap-2">
+                    <button v-for="tag in allTags[category]" :key="tag.id"
+                            @click="addTagToQuestion(editingTagQuestion.id, tag.id)"
+                            :disabled="(editingTagQuestion?.tags || []).some(t => t.id === tag.id)"
+                            class="px-2 py-1 text-xs rounded border disabled:opacity-30"
+                            :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }">
+                      {{ tag.name }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+            <button @click="showTagEditor = false"
+                    class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300">
+              完成
+            </button>
+          </div>
         </div>
       </div>
 

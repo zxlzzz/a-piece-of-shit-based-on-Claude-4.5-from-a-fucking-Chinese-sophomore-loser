@@ -105,7 +105,6 @@ export function generatePlayerColor(seed) {
   ]
   
   if (!seed || typeof seed !== 'string') {
-    console.warn('⚠️ generatePlayerColor: seed 无效，使用默认颜色', seed)
     return colors[0]
   }
   

@@ -1,3 +1,4 @@
+import { logger } from '@/utils/logger'
 import { ref } from 'vue'
 import { sendSubmit } from '@/websocket/ws'
 
@@ -46,7 +47,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     hasSubmitted.value = true
     const submissionKey = getSubmissionKey()
     localStorage.setItem(submissionKey, 'true')
-    console.log('💾 提交前保存状态:', submissionKey)
 
     try {
       sendSubmit({
@@ -62,7 +62,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         life: 2000
       })
     } catch (error) {
-      console.error('❌ 提交失败:', error)
+      logger.error('❌ 提交失败:', error)
       hasSubmitted.value = false
       localStorage.removeItem(submissionKey)
 
@@ -78,17 +78,15 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   const handleAutoSubmit = () => {
     // 🔥 观战者不需要自动提交
     if (playerStore.isSpectator) {
-      console.log('⚠️ 观战者不自动提交')
       return
     }
 
     if (hasSubmitted.value) {
-      console.log('⚠️ 已提交，跳过自动提交')
       return
     }
 
     if (!question.value || !question.value.id) {
-      console.error('❌ 题目不存在，无法自动提交')
+      logger.error('❌ 题目不存在，无法自动提交')
       return
     }
 
@@ -103,7 +101,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
 
     const submissionKey = getSubmissionKey()
     localStorage.setItem(submissionKey, 'true')
-    console.log('💾 自动提交前保存状态:', submissionKey)
 
     try {
       sendSubmit({
@@ -120,7 +117,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         life: 3000
       })
     } catch (error) {
-      console.error('❌ 自动提交失败:', error)
+      logger.error('❌ 自动提交失败:', error)
       hasSubmitted.value = false
       localStorage.removeItem(submissionKey)
     }
@@ -135,7 +132,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     const savedSubmission = localStorage.getItem(submissionKey)
     if (savedSubmission === 'true') {
       hasSubmitted.value = true
-      console.log('✅ 恢复提交状态: 已提交')
     }
   }
 

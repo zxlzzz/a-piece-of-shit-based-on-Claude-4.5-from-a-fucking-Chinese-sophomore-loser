@@ -1,11 +1,13 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
+import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
 
 const router = useRouter()
 const toast = useToast()
@@ -16,6 +18,38 @@ const loading = ref(false)
 const activeRooms = ref([])
 const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
+const searchQuery = ref('') // 🔥 房间搜索关键词
+
+// 自动刷新
+const REFRESH_INTERVAL = 5000 // 5秒刷新一次
+let refreshTimer = null
+
+// 🔥 过滤后的房间列表（支持前缀匹配）
+const filteredRooms = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return activeRooms.value
+  }
+  const query = searchQuery.value.trim().toUpperCase()
+  return activeRooms.value.filter(room =>
+    room.roomCode.toUpperCase().startsWith(query)
+  )
+})
+
+// 启动自动刷新
+const startAutoRefresh = () => {
+  if (refreshTimer) return
+  refreshTimer = setInterval(() => {
+    loadActiveRooms()
+  }, REFRESH_INTERVAL)
+}
+
+// 停止自动刷新
+const stopAutoRefresh = () => {
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
 
 // 初始化
 onMounted(async () => {
@@ -32,7 +66,8 @@ onMounted(async () => {
   }
 
   await loadActiveRooms()
-  
+  startAutoRefresh() // 启动自动刷新
+
   // 🔥 改进：尝试恢复房间，失败则自动清理
   const savedRoom = playerStore.loadRoom()
   if (savedRoom) {
@@ -43,16 +78,20 @@ onMounted(async () => {
     } catch (error) {
       // 🔥 静默处理404错误，不显示弹窗
       if (error.response?.status === 404) {
-        console.log('房间已失效，自动清除缓存')
       } else {
         // 其他错误才提示
-        console.error('获取房间状态失败:', error)
+        logger.error('获取房间状态失败:', error)
       }
       // 清理失效的房间数据
       playerStore.clearRoom()
       currentRoom.value = null
     }
   }
+})
+
+// 清理定时器
+onUnmounted(() => {
+  stopAutoRefresh()
 })
 
 const loadActiveRooms = async () => {
@@ -63,31 +102,33 @@ const loadActiveRooms = async () => {
       !currentRoom.value || r.roomCode !== currentRoom.value.roomCode
     )
   } catch (error) {
-    console.error(error)
-    toast.add({
-      severity: 'error',
-      summary: '加载失败',
-      detail: '获取房间列表失败',
-      life: 3000
-    })
+    logger.error('加载房间列表失败:', error)
+    // 🔥 网络错误才显示提示（用户可以重试）
+    if (!error.response || error.code === 'ECONNABORTED') {
+      toast.add({
+        severity: 'error',
+        summary: '网络错误',
+        detail: '加载房间列表失败，请检查网络后重试',
+        life: 4000
+      })
+    }
   } finally {
     refreshing.value = false
   }
 }
 
-const handleCreate = async ({ questionCount, maxPlayers }) => {
+const handleCreate = async ({ questionCount, maxPlayers, password, questionTagIds }) => {
   loading.value = true
   try {
-    const createResponse = await createRoom(maxPlayers, questionCount)
+    const createResponse = await createRoom(maxPlayers, questionCount, 30, password, questionTagIds)
     const roomData = createResponse.data
-    
-    console.log('房间创建成功:', roomData)
-    
+
     const joinResponse = await joinRoom(
       roomData.roomCode,
       playerStore.playerId,
       playerStore.playerName,
-      false  // 房主不能是观战者
+      false,  // 房主不能是观战者
+      password  // 房主加入时传入密码
     )
 
     currentRoom.value = joinResponse.data
@@ -104,7 +145,7 @@ const handleCreate = async ({ questionCount, maxPlayers }) => {
     router.push(`/wait/${roomData.roomCode}`)
     
   } catch (error) {
-    console.error("创建房间失败:", error)
+    logger.error("创建房间失败:", error)
     toast.add({
       severity: 'error',
       summary: '创建失败',
@@ -122,7 +163,18 @@ const handleEnterRoom = () => {
   }
 }
 
-const handleJoinRoom = async (roomCode, spectator = false) => {
+const handleJoinRoom = async (roomCode, hasPassword, spectator = false) => {
+  let password = null
+
+  // 如果房间有密码，提示输入
+  if (hasPassword) {
+    password = prompt('此房间需要密码，请输入密码：')
+    if (password === null) {
+      // 用户取消输入
+      return
+    }
+  }
+
   loading.value = true
   try {
     // 🔥 改用 playerStore
@@ -130,7 +182,8 @@ const handleJoinRoom = async (roomCode, spectator = false) => {
       roomCode,
       playerStore.playerId,
       playerStore.playerName,
-      spectator
+      spectator,
+      password
     )
     currentRoom.value = response.data
     // 🔥 统一用 playerStore 存储
@@ -148,7 +201,7 @@ const handleJoinRoom = async (roomCode, spectator = false) => {
 
     router.push(`/wait/${roomCode}`)
   } catch (error) {
-    console.error('加入房间失败:', error)
+    logger.error('加入房间失败:', error)
     toast.add({
       severity: 'error',
       summary: '加入失败',
@@ -247,7 +300,7 @@ const handleLogout = () => {
                       border border-gray-100 dark:border-gray-700 p-4 sm:p-6">
             
             <!-- 标题栏 -->
-            <div class="flex items-center justify-between mb-6">
+            <div class="flex items-center justify-between mb-4">
               <h2 class="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
                 <i class="pi pi-home text-blue-500"></i>
                 活跃房间
@@ -255,12 +308,12 @@ const handleLogout = () => {
                   ({{ activeRooms.length }})
                 </span>
               </h2>
-              
+
               <!-- 刷新按钮 -->
               <button
                 @click="loadActiveRooms"
                 :disabled="refreshing"
-                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                class="p-2 hover:bg-gray-100 dark:hover:bg-gray-700
                        rounded-lg transition-colors"
                 :class="{ 'animate-spin': refreshing }"
               >
@@ -268,11 +321,50 @@ const handleLogout = () => {
               </button>
             </div>
 
+            <!-- 🔥 搜索框 -->
+            <div class="mb-4">
+              <div class="relative">
+                <input
+                  v-model="searchQuery"
+                  type="text"
+                  placeholder="搜索房间码（支持前缀匹配，如输入 'AB' 可搜索到 'ABC123'）"
+                  class="w-full px-4 py-2.5 pl-10
+                         bg-gray-50 dark:bg-gray-700/50
+                         border border-gray-200 dark:border-gray-600
+                         rounded-lg
+                         text-gray-800 dark:text-white
+                         placeholder-gray-400 dark:placeholder-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                         transition-all"
+                />
+                <i class="pi pi-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                <button
+                  v-if="searchQuery"
+                  @click="searchQuery = ''"
+                  class="absolute right-3 top-1/2 -translate-y-1/2
+                         text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
+                         transition-colors"
+                >
+                  <i class="pi pi-times"></i>
+                </button>
+              </div>
+              <p v-if="searchQuery && filteredRooms.length === 0"
+                 class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                未找到匹配的房间
+              </p>
+            </div>
+
+            <!-- 骨架屏（首次加载） -->
+            <div v-if="refreshing && activeRooms.length === 0"
+                 class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <SkeletonRoomCard v-for="i in 4" :key="i" />
+            </div>
+
             <!-- 房间列表 -->
-            <div v-if="activeRooms.length > 0" 
+            <div v-else-if="filteredRooms.length > 0"
                  class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div
-                v-for="room in activeRooms"
+                v-for="room in filteredRooms"
                 :key="room.roomCode"
                 class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 sm:p-4
                        border border-gray-200 dark:border-gray-600
@@ -282,8 +374,9 @@ const handleLogout = () => {
                 <!-- 房间头部 -->
                 <div class="flex justify-between items-start mb-2 sm:mb-3">
                   <div>
-                    <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white">
+                    <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white flex items-center gap-2">
                       {{ room.roomCode }}
+                      <i v-if="room.hasPassword" class="pi pi-lock text-orange-500 text-sm" title="需要密码"></i>
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <i class="pi pi-users text-xs"></i>
@@ -328,7 +421,7 @@ const handleLogout = () => {
 
                 <!-- 加入按钮 -->
                 <button
-                  @click="handleJoinRoom(room.roomCode, spectatorModes[room.roomCode] || false)"
+                  @click="handleJoinRoom(room.roomCode, room.hasPassword, spectatorModes[room.roomCode] || false)"
                   :disabled="room.status !== 'WAITING' ||
                             room.currentPlayers >= room.maxPlayers ||
                             loading"

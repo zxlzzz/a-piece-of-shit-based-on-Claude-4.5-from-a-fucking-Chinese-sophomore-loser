@@ -4,9 +4,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.dto.QuestionDTO;
 import org.example.entity.*;
 import org.example.repository.*;
 import org.springframework.stereotype.Component;
@@ -20,7 +20,6 @@ import java.util.List;
 @Slf4j
 @RequiredArgsConstructor
 public class QuestionDataInitializer {
-
     private final QuestionRepository questionRepository;
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
@@ -43,8 +42,9 @@ public class QuestionDataInitializer {
                 throw new FileNotFoundException("questions.json not found in classpath");
             }
 
-            List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<List<QuestionDTO>>() {});
+            List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<>() {});
             log.info("从 questions.json 读取到 {} 道题目", dtos.size());
+            System.out.println(dtos);
 
             int successCount = 0;
             for (QuestionDTO dto : dtos) {
@@ -71,6 +71,7 @@ public class QuestionDataInitializer {
         QuestionEntity entity = QuestionEntity.builder()
                 .type(dto.getType())
                 .text(dto.getText())
+                .calculateRule(dto.getCalculateRule())
                 .strategyId(dto.getStrategyId())
                 .minPlayers(dto.getMinPlayers())
                 .maxPlayers(dto.getMaxPlayers())
@@ -155,33 +156,5 @@ public class QuestionDataInitializer {
         log.debug("QuestionMetadata 保存成功: questionId={}", entity.getId());
     }
 
-    // ========== 内部 DTO 类 ==========
-    @Data
-    private static class QuestionDTO {
-        private Long id;
-        private QuestionType type;           // ✅ 直接用枚举类型
-        private String text;
-        private String strategyId;
-        private Integer minPlayers;
-        private Integer maxPlayers;
-        private String defaultChoice;
 
-        // Choice 题专用
-        private List<QuestionOption> options;
-
-        // Bid 题专用
-        private Integer min;
-        private Integer max;
-        private Integer step;
-
-        // 元数据
-        private String sequenceGroupId;
-        private Integer sequenceOrder;
-        private Integer totalSequenceCount;
-        private Boolean isRepeatable;
-        private Integer repeatTimes;
-        private Integer repeatInterval;
-        private String repeatGroupId;
-        private String prerequisiteQuestionIds;
-    }
 }

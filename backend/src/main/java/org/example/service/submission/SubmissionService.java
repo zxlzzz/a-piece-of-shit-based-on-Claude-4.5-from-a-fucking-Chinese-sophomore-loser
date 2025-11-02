@@ -28,4 +28,9 @@ public interface SubmissionService {
      * @return true-全部提交，false-还有人未提交
      */
     boolean allSubmitted(GameRoom gameRoom);
+    /**
+     * 自动为Bot提交随机答案（测试房间专用）
+     * @param gameRoom 游戏房间
+     */
+    void autoSubmitBots(GameRoom gameRoom);
 }

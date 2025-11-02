@@ -30,6 +30,10 @@ public class GameEntity {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
 
+    // 是否为测试游戏（虚拟玩家）
+    @Column(nullable = false)
+    private Boolean isTest = false;
+
     // ✅ 一对多：游戏 -> 玩家参与记录
     @OneToMany(mappedBy = "game",
             cascade = CascadeType.ALL,

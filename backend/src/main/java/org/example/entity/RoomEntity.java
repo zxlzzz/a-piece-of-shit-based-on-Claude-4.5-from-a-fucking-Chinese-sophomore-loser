@@ -59,6 +59,19 @@ public class RoomEntity implements Serializable {
     private Integer questionCount;
 
     /**
+     * 每题时长限制（秒）
+     */
+    @Column
+    @Builder.Default
+    private Integer timeLimit = 30;
+
+    /**
+     * 房间密码（可选）
+     */
+    @Column(length = 50)
+    private String password;
+
+    /**
      * 房主玩家ID
      */
     @Column(length = 50)
@@ -98,6 +111,14 @@ public class RoomEntity implements Serializable {
      */
     @Column(columnDefinition = "TEXT")
     private String winConditionsJson;
+
+    /**
+     * 题目标签筛选（JSON 格式存储标签ID列表）
+     * 例如: [1,2,3]
+     * 用于选题时筛选指定标签的题目
+     */
+    @Column(columnDefinition = "TEXT")
+    private String questionTagIdsJson;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

@@ -59,10 +59,11 @@ server:
 # 日志配置
 logging:
   level:
-    root: INFO
-    org.example: INFO
-    org.hibernate: WARN
-    org.springframework: WARN
+    root: WARN                    # 只显示警告和错误
+    org.example: INFO              # 你自己的代码保留INFO级别
+    org.hibernate: ERROR           # Hibernate只显示错误
+    org.springframework: ERROR     # Spring只显示错误
+    org.springframework.web: WARN  # Web相关显示警告
   pattern:
     console: "%d{HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
 

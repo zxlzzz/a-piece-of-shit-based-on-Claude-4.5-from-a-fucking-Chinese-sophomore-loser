@@ -8,18 +8,16 @@ const api = axios.create({
 // ============ 请求拦截器（添加 token）============
 api.interceptors.request.use(
   (config) => {
-    console.log('🚀 API Request:', config.method?.toUpperCase(), config.url, config.params);
-    
-    // 🔥 自动添加 token 到请求头
+    // 自动添加 token 到请求头
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
+
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+
     return Promise.reject(error);
   }
 );
@@ -27,12 +25,9 @@ api.interceptors.request.use(
 // ============ 响应拦截器 ============
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ API Response:', response.config.url, response.data);
     return response;
   },
   (error) => {
-    console.error('❌ API Error:', error.response?.data || error.message);
-
     // 🔥 处理 401 未授权错误
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
@@ -69,21 +64,30 @@ function isIgnorableError(error) {
   const message = error.response?.data?.message || '';
   const url = error.config?.url || '';
 
-  // 房间不存在（404）- 静默处理
-  if (status === 404 && url.includes('/rooms/')) {
+  // 房间不存在（404/400）- 静默处理
+  if ((status === 404 || status === 400) && url.includes('/rooms/')) {
     return true;
   }
 
   // 房间已结束/不存在等业务错误 - 静默处理
   if (message.includes('房间不存在') ||
       message.includes('房间已结束') ||
-      message.includes('房间已过期')) {
+      message.includes('房间已过期') ||
+      message.includes('房间已满') ||
+      message.includes('游戏已开始')) {
     return true;
   }
 
   // 重复提交等正常业务逻辑 - 静默处理
   if (message.includes('已经提交') ||
-      message.includes('已提交')) {
+      message.includes('已提交') ||
+      message.includes('已准备') ||
+      message.includes('未准备')) {
+    return true;
+  }
+
+  // 🔥 自动恢复操作失败 - 静默处理（GET请求且是查询房间状态）
+  if (error.config?.method === 'get' && url.includes('/rooms/') && status === 404) {
     return true;
   }
 
@@ -98,16 +102,22 @@ export const register = (username, password, name) =>
 export const login = (username, password) =>
   api.post('/auth/login', { username, password });
 
+export const guestLogin = (name) =>
+  api.post('/auth/guest', { name });
+
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers, questionCount) =>
-  api.post('/rooms', null, {
-    params: {maxPlayers, questionCount}
-  });
+export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null) => {
+  const params = { maxPlayers, questionCount, timeLimit, password };
+  if (questionTagIds && questionTagIds.length > 0) {
+    params.questionTagIds = questionTagIds;
+  }
+  return api.post('/rooms', null, { params });
+};
 
-export const joinRoom = (roomCode, playerId, playerName, spectator = false) =>
+export const joinRoom = (roomCode, playerId, playerName, spectator = false, password = null) =>
   api.post(`/rooms/${roomCode}/join`, null, {
-    params: { playerId, playerName, spectator }
+    params: { playerId, playerName, spectator, password }
   });
 
 export const startGame = (roomCode) =>
@@ -123,8 +133,8 @@ export const setPlayerReady = (roomCode, playerId, ready) =>
     params: { ready }
   });
 
-export const getRoomStatus = (roomCode) =>
-  api.get(`/rooms/${roomCode}`);
+export const getRoomStatus = (roomCode, silentError = false) =>
+  api.get(`/rooms/${roomCode}`, { silentError });
 
 export const getGameResults = (roomCode) =>
   api.get(`/rooms/${roomCode}/results`);
@@ -138,11 +148,8 @@ export const getAllActiveRooms = () =>
 export const updateRoomSettings = (roomCode, settings) =>
   api.put(`/rooms/${roomCode}/settings`, settings);
 
-// ============ 玩家相关API ============
-
-// ❌ 删除 createPlayer（已被 register 取代）
-// export const createPlayer = (playerId, name) =>
-//   api.post(`/players`, null, { params: { playerId, name } });
+export const loadTags = () =>
+  api.get(`/tags`);
 
 export const listPlayers = () =>
   api.get(`/players`);
@@ -157,6 +164,12 @@ export const updatePlayerReady = (playerId, ready) =>
 
 export const deletePlayer = (playerId) =>
   api.delete(`/players/${playerId}`);
+
+export const kickPlayer = (roomCode, ownerId, targetPlayerId) =>
+  api.post(`/rooms/${roomCode}/kick`, null, {
+    params: { ownerId, targetPlayerId }
+  });
+
 
 // ============ 题目相关API ============
 

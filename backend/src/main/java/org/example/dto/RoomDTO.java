@@ -19,12 +19,14 @@ public class RoomDTO {
     private int maxPlayers;
     private int currentPlayers;
     private RoomStatus status;
+    private Boolean finished;            // 游戏是否结束
     private List<PlayerDTO> players;
     private LocalDateTime questionStartTime;
     private Integer timeLimit;
     private Integer currentIndex;
     private QuestionDTO currentQuestion;
     private Integer questionCount;
+    private Boolean hasPassword;         // 是否有密码保护
 
     private String rankingMode;          // 排名模式
     private Integer targetScore;         // 目标分数

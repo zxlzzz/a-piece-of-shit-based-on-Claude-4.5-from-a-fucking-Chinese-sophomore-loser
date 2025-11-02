@@ -39,8 +39,24 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom) {
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password,GameRoom gameRoom) {
+        return initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit,password, null);
+    }
+
+    @Transactional
+    @Override
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, java.util.List<Long> questionTagIds) {
         String roomCode = generateRoomCode();
+
+        // 🔥 序列化标签IDs
+        String questionTagIdsJson = null;
+        if (questionTagIds != null && !questionTagIds.isEmpty()) {
+            try {
+                questionTagIdsJson = objectMapper.writeValueAsString(questionTagIds);
+            } catch (Exception e) {
+                log.error("序列化questionTagIds失败", e);
+            }
+        }
 
         // 🔥 创建房间实体（只有基础字段）
         RoomEntity roomEntity = RoomEntity.builder()
@@ -48,10 +64,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .status(RoomStatus.WAITING)
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
+                .timeLimit(timeLimit != null ? timeLimit : 30)
+                .password(password != null && !password.trim().isEmpty() ? password : null)
                 // 🔥 高级规则使用默认值
                 .rankingMode("standard")
                 .targetScore(null)
                 .winConditionsJson(null)
+                .questionTagIdsJson(questionTagIdsJson)
                 .build();
 
         RoomEntity savedRoom = roomRepository.save(roomEntity);
@@ -69,26 +88,33 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         gameRoom.setDisconnectedPlayers(new ConcurrentHashMap<>());
         gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
 
-        log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}", roomCode, maxPlayers, questionCount);
+        log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}, 标签筛选: {}", roomCode, maxPlayers, questionCount, questionTagIds);
         return savedRoom;
     }
 
     @Override
     @Transactional
-    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator) {
+    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (getInternedRoomCode(roomCode)) {
+            // 检查房间密码（观战者不需要密码）
+            if (!spectator && room.getPassword() != null && !room.getPassword().isEmpty()) {
+                if (!room.getPassword().equals(password)) {
+                    throw new BusinessException("房间密码错误");
+                }
+            }
+
             // 检查房间状态
             if (room.getStatus() != RoomStatus.WAITING) {
                 throw new BusinessException("房间已开始游戏或已结束");
             }
 
             // 🔥 检查房间是否已满（观战者不计入人数）
-            if (spectator == null || !spectator) {  // 非观战者才检查容量
+            if (!spectator) {  // 非观战者才检查容量
                 long nonSpectatorCount = gameRoom.getPlayers().stream()
                         .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                         .count();
@@ -120,10 +146,21 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         .ready(false)
                         .spectator(spectator != null && spectator)  // 设置观战模式
                         .build();
-                gameRoom.getPlayers().add(playerDTO);
+
+                // 🔥 测试房间：真实玩家插入到第一位（成为房主）
+                if (gameRoom.isTestRoom()) {
+                    gameRoom.getPlayers().add(0, playerDTO);
+                    log.info("🔧 测试房间：真实玩家 {} 插入到第一位（房主）", playerName);
+                } else {
+                    gameRoom.getPlayers().add(playerDTO);
+                }
+
                 gameRoom.getScores().put(playerId, 0);
 
                 log.info("✅ 玩家 {} ({}) 加入房间 {} (观战模式: {})", playerName, playerId, roomCode, spectator);
+                log.info("🔧 当前房间玩家列表: {}, ready状态: {}",
+                    gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList(),
+                    gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
 
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);
@@ -265,6 +302,12 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 log.info("📝 房间 {} 题目数量更新为: {}", roomCode, request.getQuestionCount());
             }
 
+            // 更新每题时长（可选）
+            if (request.getTimeLimit() != null && request.getTimeLimit() >= 20 && request.getTimeLimit() <= 120) {
+                room.setTimeLimit(request.getTimeLimit());
+                log.info("⏱️ 房间 {} 每题时长更新为: {}秒", roomCode, request.getTimeLimit());
+            }
+
             // 更新排名模式
             if (request.getRankingMode() != null) {
                 room.setRankingMode(request.getRankingMode());
@@ -297,6 +340,25 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     @Override
     @Transactional
     public void setPlayerReady(String roomCode, String playerId, boolean ready) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            throw new BusinessException("房间不存在");
+        }
+
+        // 🔥 测试房间中的Bot玩家：只更新内存，不操作数据库
+        if (playerId.startsWith("BOT_")) {
+            gameRoom.getPlayers().stream()
+                    .filter(p -> p.getPlayerId().equals(playerId))
+                    .findFirst()
+                    .ifPresent(p -> p.setReady(ready));
+
+            // 同步到 Redis
+            roomCache.syncToRedis(roomCode);
+            log.info("✅ Bot玩家 {} 设置准备状态: {}", playerId, ready);
+            return;
+        }
+
+        // 🔥 真实玩家：更新数据库 + 内存
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
@@ -307,18 +369,27 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         player.setReady(ready);
         playerRepository.save(player);
 
-        GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom != null) {
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(p -> p.setReady(ready));
+        gameRoom.getPlayers().stream()
+                .filter(p -> p.getPlayerId().equals(playerId))
+                .findFirst()
+                .ifPresent(p -> p.setReady(ready));
 
-            // 🔥 同步到 Redis
-            roomCache.syncToRedis(roomCode);
-        }
+        // 🔥 同步到 Redis
+        roomCache.syncToRedis(roomCode);
 
         log.info("✅ 玩家 {} 设置准备状态: {}", playerId, ready);
+        log.info("🔧 当前房间所有玩家ready状态: {}",
+            gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
+
+        // 🔥 检查是否所有玩家都准备好了
+        long totalPlayers = gameRoom.getPlayers().stream()
+            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+            .count();
+        long readyPlayers = gameRoom.getPlayers().stream()
+            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+            .filter(PlayerDTO::getReady)
+            .count();
+        log.info("🔧 准备情况: {}/{} 玩家已准备", readyPlayers, totalPlayers);
     }
 
     @Override
@@ -350,13 +421,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
             log.info("⚠️ 玩家 {} ({}) 从房间 {} 断开连接", playerName, playerId, roomCode);
 
-            // 🔥 如果游戏进行中且所有玩家都断线，自动推进
+            // 🔥 如果游戏进行中且所有非观战玩家都断线，自动推进
             if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
                 boolean allDisconnected = gameRoom.getPlayers().stream()
+                        .filter(p -> !Boolean.TRUE.equals(p.getSpectator())) // 排除观战者
                         .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
 
                 if (allDisconnected) {
-                    log.warn("❌ 房间 {} 所有玩家都断开连接", roomCode);
+                    log.warn("❌ 房间 {} 所有非观战玩家都断开连接", roomCode);
                     // 注意：不在这里调用 advanceQuestion，由 GameFlowService 处理
                 }
             }
@@ -467,6 +539,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         (roomEntity != null ? roomEntity.getMaxPlayers() : gameRoom.getPlayers().size()))
                 .currentPlayers(currentNonSpectators)  // 🔥 只计算非观战者
                 .status(status)
+                .finished(gameRoom.isFinished())  // 🔥 添加 finished 字段
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())
                 .timeLimit(gameRoom.getTimeLimit())

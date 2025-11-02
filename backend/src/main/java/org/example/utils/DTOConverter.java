@@ -43,6 +43,7 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
+                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())
@@ -63,6 +64,7 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
+                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())
@@ -106,9 +108,15 @@ public class DTOConverter {
             return null;
         }
 
+        // 处理已删除账号的显示名称
+        String displayName = entity.getName();
+        if (entity.getDeleted() != null && entity.getDeleted()) {
+            displayName = entity.getName() + " [已删除]";
+        }
+
         return PlayerDTO.builder()
                 .playerId(entity.getPlayerId())
-                .name(entity.getName())
+                .name(displayName)
                 .score(0)
                 .ready(entity.getReady())
                 .build();

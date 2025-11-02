@@ -31,7 +31,8 @@
     "repeatGroupId": null,
     "defaultChoice": "C",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 2,
@@ -52,7 +53,8 @@
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 3,
@@ -73,7 +75,8 @@
     "repeatGroupId": null,
     "defaultChoice": "2",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 4,
@@ -94,7 +97,8 @@
     "repeatGroupId": null,
     "defaultChoice": "3",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 5,
@@ -128,7 +132,8 @@
     "repeatGroupId": null,
     "defaultChoice": "C",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 6,
@@ -162,7 +167,8 @@
     "repeatGroupId": null,
     "defaultChoice": "C",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 7,
@@ -183,7 +189,8 @@
     "repeatGroupId": null,
     "defaultChoice": "5",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 8,
@@ -204,7 +211,8 @@
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 9,
@@ -225,7 +233,8 @@
     "repeatGroupId": null,
     "defaultChoice": "5",
     "minPlayers": 2,
-    "maxPlayers": 2
+    "maxPlayers": 2,
+    "calculateRule": null
   },
   {
     "id": 10,
@@ -246,7 +255,8 @@
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 3,
-    "maxPlayers": 4
+    "maxPlayers": 4,
+    "calculateRule": null
   },
   {
     "id": 11,
@@ -267,7 +277,8 @@
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 3,
-    "maxPlayers": 3
+    "maxPlayers": 3,
+    "calculateRule": null
   },
   {
     "id": 12,
@@ -288,7 +299,8 @@
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 3,
-    "maxPlayers": 3
+    "maxPlayers": 3,
+    "calculateRule": null
   },
   {
     "id": 13,
@@ -322,6 +334,7 @@
     "repeatGroupId": null,
     "defaultChoice": null,
     "minPlayers": 4,
-    "maxPlayers": 4
+    "maxPlayers": 4,
+    "calculateRule": null
   }
 ]

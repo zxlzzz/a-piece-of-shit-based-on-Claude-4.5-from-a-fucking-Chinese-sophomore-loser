@@ -1,6 +1,7 @@
 {
-    "name": "sakai-vue",
-    "version": "4.3.0",
+    "name": "boilune",
+    "version": "1.0.0",
+    "description": "博弈论多人实时答题游戏平台 - 前端",
     "type": "module",
     "scripts": {
         "dev": "vite",

@@ -1,10 +1,13 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { getHistoryDetail, getHistoryList } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import Dialog from 'primevue/dialog'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ResultContent from '@/components/result/ResultContent.vue'
+import SkeletonHistoryCard from '@/components/common/SkeletonHistoryCard.vue'
+import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
@@ -42,7 +45,7 @@ const loadHistory = async () => {
     const response = await getHistoryList(playerStore.playerId)
     games.value = response.data
   } catch (error) {
-    console.error('加载历史记录失败:', error)
+    logger.error('加载历史记录失败:', error)
   } finally {
     loading.value = false
   }
@@ -57,7 +60,7 @@ const viewDetail = async (gameId) => {
     const response = await getHistoryDetail(gameId)
     selectedGame.value = response.data
   } catch (error) {
-    console.error('加载游戏详情失败:', error)
+    logger.error('加载游戏详情失败:', error)
   } finally {
     detailLoading.value = false
   }
@@ -109,7 +112,7 @@ const formatDate = (dateStr) => {
       minute: '2-digit'
     })
   } catch (error) {
-    console.error('日期格式化失败:', dateStr, error)
+    logger.error('日期格式化失败:', dateStr, error)
     return dateStr
   }
 }
@@ -172,9 +175,8 @@ onMounted(() => {
       </div>
 
       <!-- 加载状态 -->
-      <div v-if="loading" class="text-center py-12">
-        <i class="pi pi-spin pi-spinner text-4xl text-gray-400 mb-3"></i>
-        <p class="text-gray-500 dark:text-gray-400">加载中</p>
+      <div v-if="loading" class="space-y-2 sm:space-y-3">
+        <SkeletonHistoryCard v-for="i in 5" :key="i" />
       </div>
 
       <!-- 历史记录列表 -->
@@ -247,10 +249,7 @@ onMounted(() => {
         </div>
       </template>
 
-      <div v-if="detailLoading" class="text-center py-8 sm:py-12">
-        <i class="pi pi-spin pi-spinner text-2xl sm:text-3xl text-gray-400 mb-3"></i>
-        <p class="text-xs sm:text-sm text-gray-500 dark:text-gray-400">加载中...</p>
-      </div>
+      <SkeletonResult v-if="detailLoading" />
 
       <ResultContent 
         v-else-if="selectedGame" 

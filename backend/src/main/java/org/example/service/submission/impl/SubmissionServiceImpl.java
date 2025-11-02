@@ -4,12 +4,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerDTO;
 import org.example.dto.QuestionDTO;
-import org.example.entity.GameEntity;
-import org.example.entity.PlayerEntity;
-import org.example.entity.QuestionEntity;
-import org.example.entity.SubmissionEntity;
+import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
+import org.example.entity.QuestionType;
 import org.example.repository.GameRepository;
 import org.example.repository.PlayerRepository;
 import org.example.repository.QuestionRepository;
@@ -17,10 +15,9 @@ import org.example.repository.SubmissionRepository;
 import org.example.service.cache.RoomCache;
 import org.example.service.submission.SubmissionService;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -58,26 +55,31 @@ public class SubmissionServiceImpl implements SubmissionService {
             throw new BusinessException("观战者不能提交答案");
         }
 
-        // 🔥 根据 DTO 的 ID 查询 Entity
-        QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
-                .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
+        // 🔥 Bot 玩家：只更新内存，不保存到数据库
+        boolean isBot = playerId.startsWith("BOT_");
 
-        PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+        if (!isBot) {
+            // 🔥 真实玩家：保存到数据库
+            QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
+                    .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
 
-        GameEntity game = gameRepository.findById(gameRoom.getGameId())
-                .orElseThrow(() -> new BusinessException("游戏不存在"));
+            PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                    .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
-        SubmissionEntity submission = SubmissionEntity.builder()
-                .player(player)
-                .question(questionEntity)  // ✅ 使用 Entity
-                .game(game)
-                .choice(choice)
-                .build();
+            GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                    .orElseThrow(() -> new BusinessException("游戏不存在"));
 
-        submissionRepository.save(submission);
+            SubmissionEntity submission = SubmissionEntity.builder()
+                    .player(player)
+                    .question(questionEntity)
+                    .game(game)
+                    .choice(choice)
+                    .build();
 
-        // 更新内存状态
+            submissionRepository.save(submission);
+        }
+
+        // 更新内存状态（Bot 和真实玩家都需要）
         gameRoom.getSubmissions()
                 .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
                 .put(playerId, choice);
@@ -93,7 +95,7 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
-        log.info("💾 玩家 {} 提交答案: {}", playerId, choice);
+        log.info("💾 玩家 {} 提交答案: {} {}", playerId, choice, isBot ? "(Bot)" : "");
     }
 
     @Override
@@ -115,7 +117,7 @@ public class SubmissionServiceImpl implements SubmissionService {
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
 
-        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者
+        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者和Bot
         for (PlayerDTO player : gameRoom.getPlayers()) {
             // 🔥 跳过观战者
             if (Boolean.TRUE.equals(player.getSpectator())) {
@@ -123,6 +125,11 @@ public class SubmissionServiceImpl implements SubmissionService {
             }
 
             String playerId = player.getPlayerId();
+
+            // 🔥 跳过 Bot 玩家（Bot 应该已经提交了）
+            if (playerId.startsWith("BOT_")) {
+                continue;
+            }
 
             // 🔥 检查是否已提交
             if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(playerId)) {
@@ -180,4 +187,60 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
     }
+
+    @Override
+    /*
+      自动为Bot提交随机答案
+     */
+    public void autoSubmitBots(GameRoom gameRoom) {
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
+        if (currentQuestion == null) {
+            return;
+        }
+
+        Random random = new Random();
+        int currentIndex = gameRoom.getCurrentIndex();
+        Map<String, String> currentSubmissions = gameRoom.getSubmissions()
+                .computeIfAbsent(currentIndex, k -> new HashMap<>());
+
+        // 为所有Bot提交答案
+        gameRoom.getPlayers().stream()
+                .filter(player -> player.getPlayerId().startsWith("BOT_"))
+                .forEach(bot -> {
+                    // 如果Bot还没提交，生成随机答案
+                    if (!currentSubmissions.containsKey(bot.getPlayerId())) {
+                        String botAnswer;
+
+                        if (currentQuestion.getType() == QuestionType.CHOICE) {
+                            // CHOICE题：随机选择一个选项
+                            List<String> options = Optional.ofNullable(currentQuestion.getOptions())
+                                    .orElse(Collections.emptyList())
+                                    .stream()
+                                    .map(QuestionOption::getKey)
+                                    .toList();
+                            if (options != null && !options.isEmpty()) {
+                                botAnswer = options.get(random.nextInt(options.size()));
+                            } else {
+                                botAnswer = "A";  // 默认选项
+                            }
+                        } else if (currentQuestion.getType() == QuestionType.BID) {
+                            // BID题：在范围内随机数
+                            Integer min = currentQuestion.getMin();
+                            Integer max = currentQuestion.getMax();
+                            if (min != null && max != null) {
+                                botAnswer = String.valueOf(random.nextInt(max - min + 1) + min);
+                            } else {
+                                botAnswer = "5";  // 默认值
+                            }
+                        } else {
+                            botAnswer = "A";  // 未知题型默认
+                        }
+
+                        // 提交Bot答案
+                        submitAnswer(gameRoom.getRoomCode(), bot.getPlayerId(), botAnswer);
+                        log.info("Bot {} 自动提交答案: {}", bot.getName(), botAnswer);
+                    }
+                });
+    }
+
 }

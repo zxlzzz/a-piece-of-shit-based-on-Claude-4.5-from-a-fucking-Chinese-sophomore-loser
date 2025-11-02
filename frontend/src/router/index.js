@@ -1,4 +1,4 @@
-import AppLayout from '@/layout/AppLayout.vue'
+import { logger } from '@/utils/logger'
 import { usePlayerStore } from '@/stores/player'
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -7,7 +7,7 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      component: AppLayout,
+      component: () => import('@/layout/AppLayout.vue'),
       children: [
         {
           path: '/',
@@ -66,6 +66,11 @@ const router = createRouter({
       path: '/admin/questions',
       name: 'admin-questions',
       component: () => import('@/views/admin/AdminQuestions.vue')
+    },
+    {
+      path: '/admin/test',
+      name: 'admin-test',
+      component: () => import('@/views/admin/AdminTest.vue')
     }
   ]
 })
@@ -73,7 +78,6 @@ const router = createRouter({
 router.beforeEach(async (to, from, next) => {
   const playerStore = usePlayerStore()
 
-  console.log('🛣️ 路由守卫:', from.name, '→', to.name, '登录状态:', playerStore.isLoggedIn)
 
   // 🔥 离开房间页面时断开 WebSocket
   const roomPages = ['wait', 'game', 'result']
@@ -81,20 +85,18 @@ router.beforeEach(async (to, from, next) => {
   const toRoom = roomPages.includes(to.name)
 
   if (fromRoom && !toRoom) {
-    console.log('🔌 离开房间区域，断开WebSocket')
     try {
       const { disconnect, isConnected } = await import('@/websocket/ws')
       if (isConnected()) {
         disconnect()
       }
     } catch (error) {
-      console.error('断开WebSocket失败:', error)
+      logger.error('断开WebSocket失败:', error)
     }
   }
 
   // 1. 检查是否需要登录
   if (to.meta.requiresAuth && !playerStore.isLoggedIn) {
-    console.warn('❌ 未登录，跳转到登录页')
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }
@@ -104,29 +106,31 @@ router.beforeEach(async (to, from, next) => {
     const roomId = to.params.roomId
     const currentRoom = playerStore.currentRoom
 
-    console.log('🏠 检查房间权限:', { roomId, currentRoom: currentRoom?.roomCode })
 
     // 🔥 改进：先尝试从 store 获取，如果没有再从 localStorage 加载
     if (!currentRoom) {
-      console.log('📦 从 localStorage 加载房间信息')
       const loaded = playerStore.loadRoom()
 
       if (!loaded) {
-        console.warn('⚠️ 没有本地房间信息，尝试从服务器获取')
 
         // 🔥 新增：尝试从服务器获取房间状态（静默失败）
         try {
           const { getRoomStatus } = await import('@/api')
-          const response = await getRoomStatus(roomId)
+          const response = await getRoomStatus(roomId, true)  // 🔥 silentError=true
 
           if (response.data) {
-            console.log('✅ 从服务器恢复房间信息:', roomId)
             playerStore.setRoom(response.data)
+
+            // 🔥 检查result页面：只有finished的游戏才能访问
+            if (to.name === 'result' && !response.data.finished) {
+              next({ name: response.data.started ? 'game' : 'wait', params: { roomId }, replace: true })
+              return
+            }
+
             next()
             return
           }
         } catch (error) {
-          console.log('⚠️ 房间不存在或已结束，跳转到查找房间页:', roomId)
           // 🔥 静默处理，清理本地数据，跳转到查找房间页
           playerStore.clearRoom()
           next({ name: 'find', replace: true })
@@ -135,24 +139,31 @@ router.beforeEach(async (to, from, next) => {
       }
 
       if (loaded && loaded.roomCode !== roomId) {
-        console.warn('⚠️ 房间码不匹配，清理本地数据')
         playerStore.clearRoom()
         next({ name: 'find', replace: true })
         return
       }
 
       if (loaded) {
-        console.log('✅ 房间信息加载成功:', loaded.roomCode)
+        // 🔥 检查result页面：只有finished的游戏才能访问
+        if (to.name === 'result' && !loaded.finished) {
+          next({ name: loaded.started ? 'game' : 'wait', params: { roomId }, replace: true })
+          return
+        }
       }
     } else if (currentRoom.roomCode !== roomId) {
-      console.warn('⚠️ 当前房间与目标房间不匹配')
       playerStore.clearRoom()
       next({ name: 'find', replace: true })
       return
+    } else {
+      // 🔥 检查result页面：只有finished的游戏才能访问
+      if (to.name === 'result' && !currentRoom.finished) {
+        next({ name: currentRoom.started ? 'game' : 'wait', params: { roomId }, replace: true })
+        return
+      }
     }
   }
 
-  console.log('✅ 路由守卫通过')
   next()
 })
 

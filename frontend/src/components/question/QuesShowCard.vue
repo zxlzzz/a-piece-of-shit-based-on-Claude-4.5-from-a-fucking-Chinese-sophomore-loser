@@ -21,9 +21,36 @@
       <h3 class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">
         题目内容
       </h3>
-      <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed mb-4 sm:mb-6">
+      <p class="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed mb-3 sm:mb-4">
         {{ text }}
       </p>
+
+      <!-- 🔥 计分规则（如果有） -->
+      <div v-if="calculateRule" class="mb-3 sm:mb-4">
+        <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
+                    rounded-lg p-3 sm:p-4 border-l-4 border-purple-500">
+          <div class="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+            <i class="pi pi-calculator text-purple-600 dark:text-purple-400 text-xs sm:text-sm"></i>
+            <span class="font-semibold text-purple-700 dark:text-purple-300 text-xs sm:text-sm">计分规则</span>
+          </div>
+          <div class="text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-relaxed whitespace-pre-line">
+            {{ calculateRule }}
+          </div>
+        </div>
+      </div>
+
+      <!-- 🔥 标签显示 -->
+      <div v-if="tags && tags.length > 0" class="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
+        <span
+          v-for="tag in tags"
+          :key="tag.id"
+          :style="{ backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+          class="inline-flex items-center px-2 sm:px-2.5 py-0.5 sm:py-1
+                 rounded-full text-xs font-medium border"
+        >
+          {{ tag.name }}
+        </span>
+      </div>
 
       <!-- 🔥 选择题：显示选项 -->
       <div v-if="type === 'CHOICE' && Array.isArray(choice) && choice.length > 0">
@@ -91,21 +118,13 @@
         暂无选项
       </div>
     </div>
-
-    <!-- 底部装饰线（hover 效果） -->
-    <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-100 dark:border-gray-700
-                opacity-0 group-hover:opacity-100 transition-opacity">
-      <span class="text-xs text-gray-400 dark:text-gray-500">
-        <span class="hidden sm:inline">点击查看详情</span>
-        <span class="sm:hidden">查看详情</span>
-      </span>
-    </div>
   </div>
 </template>
 
 <script setup>
 defineProps({
   text: String,
+  calculateRule: String,  // 🔥 计分规则（可选）
   type: {
     type: String,
     default: 'choice' // choice 或 bid
@@ -117,6 +136,10 @@ defineProps({
   people: [Number, String],
   min: Number,
   max: Number,
-  step: Number
+  step: Number,
+  tags: {
+    type: Array,
+    default: () => []
+  }
 })
 </script>

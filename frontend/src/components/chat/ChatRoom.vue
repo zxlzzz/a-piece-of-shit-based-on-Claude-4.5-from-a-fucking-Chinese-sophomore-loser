@@ -1,4 +1,5 @@
 <script setup>
+import { logger } from '@/utils/logger'
 import { getStompClient, isConnected, sendMessage } from '@/websocket/ws'
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 // 注意：不再直接导入 SockJS，通过 ws.js 使用
@@ -41,7 +42,6 @@ const messageTypeClass = computed(() => ({
 const subscribeChatChannel = async () => {
   // 🔥 检查并等待连接
   if (!isConnected()) {
-    console.warn('⚠️ ChatRoom: WebSocket 未连接，等待连接...')
     
     // 等待最多 3 秒
     let waited = 0
@@ -51,7 +51,7 @@ const subscribeChatChannel = async () => {
     }
     
     if (!isConnected()) {
-      console.error('❌ ChatRoom: 等待超时，WebSocket 仍未连接')
+      logger.error('❌ ChatRoom: 等待超时，WebSocket 仍未连接')
       return
     }
   }
@@ -64,11 +64,10 @@ const subscribeChatChannel = async () => {
       const chatMessage = JSON.parse(message.body)
       addMessage(chatMessage)
     } catch (error) {
-      console.error('解析聊天消息失败:', error)
+      logger.error('解析聊天消息失败:', error)
     }
   })
 
-  console.log('✅ 已订阅聊天频道:', props.roomCode)
 
   // 发送加入消息
   sendJoinMessage()
@@ -136,7 +135,6 @@ const unsubscribe = () => {
   if (chatSubscription) {
     chatSubscription.unsubscribe()
     chatSubscription = null
-    console.log('已取消聊天订阅')
   }
 }
 

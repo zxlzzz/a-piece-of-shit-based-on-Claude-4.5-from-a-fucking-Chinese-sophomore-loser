@@ -1,5 +1,6 @@
 <script setup>
-import { login, register } from '@/api'
+import { login, register, guestLogin } from '@/api'
+import { logger } from '@/utils/logger'
 import { usePlayerStore } from '@/stores/player'
 import { validateUsername, validatePassword, validatePlayerName } from '@/utils/player'
 import { useToast } from 'primevue/usetoast'
@@ -35,7 +36,7 @@ const handleSubmit = async () => {
     })
     return
   }
-  
+
   // 验证密码
   const passwordValidation = validatePassword(password.value)
   if (!passwordValidation.valid) {
@@ -47,7 +48,7 @@ const handleSubmit = async () => {
     })
     return
   }
-  
+
   // 如果是注册，验证昵称
   if (!isLogin.value) {
     const nameValidation = validatePlayerName(name.value)
@@ -61,11 +62,11 @@ const handleSubmit = async () => {
       return
     }
   }
-  
+
   loading.value = true
   try {
     let resp
-    
+
     if (isLogin.value) {
       // 登录
       resp = await login(username.value.trim().toLowerCase(), password.value)
@@ -77,32 +78,31 @@ const handleSubmit = async () => {
         name.value.trim()
       )
     }
-    
+
     const authData = resp.data
-    console.log('🔍 认证成功:', authData)
-    
+
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
-    
+
     toast.add({
       severity: 'success',
       summary: isLogin.value ? '登录成功' : '注册成功',
       detail: `欢迎，${authData.name}!`,
       life: 2000
     })
-    
+
     // 跳转到主页
     setTimeout(() => {
       router.push('/find')
     }, 500)
-    
+
   } catch (err) {
-    console.error('操作失败:', err)
-    
-    const errorMsg = err.response?.data?.message || 
-                     err.response?.data || 
+    logger.error('操作失败:', err)
+
+    const errorMsg = err.response?.data?.message ||
+                     err.response?.data ||
                      (isLogin.value ? '登录失败' : '注册失败')
-    
+
     toast.add({
       severity: 'error',
       summary: '操作失败',
@@ -128,6 +128,48 @@ const canSubmit = computed(() => {
     return username.value.trim() && password.value.trim() && name.value.trim()
   }
 })
+
+// 游客快速试玩
+const handleGuestLogin = async () => {
+  loading.value = true
+  try {
+    // 生成随机游客昵称
+    const randomId = Math.floor(Math.random() * 1000000)
+    const guestName = `游客${randomId}`
+
+    const resp = await guestLogin(guestName)
+    const authData = resp.data
+
+    console.log('🎮 游客登录成功:', authData)
+
+    // 保存用户信息到 store
+    playerStore.setPlayer(authData)
+
+    toast.add({
+      severity: 'success',
+      summary: '欢迎试玩',
+      detail: `欢迎，${authData.name}!`,
+      life: 2000
+    })
+
+    // 跳转到主页
+    setTimeout(() => {
+      router.push('/find')
+    }, 500)
+
+  } catch (err) {
+    console.error('游客登录失败:', err)
+
+    toast.add({
+      severity: 'error',
+      summary: '登录失败',
+      detail: err.response?.data?.message || '游客登录失败，请重试',
+      life: 3000
+    })
+  } finally {
+    loading.value = false
+  }
+}
 </script>
 
 <template>
@@ -145,14 +187,14 @@ const canSubmit = computed(() => {
 
       <!-- 主卡片 -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
-        
+
         <!-- 切换按钮 -->
         <div class="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
           <button
             @click="switchMode"
             class="flex-1 py-2 rounded-md font-medium transition-all"
-            :class="isLogin 
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+            :class="isLogin
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
           >
             登录
@@ -160,8 +202,8 @@ const canSubmit = computed(() => {
           <button
             @click="switchMode"
             class="flex-1 py-2 rounded-md font-medium transition-all"
-            :class="!isLogin 
-              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm' 
+            :class="!isLogin
+              ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'"
           >
             注册
@@ -172,18 +214,18 @@ const canSubmit = computed(() => {
         <div class="space-y-4">
           <!-- 用户名 -->
           <div>
-            <label 
-              for="username" 
+            <label
+              for="username"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               用户名
             </label>
-            <input 
+            <input
               id="username"
               v-model="username"
               type="text"
               placeholder="请输入用户名"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -195,18 +237,18 @@ const canSubmit = computed(() => {
 
           <!-- 密码 -->
           <div>
-            <label 
-              for="password" 
+            <label
+              for="password"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               密码
             </label>
-            <input 
+            <input
               id="password"
               v-model="password"
               type="password"
               placeholder="请输入密码（至少6位）"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -217,18 +259,18 @@ const canSubmit = computed(() => {
 
           <!-- 昵称（仅注册时显示）-->
           <div v-if="!isLogin">
-            <label 
-              for="name" 
+            <label
+              for="name"
               class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
             >
               游戏昵称
             </label>
-            <input 
+            <input
               id="name"
               v-model="name"
               type="text"
               placeholder="请输入游戏昵称"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg 
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg
                      bg-white dark:bg-gray-700 text-gray-900 dark:text-white
                      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                      disabled:opacity-50 disabled:cursor-not-allowed"
@@ -249,6 +291,31 @@ const canSubmit = computed(() => {
             <span v-if="loading">{{ isLogin ? '登录中...' : '注册中...' }}</span>
             <span v-else>{{ isLogin ? '登录' : '注册' }}</span>
           </button>
+
+          <!-- 分隔线 -->
+          <div class="relative my-6">
+            <div class="absolute inset-0 flex items-center">
+              <div class="w-full border-t border-gray-300 dark:border-gray-600"></div>
+            </div>
+            <div class="relative flex justify-center text-sm">
+              <span class="px-2 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
+                或
+              </span>
+            </div>
+          </div>
+
+          <!-- 游客快速试玩按钮 -->
+          <button
+            @click="handleGuestLogin"
+            :disabled="loading"
+            class="w-full py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600
+                   text-gray-900 dark:text-white font-semibold rounded-lg
+                   transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+                   flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-600"
+          >
+            <i class="pi pi-play-circle"></i>
+            <span>快速试玩（无需注册）</span>
+          </button>
         </div>
 
         <!-- 提示信息 -->
@@ -261,7 +328,7 @@ const canSubmit = computed(() => {
 
       <!-- 底部链接 -->
       <div class="mt-6 text-center">
-        <button 
+        <button
           @click="router.push('/')"
           class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
         >

@@ -43,14 +43,56 @@ public class GameServiceImpl implements GameService {
 
     // ==================== 房间生命周期（委托给 RoomLifecycleService） ====================
 
+    @Transactional
+    @Override
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds) {
+        GameRoom gameRoom = new GameRoom();
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds);
+        gameRoom.setRoomEntity(savedRoom);
+        roomCache.put(savedRoom.getRoomCode(), gameRoom);
+        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
+    }
+
     @Override
     @Transactional
-    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount) {
+    public RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount) {
+        log.info("🔧 创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
+
+        // 创建普通房间
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom);
-        gameRoom.setRoomEntity(savedRoom);  // ✅ 新增
+        gameRoom.setTestRoom(true);  // 标记为测试房间
+
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
+        gameRoom.setRoomEntity(savedRoom);
+
+        log.info("🔧 RoomEntity 已保存: roomCode={}, id={}", savedRoom.getRoomCode(), savedRoom.getId());
+
+        // 添加虚拟玩家 (maxPlayers - 1 个)
+        for (int i = 1; i < maxPlayers; i++) {
+            String botId = "BOT_" + i;
+            String botName = "Bot" + i;
+
+            PlayerDTO botPlayer = PlayerDTO.builder()
+                    .playerId(botId)
+                    .name(botName)
+                    .ready(true)  // Bot默认准备
+                    .spectator(false)
+                    .build();
+
+            gameRoom.getPlayers().add(botPlayer);
+            gameRoom.getScores().put(botId, 0);  // 初始化分数
+
+            log.info("🔧 添加虚拟玩家: {}, ready={}", botName, true);
+        }
+
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
-        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());  // ✅ 改这里
+
+        log.info("🔧 测试房间创建完成: {}, Bot数量: {}, 玩家列表: {}",
+            savedRoom.getRoomCode(),
+            maxPlayers - 1,
+            gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList());
+
+        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
 
     @Override
@@ -64,8 +106,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator) {
-        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator);
+    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
+        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator, password);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
 
@@ -118,9 +160,17 @@ public class GameServiceImpl implements GameService {
     public List<RoomDTO> getAllActiveRoom() {
         return roomCache.getAll().stream()
                 .filter(gameRoom -> !gameRoom.isFinished())
-                .map(gameRoom -> roomLifecycleService.toRoomDTO(
-                        gameRoom.getRoomCode()
-                ))
+                .map(gameRoom -> {
+                    try {
+                        return roomLifecycleService.toRoomDTO(gameRoom.getRoomCode());
+                    } catch (BusinessException e) {
+                        // 🔥 房间在缓存中但数据库中不存在，跳过并清理
+                        log.warn("⚠️ 房间 {} 在缓存中但数据库中不存在，已清理", gameRoom.getRoomCode());
+                        roomCache.remove(gameRoom.getRoomCode());
+                        return null;
+                    }
+                })
+                .filter(roomDTO -> roomDTO != null)  // 过滤掉null值
                 .toList();
     }
 
@@ -155,6 +205,11 @@ public class GameServiceImpl implements GameService {
             // 提交答案
             submissionService.submitAnswer(roomCode, playerId, choice);
 
+            // 如果是测试房间且提交者不是Bot，立即触发Bot提交
+            if (gameRoom.isTestRoom() && !playerId.startsWith("BOT_")) {
+                submissionService.autoSubmitBots(gameRoom);
+            }
+
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);
 
@@ -184,5 +239,34 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameHistoryDTO getHistoryDetail(Long gameId) {
         return gameHistoryService.getHistoryDetail(gameId);
+    }
+
+    @Override
+    @Transactional
+    public RoomDTO kickPlayer(String roomCode, String ownerId, String targetPlayerId) {
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        synchronized (roomCode.intern()) {
+            // 检查房间状态
+            if (gameRoom.isStarted()) {
+                throw new BusinessException("游戏已开始，无法踢出玩家");
+            }
+
+            // 检查操作者是否是房主（第一个玩家）
+            if (gameRoom.getPlayers().isEmpty() ||
+                !gameRoom.getPlayers().get(0).getPlayerId().equals(ownerId)) {
+                throw new BusinessException("只有房主可以踢出玩家");
+            }
+
+            // 不能踢出自己
+            if (targetPlayerId.equals(ownerId)) {
+                throw new BusinessException("不能踢出自己");
+            }
+
+            // 踢出玩家（使用 handleLeave 的逻辑）
+            roomLifecycleService.handleLeave(roomCode, targetPlayerId);
+
+            return roomLifecycleService.toRoomDTO(roomCode);
+        }
     }
 }

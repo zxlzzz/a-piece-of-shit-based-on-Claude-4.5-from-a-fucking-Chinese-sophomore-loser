@@ -1,8 +1,8 @@
 <template>
   <div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-3 sm:p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 
+    <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700
                 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto">
-      
+
       <!-- 头部 -->
       <div class="px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
         <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
@@ -12,13 +12,13 @@
 
       <!-- 表单内容 -->
       <div class="px-4 sm:px-6 py-3 sm:py-4 space-y-4 sm:space-y-5">
-        
+
         <!-- 题目数量 -->
         <div>
           <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
             题目数量
           </label>
-          <input 
+          <input
             v-model.number="formData.questionCount"
             type="number"
             min="1"
@@ -35,11 +35,90 @@
           </p>
         </div>
 
+        <!-- 🔥 题目标签筛选 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            题目标签筛选
+            <span class="text-xs font-normal text-gray-500 dark:text-gray-400 ml-1 sm:ml-2">
+              （不选则为全部题目）
+            </span>
+          </label>
+
+          <div v-if="loadingTags" class="text-xs text-gray-500">加载标签中...</div>
+          <div v-else-if="tagError" class="text-xs text-red-500">加载标签失败</div>
+          <div v-else class="space-y-2">
+            <!-- 博弈机制类标签 -->
+            <div v-if="allTags.mechanism && allTags.mechanism.length">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">博弈机制</div>
+              <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                <button
+                  v-for="tag in allTags.mechanism"
+                  :key="tag.id"
+                  type="button"
+                  @click="toggleTag(tag.id)"
+                  :style="formData.questionTagIds.includes(tag.id)
+                    ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color }
+                    : { backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+                  class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80"
+                >
+                  {{ tag.name }}
+                </button>
+              </div>
+            </div>
+
+            <!-- 策略特性类标签 -->
+            <div v-if="allTags.strategy && allTags.strategy.length">
+              <div class="text-xs text-gray-500 dark:text-gray-400 mb-1.5">策略特性</div>
+              <div class="flex flex-wrap gap-1.5 sm:gap-2">
+                <button
+                  v-for="tag in allTags.strategy"
+                  :key="tag.id"
+                  type="button"
+                  @click="toggleTag(tag.id)"
+                  :style="formData.questionTagIds.includes(tag.id)
+                    ? { backgroundColor: tag.color, color: '#fff', borderColor: tag.color }
+                    : { backgroundColor: tag.color + '20', color: tag.color, borderColor: tag.color }"
+                  class="px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full text-xs font-medium border transition-all hover:opacity-80"
+                >
+                  {{ tag.name }}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p v-if="formData.questionTagIds.length" class="mt-1.5 text-xs text-blue-600 dark:text-blue-400">
+            已选择 {{ formData.questionTagIds.length }} 个标签
+          </p>
+        </div>
+
+        <!-- 每题时长 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            每题时长（秒）
+          </label>
+          <input
+            v-model.number="formData.timeLimit"
+            type="number"
+            min="20"
+            max="120"
+            step="5"
+            class="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600
+                   bg-white dark:bg-gray-700
+                   text-sm sm:text-base
+                   text-gray-900 dark:text-white
+                   focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                   transition-colors"
+          />
+          <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            可选范围：20-120秒，步长5秒
+          </p>
+        </div>
+
         <!-- ========================================= -->
         <!-- 🔥 高级规则区域（可折叠） -->
         <!-- ========================================= -->
         <div class="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-5">
-          
+
           <!-- 折叠按钮 -->
           <button
             type="button"
@@ -49,7 +128,7 @@
             <span class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2">
               <i class="pi pi-sliders-h text-blue-600 text-xs sm:text-sm"></i>
               高级规则
-              <span v-if="formData.rankingMode !== 'standard' || hasWinConditions" 
+              <span v-if="formData.rankingMode !== 'standard' || hasWinConditions"
                     class="text-xs px-1.5 sm:px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
                 已配置
               </span>
@@ -61,7 +140,7 @@
 
           <!-- 高级规则内容 -->
           <div v-show="showAdvanced" class="mt-3 sm:mt-4 space-y-4 sm:space-y-5 pl-0 sm:pl-1">
-            
+
             <!-- ========================================= -->
             <!-- 1️⃣ 排名模式 -->
             <!-- ========================================= -->
@@ -70,13 +149,13 @@
                 排名模式
               </label>
               <div class="space-y-2">
-                
+
                 <!-- 标准排名 -->
                 <label class="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border cursor-pointer transition-all"
                        :class="formData.rankingMode === 'standard'
                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
                          : 'bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
-                  <input 
+                  <input
                     type="radio"
                     v-model="formData.rankingMode"
                     value="standard"
@@ -97,7 +176,7 @@
                        :class="formData.rankingMode === 'closest_to_avg'
                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
                          : 'bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
-                  <input 
+                  <input
                     type="radio"
                     v-model="formData.rankingMode"
                     value="closest_to_avg"
@@ -118,7 +197,7 @@
                        :class="formData.rankingMode === 'closest_to_target'
                          ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
                          : 'bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
-                  <input 
+                  <input
                     type="radio"
                     v-model="formData.rankingMode"
                     value="closest_to_target"
@@ -136,9 +215,9 @@
               </div>
 
               <!-- 🔥 目标分输入框（条件显示） -->
-              <div v-if="formData.rankingMode === 'closest_to_target'" 
+              <div v-if="formData.rankingMode === 'closest_to_target'"
                    class="mt-2 sm:mt-3 pl-5 sm:pl-7">
-                <input 
+                <input
                   v-model.number="formData.targetScore"
                   type="number"
                   placeholder="输入目标分数（例如：100）"
@@ -147,7 +226,7 @@
                          focus:ring-2 focus:ring-blue-500 focus:border-transparent
                          placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 />
-                <p v-if="!formData.targetScore" 
+                <p v-if="!formData.targetScore"
                    class="mt-1.5 text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
                   <i class="pi pi-exclamation-circle text-xs"></i>
                   请设置目标分数
@@ -165,13 +244,13 @@
                   （可选）
                 </span>
               </label>
-              
+
               <div class="space-y-2 sm:space-y-3">
-                
+
                 <!-- 所有人最低分 -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                   <div class="flex-1 w-full sm:w-auto">
-                    <input 
+                    <input
                       v-model.number="formData.winConditions.minScorePerPlayer"
                       type="number"
                       placeholder="例如：80"
@@ -190,7 +269,7 @@
                 <!-- 团队总分 -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                   <div class="flex-1 w-full sm:w-auto">
-                    <input 
+                    <input
                       v-model.number="formData.winConditions.minTotalScore"
                       type="number"
                       placeholder="例如：500"
@@ -209,7 +288,7 @@
                 <!-- 平均分 -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3">
                   <div class="flex-1 w-full sm:w-auto">
-                    <input 
+                    <input
                       v-model.number="formData.winConditions.minAvgScore"
                       type="number"
                       placeholder="例如：60"
@@ -242,7 +321,7 @@
       </div>
 
       <!-- 底部按钮 -->
-      <div class="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700 
+      <div class="px-4 sm:px-6 py-3 sm:py-4 border-t border-gray-200 dark:border-gray-700
                   flex justify-end gap-2 sm:gap-3 sticky bottom-0 bg-white dark:bg-gray-800">
         <button
           @click="handleCancel"
@@ -256,7 +335,7 @@
         >
           取消
         </button>
-        
+
         <button
           @click="handleSubmit"
           :disabled="formData.rankingMode === 'closest_to_target' && !formData.targetScore"
@@ -276,7 +355,9 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { loadTags } from '@/api'
+import { logger } from '@/utils/logger'
 
 const props = defineProps({
   maxQuestions: {
@@ -294,16 +375,23 @@ const emit = defineEmits(['submit', 'cancel'])
 // 🔥 折叠状态
 const showAdvanced = ref(false)
 
+// 🔥 标签数据
+const allTags = ref({ mechanism: [], strategy: [] })
+const loadingTags = ref(true)
+const tagError = ref(false)
+
 // 🔥 表单数据（从 props 初始化）
 const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
+  timeLimit: props.currentSettings?.timeLimit || 30,
   rankingMode: props.currentSettings?.rankingMode || 'standard',
   targetScore: props.currentSettings?.targetScore || null,
   winConditions: {
     minScorePerPlayer: props.currentSettings?.winConditions?.minScorePerPlayer || null,
     minTotalScore: props.currentSettings?.winConditions?.minTotalScore || null,
     minAvgScore: props.currentSettings?.winConditions?.minAvgScore || null
-  }
+  },
+  questionTagIds: props.currentSettings?.questionTagIds || []
 })
 
 // 🔥 计算属性：是否有通关条件
@@ -312,21 +400,55 @@ const hasWinConditions = computed(() => {
   return wc.minScorePerPlayer || wc.minTotalScore || wc.minAvgScore
 })
 
+// 🔥 切换标签选择
+const toggleTag = (tagId) => {
+  const index = formData.value.questionTagIds.indexOf(tagId)
+  if (index > -1) {
+    formData.value.questionTagIds.splice(index, 1)
+  } else {
+    formData.value.questionTagIds.push(tagId)
+  }
+}
+
+
 const handleSubmit = () => {
   // 校验题目数量
   if (formData.value.questionCount < 1) {
     return
   }
-  
+
   // 🔥 校验：closest_to_target 必须填目标分
   if (formData.value.rankingMode === 'closest_to_target' && !formData.value.targetScore) {
     return
   }
-  
+
   emit('submit', formData.value)
 }
 
 const handleCancel = () => {
   emit('cancel')
 }
+
+// Esc键关闭
+const handleKeydown = (e) => {
+  if (e.key === 'Escape') {
+    handleCancel()
+  }
+}
+
+onMounted(async() => {
+  window.addEventListener('keydown', handleKeydown)
+  try{
+    const res = await loadTags()
+    allTags.value = res.data
+  }catch(err){
+    logger.error(err)
+  }finally{
+    loadingTags.value = false
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 </script>

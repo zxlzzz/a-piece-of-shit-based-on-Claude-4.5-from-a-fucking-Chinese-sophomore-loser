@@ -32,14 +32,16 @@
           v-for="q in questions"
           :key="q.id"
           :type="q.type"
-          :people="q.minPlayers === q.maxPlayers 
-            ? (q.minPlayers || '?') 
+          :people="q.minPlayers === q.maxPlayers
+            ? (q.minPlayers || '?')
             : `${q.minPlayers || '?'} ~ ${q.maxPlayers || '?'}`"
           :text="q.text"
+          :calculate-rule="q.calculateRule"
           :choice="q.options"
           :min="q.min"
           :max="q.max"
           :step="q.step"
+          :tags="q.tags"
         />
       </div>
     </div>
@@ -47,6 +49,7 @@
 </template>
 
 <script setup>
+import { logger } from '@/utils/logger'
 import { getAllQuestions } from '@/api'
 import { onMounted, ref } from 'vue'
 import QuesShowCard from './QuesShowCard.vue'
@@ -59,8 +62,9 @@ onMounted(async () => {
   try {
     const res = await getAllQuestions()
     questions.value = res.data
+    console.log(questions.value)
   } catch (err) {
-    console.error("获取题库失败:", err)
+    logger.error("获取题库失败:", err)
     error.value = "加载失败，请刷新重试"
   } finally {
     loading.value = false

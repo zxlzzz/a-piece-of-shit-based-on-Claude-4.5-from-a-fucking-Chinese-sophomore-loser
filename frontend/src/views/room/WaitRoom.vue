@@ -69,6 +69,18 @@ onMounted(async () => {
       router.push('/find')
       return
     }
+
+    // 🔥 新增：如果游戏已经开始，自动跳转到游戏页面
+    if (savedRoom.status === 'PLAYING') {
+      toast.add({
+        severity: 'info',
+        summary: '游戏进行中',
+        detail: '正在进入游戏...',
+        life: 2000
+      })
+      router.push(`/game/${roomCode.value}`)
+      return
+    }
   } else {
     toast.add({
       severity: 'error',
@@ -376,6 +388,15 @@ const handleStart = () => {
 }
 
 const handleLeave = () => {
+  // 🔥 新增：添加确认提示，房主离开提示更强烈
+  const message = isRoomOwner.value
+    ? '您是房主，离开后房间将被解散，确定要离开吗？'
+    : '确定要离开房间吗？'
+
+  if (!confirm(message)) {
+    return
+  }
+
   if (wsConnected.value) {
     sendLeave({
       roomCode: roomCode.value,

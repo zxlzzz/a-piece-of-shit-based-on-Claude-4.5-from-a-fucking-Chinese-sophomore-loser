@@ -4,9 +4,9 @@ import { connect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
-  roomCode, 
-  playerStore, 
-  toast, 
+  roomCode,
+  playerStore,
+  toast,
   router,
   room,
   question,
@@ -19,9 +19,10 @@ export function useGameWebSocket(
   getSubmissionKey
 ) {
   const subscriptions = ref([])
+  const wsConnected = ref(false) // 🔥 新增：连接状态
 
   const handleReconnecting = (event) => {
-    
+    wsConnected.value = false // 🔥 更新连接状态
     toast.add({
       severity: 'warn',
       summary: '连接中断',
@@ -180,11 +181,13 @@ export function useGameWebSocket(
 
   const connectWebSocket = async () => {
     if (!isConnected()) {
-      
+
       try {
         await connect(playerStore.playerId)
+        wsConnected.value = true // 🔥 连接成功，更新状态
       } catch (err) {
         logger.error('❌ GameView: WebSocket 连接失败', err)
+        wsConnected.value = false // 🔥 连接失败，更新状态
         toast.add({
           severity: 'error',
           summary: '连接失败',
@@ -193,8 +196,10 @@ export function useGameWebSocket(
         })
         return
       }
+    } else {
+      wsConnected.value = true // 🔥 已连接，更新状态
     }
-    
+
     setupRoomSubscription()
     await refreshRoomState()
   }
@@ -214,6 +219,7 @@ export function useGameWebSocket(
 
   return {
     connectWebSocket,
-    refreshRoomState
+    refreshRoomState,
+    wsConnected // 🔥 新增：返回连接状态
   }
 }

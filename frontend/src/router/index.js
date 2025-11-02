@@ -133,7 +133,12 @@ router.beforeEach(async (to, from, next) => {
         } catch (error) {
           // 🔥 静默处理，清理本地数据，跳转到查找房间页
           playerStore.clearRoom()
-          next({ name: 'find', replace: true })
+          // 🔥 新增：添加错误信息到路由query，让find页面显示
+          next({
+            name: 'find',
+            replace: true,
+            query: { error: 'room_not_found' }
+          })
           return
         }
       }

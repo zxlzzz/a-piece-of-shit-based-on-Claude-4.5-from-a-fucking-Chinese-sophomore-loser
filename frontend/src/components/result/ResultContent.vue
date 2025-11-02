@@ -115,7 +115,27 @@ const getMyChoice = (questionDetail) => {
         </div>
       </div>
     </div>
-    
+
+    <!-- 🔥 新增：操作按钮 -->
+    <div class="flex flex-col sm:flex-row gap-3 justify-center">
+      <button
+        @click="$router.push('/find')"
+        class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg
+               font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        <i class="pi pi-home"></i>
+        返回大厅
+      </button>
+      <button
+        @click="$router.push('/history')"
+        class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white rounded-lg
+               font-medium transition-colors flex items-center justify-center gap-2"
+      >
+        <i class="pi pi-history"></i>
+        历史记录
+      </button>
+    </div>
+
     <!-- 题目详情 -->
     <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 sm:p-6 shadow-sm">
       <h2 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-3 sm:mb-4">题目详情</h2>

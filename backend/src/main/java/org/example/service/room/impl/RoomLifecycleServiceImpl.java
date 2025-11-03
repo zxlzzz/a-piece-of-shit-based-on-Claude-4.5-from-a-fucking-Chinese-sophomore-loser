@@ -16,6 +16,8 @@ import org.example.repository.PlayerRepository;
 import org.example.repository.RoomRepository;
 import org.example.service.cache.RoomCache;
 import org.example.service.room.RoomLifecycleService;
+import org.example.service.timer.QuestionTimerService;
+import org.example.utils.RoomLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     private final PlayerRepository playerRepository;
     private final RoomCache roomCache;
     private final ObjectMapper objectMapper;
+    private final QuestionTimerService timerService;  // 🔥 P1-2: 用于取消定时器
 
     @Override
     @Transactional
@@ -100,7 +103,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             // 检查房间密码（观战者不需要密码）
             if (!spectator && room.getPassword() != null && !room.getPassword().isEmpty()) {
                 if (!room.getPassword().equals(password)) {
@@ -176,7 +180,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
             PlayerDTO leavingPlayer = gameRoom.getPlayers().stream()
@@ -253,7 +258,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     public void handleReconnect(String roomCode, String playerId) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             LocalDateTime disconnectTime = gameRoom.getDisconnectedPlayers().remove(playerId);
 
             if (disconnectTime != null) {
@@ -266,6 +272,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                                 log.info("✅ 玩家 {} 重连房间 {}，离线时长: {}秒",
                                         player.getName(), roomCode, offlineSeconds)
                         );
+
+                // 🔥 P1-2: 游戏进行中重连
+                // 注意：不在这里重启后端定时器，而是依赖前端 countdown
+                // 当前端倒计时结束时会调用 handleAutoSubmit，自动提交答案并推进游戏
+                if (gameRoom.isStarted() && !gameRoom.isFinished() && gameRoom.getCurrentQuestion() != null) {
+                    log.info("🎮 玩家重连到进行中的游戏，依赖前端倒计时机制");
+                }
 
                 // 🔥 添加：如果游戏已结束，重连时重置房间过期时间
                 if (gameRoom.isFinished()) {
@@ -290,7 +303,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             // 校验：游戏未开始
             if (gameRoom.isStarted()) {
                 throw new BusinessException("游戏已开始，无法修改设置");
@@ -409,7 +423,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             return;
         }
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             // 🔥 标记断线时间
             gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
@@ -429,7 +444,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
                 if (allDisconnected) {
                     log.warn("❌ 房间 {} 所有非观战玩家都断开连接", roomCode);
-                    // 注意：不在这里调用 advanceQuestion，由 GameFlowService 处理
+                    // 🔥 P1-2: 取消定时器，避免幽灵定时器在无人状态下触发
+                    timerService.cancelTimeout(roomCode);
+                    log.info("⏹️ 已取消房间 {} 的定时器（所有玩家断线）", roomCode);
                 }
             }
         }
@@ -444,7 +461,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             return;
         }
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             // 🔥 添加：如果游戏进行中，不移除玩家，只保持断线状态
             if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                 log.info("⚠️ 玩家 {} 在游戏中断线，保留玩家数据，游戏结束后再移除", playerId);
@@ -533,6 +551,15 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .count();
 
+        // 🔥 P1-1: 获取当前题目的已提交玩家ID列表（用于前端验证）
+        java.util.List<String> submittedPlayerIds = new ArrayList<>();
+        if (gameRoom.isStarted() && gameRoom.getCurrentIndex() >= 0) {
+            Map<String, String> currentSubmissions = gameRoom.getSubmissions().get(gameRoom.getCurrentIndex());
+            if (currentSubmissions != null) {
+                submittedPlayerIds = new ArrayList<>(currentSubmissions.keySet());
+            }
+        }
+
         return RoomDTO.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
@@ -546,6 +573,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)
+                .submittedPlayerIds(submittedPlayerIds)  // 🔥 P1-1: 已提交玩家列表
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)
@@ -556,9 +584,5 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     private String generateRoomCode() {
         return UUID.randomUUID().toString().substring(0, 6).toUpperCase();
-    }
-
-    private String getInternedRoomCode(String roomCode) {
-        return roomCode.intern();
     }
 }

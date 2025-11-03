@@ -64,7 +64,8 @@ const {
   resetSubmitState,
   restoreSubmitState,
   cleanupSubmission,
-  getSubmissionKey
+  getSubmissionKey,
+  verifySubmissionState  // 🔥 P1-1: 验证提交状态
 } = useGameSubmit(roomCode, playerStore, toast, question, room)
 
 const {
@@ -91,7 +92,8 @@ const { connectWebSocket, wsConnected } = useGameWebSocket(
   clearCountdown,
   resetSubmitState,
   restoreSubmitState,
-  getSubmissionKey
+  getSubmissionKey,
+  verifySubmissionState  // 🔥 P1-1: 传递验证函数
 )
 
 // 聊天相关

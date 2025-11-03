@@ -16,7 +16,8 @@ export function useGameWebSocket(
   clearCountdown,
   resetSubmitState,
   restoreSubmitState,
-  getSubmissionKey
+  getSubmissionKey,
+  verifySubmissionState  // 🔥 P1-1: 新增验证函数参数
 ) {
   const subscriptions = ref([])
   const wsConnected = ref(false) // 🔥 新增：连接状态
@@ -61,7 +62,12 @@ export function useGameWebSocket(
       room.value = updatedRoom
       question.value = updatedRoom.currentQuestion
       playerStore.setRoom(updatedRoom)
-      
+
+      // 🔥 P1-1: 刷新时也验证提交状态
+      if (verifySubmissionState && updatedRoom.submittedPlayerIds) {
+        verifySubmissionState(updatedRoom.submittedPlayerIds)
+      }
+
       if (updatedRoom.questionStartTime) {
         questionStartTime.value = new Date(updatedRoom.questionStartTime)
         timeLimit.value = updatedRoom.timeLimit || 30
@@ -102,9 +108,14 @@ export function useGameWebSocket(
         
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
-        
+
         room.value = update
-        
+
+        // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
+        if (verifySubmissionState && update.submittedPlayerIds) {
+          verifySubmissionState(update.submittedPlayerIds)
+        }
+
         if (newIndex !== undefined && oldIndex !== newIndex) {
           if (oldIndex !== undefined) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`

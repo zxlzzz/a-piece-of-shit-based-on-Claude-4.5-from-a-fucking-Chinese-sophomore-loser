@@ -140,6 +140,42 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     localStorage.removeItem(submissionKey)
   }
 
+  /**
+   * 🔥 P1-1: 验证提交状态（对比 localStorage 和后端状态）
+   * 如果 localStorage 说已提交但后端没有记录，则清除 localStorage 并重置状态
+   * @param {Array<string>} submittedPlayerIds - 后端返回的已提交玩家ID列表
+   */
+  const verifySubmissionState = (submittedPlayerIds) => {
+    // 观战者不需要验证
+    if (playerStore.isSpectator) {
+      return
+    }
+
+    const submissionKey = getSubmissionKey()
+    const localStorageSaysSubmitted = localStorage.getItem(submissionKey) === 'true'
+    const backendSaysSubmitted = submittedPlayerIds && submittedPlayerIds.includes(playerStore.playerId)
+
+    // 🔥 检测不一致：localStorage说已提交，但后端没有记录
+    if (localStorageSaysSubmitted && !backendSaysSubmitted) {
+      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态')
+      localStorage.removeItem(submissionKey)
+      hasSubmitted.value = false
+
+      toast.add({
+        severity: 'warn',
+        summary: '提交状态已更新',
+        detail: '检测到提交未成功，请重新提交',
+        life: 3000
+      })
+    }
+    // 🔥 检测不一致：localStorage说未提交，但后端有记录
+    else if (!localStorageSaysSubmitted && backendSaysSubmitted) {
+      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态')
+      localStorage.setItem(submissionKey, 'true')
+      hasSubmitted.value = true
+    }
+  }
+
   return {
     hasSubmitted,
     handleChoose,
@@ -147,6 +183,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     resetSubmitState,
     restoreSubmitState,
     cleanupSubmission,
-    getSubmissionKey
+    getSubmissionKey,
+    verifySubmissionState  // 🔥 P1-1: 新增验证函数
   }
 }

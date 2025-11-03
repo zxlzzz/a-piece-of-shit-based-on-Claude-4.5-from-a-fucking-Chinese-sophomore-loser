@@ -91,6 +91,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         gameRoom.setScores(new ConcurrentHashMap<>());
         gameRoom.setDisconnectedPlayers(new ConcurrentHashMap<>());
         gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
+        gameRoom.setRoomEntity(savedRoom); // 🔥 性能优化：缓存 RoomEntity，避免后续频繁查询数据库
 
         log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}, 标签筛选: {}", roomCode, maxPlayers, questionCount, questionTagIds);
         return savedRoom;
@@ -346,7 +347,10 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             room.setWinConditionsJson(winConditionsJson);
 
             // 保存到数据库
-            roomRepository.save(room);
+            RoomEntity savedRoom = roomRepository.save(room);
+
+            // 🔥 性能优化：更新缓存的 RoomEntity
+            gameRoom.setRoomEntity(savedRoom);
 
             log.info("✅ 房间 {} 设置更新成功", roomCode);
         }
@@ -409,9 +413,18 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     public RoomDTO toRoomDTO(String roomCode) {
-        RoomEntity roomEntity = roomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new BusinessException("房间不存在"));
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        // 🔥 性能优化：优先使用 GameRoom 中缓存的 RoomEntity，避免频繁数据库查询
+        RoomEntity roomEntity = gameRoom.getRoomEntity();
+        if (roomEntity == null) {
+            // 缓存失效或首次访问，从数据库查询并缓存
+            roomEntity = roomRepository.findByRoomCode(roomCode)
+                    .orElseThrow(() -> new BusinessException("房间不存在"));
+            gameRoom.setRoomEntity(roomEntity);
+            log.debug("🔄 房间 {} 的 RoomEntity 已缓存", roomCode);
+        }
+
         return toRoomDTO(roomEntity, gameRoom);
     }
 

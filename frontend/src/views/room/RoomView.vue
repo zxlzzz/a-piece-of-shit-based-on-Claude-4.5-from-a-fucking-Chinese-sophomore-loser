@@ -21,8 +21,8 @@ const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 const searchQuery = ref('') // 🔥 房间搜索关键词
 
-// 自动刷新
-const REFRESH_INTERVAL = 5000 // 5秒刷新一次
+// 🔥 自动刷新（性能优化：降低轮询频率）
+const REFRESH_INTERVAL = 10000 // 10秒刷新一次（从5秒调整）
 let refreshTimer = null
 
 // 🔥 过滤后的房间列表（支持前缀匹配）

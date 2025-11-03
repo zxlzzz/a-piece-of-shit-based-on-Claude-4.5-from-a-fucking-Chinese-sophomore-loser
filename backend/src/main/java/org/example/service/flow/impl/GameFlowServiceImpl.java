@@ -167,8 +167,7 @@ public class GameFlowServiceImpl implements GameFlowService {
         AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
         if (!isAdvancing.compareAndSet(false, true)) {
             log.warn("⚠️ 房间 {} 正在推进中，跳过（原因: {}）", roomCode, reason);
-            // 🔥 广播当前状态，避免客户端等待
-            broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
+            // 🔥 性能优化：移除重复推送，正在推进的线程完成后会广播
             return;
         }
 

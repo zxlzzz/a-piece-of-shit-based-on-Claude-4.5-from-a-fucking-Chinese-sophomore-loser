@@ -227,8 +227,9 @@ public class SubmissionServiceImpl implements SubmissionService {
                             // BID题：在范围内随机数
                             Integer min = currentQuestion.getMin();
                             Integer max = currentQuestion.getMax();
+                            Integer step = currentQuestion.getStep();
                             if (min != null && max != null) {
-                                botAnswer = String.valueOf(random.nextInt(max - min + 1) + min);
+                                botAnswer = String.valueOf((random.nextInt((max - min) / step + 1) * step) + min);
                             } else {
                                 botAnswer = "5";  // 默认值
                             }

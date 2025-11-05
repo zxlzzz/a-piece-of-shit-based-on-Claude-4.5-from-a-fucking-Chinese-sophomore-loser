@@ -21,6 +21,7 @@ import org.example.service.scoring.ScoringResult;
 import org.example.service.scoring.ScoringService;
 import org.example.service.submission.SubmissionService;
 import org.example.service.timer.QuestionTimerService;
+import org.example.utils.RoomLock;
 import java.time.Duration;
 
 import org.springframework.scheduling.TaskScheduler;
@@ -68,7 +69,8 @@ public class GameFlowServiceImpl implements GameFlowService {
     public void startGame(String roomCode) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             if (gameRoom.isStarted()) {
                 log.warn("⚠️ 房间 {} 已经开始游戏", roomCode);
                 return;
@@ -165,8 +167,7 @@ public class GameFlowServiceImpl implements GameFlowService {
         AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
         if (!isAdvancing.compareAndSet(false, true)) {
             log.warn("⚠️ 房间 {} 正在推进中，跳过（原因: {}）", roomCode, reason);
-            // 🔥 广播当前状态，避免客户端等待
-            broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
+            // 🔥 性能优化：移除重复推送，正在推进的线程完成后会广播
             return;
         }
 
@@ -175,7 +176,8 @@ public class GameFlowServiceImpl implements GameFlowService {
 
             GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-            synchronized (getInternedRoomCode(roomCode)) {
+            // 🔥 P0修复：使用统一的RoomLock
+            synchronized (RoomLock.getLock(roomCode)) {
                 // 1. 填充默认答案
                 if (fillDefaults) {
                     submissionService.fillDefaultAnswers(gameRoom);
@@ -252,7 +254,8 @@ public class GameFlowServiceImpl implements GameFlowService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (getInternedRoomCode(roomCode)) {
+        // 🔥 P0修复：使用统一的RoomLock
+        synchronized (RoomLock.getLock(roomCode)) {
             // ✅ 使用 CAS 模式：先检查，通过后立即设置
             if (gameRoom.isFinished()) {
                 log.warn("⚠️ 房间 {} 已经结束，跳过重复调用", roomCode);
@@ -378,9 +381,5 @@ public class GameFlowServiceImpl implements GameFlowService {
         gameRoom.getQuestionScores().put(currentIndex, result.getScoreDetails());
 
         log.info("✅ 房间 {} 题目索引 {} 分数计算完成", gameRoom.getRoomCode(), currentIndex);
-    }
-
-    private String getInternedRoomCode(String roomCode) {
-        return roomCode.intern();
     }
 }

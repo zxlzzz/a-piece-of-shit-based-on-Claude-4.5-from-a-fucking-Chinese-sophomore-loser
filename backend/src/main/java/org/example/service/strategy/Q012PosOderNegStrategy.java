@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 选择一项（x初始为0，偶数次取反后为正数
@@ -22,7 +23,7 @@ public class Q012PosOderNegStrategy extends BaseQuestionStrategy {
         super(buffApplier);
     }
 
-    @Override
+   /* @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
         Map<String, Integer> scores = new HashMap<>();
         int x = 1;
@@ -43,6 +44,24 @@ public class Q012PosOderNegStrategy extends BaseQuestionStrategy {
         );
 
         return scores;
+    }*/
+
+    @Override
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 1️⃣ 通过 Stream 计算最终的 x
+        int finalX = submissions.values().stream()
+                .reduce(1, (x, choice) -> switch (choice) {
+                    case "A" -> x * 2;
+                    case "B" -> -x;
+                    default -> x;
+                }, (x1, x2) -> x1); // 并行时合并策略：保持左侧（但我们这里不会并行）
+
+        // 2️⃣ 生成结果 Map，选 A 的人得 finalX，其余 0
+        return submissions.entrySet().stream()
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        e -> "A".equals(e.getValue()) ? finalX : 0
+                ));
     }
 
     @Override

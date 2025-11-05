@@ -4,9 +4,9 @@ import { connect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
-  roomCode, 
-  playerStore, 
-  toast, 
+  roomCode,
+  playerStore,
+  toast,
   router,
   room,
   question,
@@ -16,12 +16,14 @@ export function useGameWebSocket(
   clearCountdown,
   resetSubmitState,
   restoreSubmitState,
-  getSubmissionKey
+  getSubmissionKey,
+  verifySubmissionState  // 🔥 P1-1: 新增验证函数参数
 ) {
   const subscriptions = ref([])
+  const wsConnected = ref(false) // 🔥 新增：连接状态
 
   const handleReconnecting = (event) => {
-    
+    wsConnected.value = false // 🔥 更新连接状态
     toast.add({
       severity: 'warn',
       summary: '连接中断',
@@ -60,7 +62,12 @@ export function useGameWebSocket(
       room.value = updatedRoom
       question.value = updatedRoom.currentQuestion
       playerStore.setRoom(updatedRoom)
-      
+
+      // 🔥 P1-1: 刷新时也验证提交状态
+      if (verifySubmissionState && updatedRoom.submittedPlayerIds) {
+        verifySubmissionState(updatedRoom.submittedPlayerIds)
+      }
+
       if (updatedRoom.questionStartTime) {
         questionStartTime.value = new Date(updatedRoom.questionStartTime)
         timeLimit.value = updatedRoom.timeLimit || 30
@@ -101,9 +108,14 @@ export function useGameWebSocket(
         
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
-        
+
         room.value = update
-        
+
+        // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
+        if (verifySubmissionState && update.submittedPlayerIds) {
+          verifySubmissionState(update.submittedPlayerIds)
+        }
+
         if (newIndex !== undefined && oldIndex !== newIndex) {
           if (oldIndex !== undefined) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
@@ -180,11 +192,13 @@ export function useGameWebSocket(
 
   const connectWebSocket = async () => {
     if (!isConnected()) {
-      
+
       try {
         await connect(playerStore.playerId)
+        wsConnected.value = true // 🔥 连接成功，更新状态
       } catch (err) {
         logger.error('❌ GameView: WebSocket 连接失败', err)
+        wsConnected.value = false // 🔥 连接失败，更新状态
         toast.add({
           severity: 'error',
           summary: '连接失败',
@@ -193,8 +207,10 @@ export function useGameWebSocket(
         })
         return
       }
+    } else {
+      wsConnected.value = true // 🔥 已连接，更新状态
     }
-    
+
     setupRoomSubscription()
     await refreshRoomState()
   }
@@ -214,6 +230,7 @@ export function useGameWebSocket(
 
   return {
     connectWebSocket,
-    refreshRoomState
+    refreshRoomState,
+    wsConnected // 🔥 新增：返回连接状态
   }
 }

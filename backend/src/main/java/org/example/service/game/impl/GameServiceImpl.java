@@ -16,6 +16,7 @@ import org.example.service.history.GameHistoryService;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.submission.SubmissionService;
 import org.example.service.timer.QuestionTimerService;
+import org.example.utils.RoomLock;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -185,7 +186,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public RoomDTO submitAnswer(String roomCode, String playerId, String choice, boolean force) {
-        synchronized (roomCode.intern()) {
+        // 🔥 P0修复：使用统一的RoomLock代替intern()，确保并发安全
+        synchronized (RoomLock.getLock(roomCode)) {
             GameRoom gameRoom = roomCache.getOrThrow(roomCode);
             if (!gameRoom.isStarted()) {
                 throw new BusinessException("游戏未开始");
@@ -246,7 +248,8 @@ public class GameServiceImpl implements GameService {
     public RoomDTO kickPlayer(String roomCode, String ownerId, String targetPlayerId) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        synchronized (roomCode.intern()) {
+        // 🔥 P0修复：使用统一的RoomLock代替intern()
+        synchronized (RoomLock.getLock(roomCode)) {
             // 检查房间状态
             if (gameRoom.isStarted()) {
                 throw new BusinessException("游戏已开始，无法踢出玩家");

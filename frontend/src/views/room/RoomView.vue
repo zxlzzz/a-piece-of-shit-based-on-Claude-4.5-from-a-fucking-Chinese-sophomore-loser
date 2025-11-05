@@ -4,12 +4,13 @@ import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
 import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
 
 const router = useRouter()
+const route = useRoute() // 🔥 新增：用于访问路由参数
 const toast = useToast()
 
 const playerStore = usePlayerStore()
@@ -20,8 +21,8 @@ const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 const searchQuery = ref('') // 🔥 房间搜索关键词
 
-// 自动刷新
-const REFRESH_INTERVAL = 5000 // 5秒刷新一次
+// 🔥 自动刷新（性能优化：降低轮询频率）
+const REFRESH_INTERVAL = 10000 // 10秒刷新一次（从5秒调整）
 let refreshTimer = null
 
 // 🔥 过滤后的房间列表（支持前缀匹配）
@@ -65,6 +66,19 @@ onMounted(async () => {
     return
   }
 
+  // 🔥 新增：检查路由错误参数并显示提示
+  const error = route.query.error
+  if (error === 'room_not_found') {
+    toast.add({
+      severity: 'warn',
+      summary: '房间不存在',
+      detail: '您访问的房间已不存在或已结束',
+      life: 3000
+    })
+    // 清除query参数，避免重复提示
+    router.replace({ name: 'find' })
+  }
+
   await loadActiveRooms()
   startAutoRefresh() // 启动自动刷新
 
@@ -98,9 +112,20 @@ const loadActiveRooms = async () => {
   refreshing.value = true
   try {
     const response = await getAllActiveRooms()
+
+    // 🔥 新增：保留原有的观战模式选择状态
+    const oldSpectatorModes = { ...spectatorModes.value }
+
     activeRooms.value = response.data.filter(r =>
       !currentRoom.value || r.roomCode !== currentRoom.value.roomCode
     )
+
+    // 🔥 新增：恢复观战模式状态（如果房间仍然存在）
+    activeRooms.value.forEach(room => {
+      if (oldSpectatorModes[room.roomCode] !== undefined) {
+        spectatorModes.value[room.roomCode] = oldSpectatorModes[room.roomCode]
+      }
+    })
   } catch (error) {
     logger.error('加载房间列表失败:', error)
     // 🔥 网络错误才显示提示（用户可以重试）

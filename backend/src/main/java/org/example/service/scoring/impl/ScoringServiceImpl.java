@@ -42,6 +42,11 @@ public class ScoringServiceImpl implements ScoringService {
      */
     private final Map<String, Map<String, Integer>> roomStrategyRounds = new ConcurrentHashMap<>();
 
+    /**
+     * 计算分数
+     * 🔥 注意：此方法不是线程安全的，必须在调用方使用 RoomLock 进行同步
+     * 调用方必须持有 RoomLock.getLock(roomCode) 的锁
+     */
     @Override
     public ScoringResult calculateScores(GameRoom gameRoom) {
         // 🔥 改成 QuestionDTO

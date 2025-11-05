@@ -69,6 +69,18 @@ onMounted(async () => {
       router.push('/find')
       return
     }
+
+    // 🔥 新增：如果游戏已经开始，自动跳转到游戏页面
+    if (savedRoom.status === 'PLAYING') {
+      toast.add({
+        severity: 'info',
+        summary: '游戏进行中',
+        detail: '正在进入游戏...',
+        life: 2000
+      })
+      router.push(`/game/${roomCode.value}`)
+      return
+    }
   } else {
     toast.add({
       severity: 'error',
@@ -305,8 +317,9 @@ const setupRoomSubscription = () => {
 }
 
 const handleReady = async () => {
-  if (currentPlayerReady.value) return
-  
+  // 🔥 改进：支持切换准备状态（准备 <-> 取消准备）
+  const newReadyState = !currentPlayerReady.value
+
   // 🔥 先检查连接状态
   if (!wsConnected.value) {
     console.error('❌ WebSocket 未连接，无法设置准备状态')
@@ -318,26 +331,26 @@ const handleReady = async () => {
     })
     return
   }
-  
+
   loading.value = true
   try {
     sendReady({
       roomCode: roomCode.value,
       playerId: playerStore.playerId,
-      ready: true
+      ready: newReadyState
     })
-    
+
     if (chatRoomRef.value) {
-      chatRoomRef.value.sendReadyMessage(true)
+      chatRoomRef.value.sendReadyMessage(newReadyState)
     }
-    
+
     toast.add({
       severity: 'success',
       summary: '成功',
-      detail: '已设置为准备状态',
+      detail: newReadyState ? '已设置为准备状态' : '已取消准备',
       life: 2000
     })
-    
+
   } catch (error) {
     console.error("设置准备状态失败:", error)
     toast.add({
@@ -376,6 +389,15 @@ const handleStart = () => {
 }
 
 const handleLeave = () => {
+  // 🔥 新增：添加确认提示，房主离开提示更强烈
+  const message = isRoomOwner.value
+    ? '您是房主，离开后房间将被解散，确定要离开吗？'
+    : '确定要离开房间吗？'
+
+  if (!confirm(message)) {
+    return
+  }
+
   if (wsConnected.value) {
     sendLeave({
       roomCode: roomCode.value,
@@ -722,17 +744,17 @@ const refreshRoomState = async () => {
               自定义
             </button>
 
-            <button 
+            <button
               @click="handleReady"
-              :disabled="currentPlayerReady || loading || !wsConnected"
+              :disabled="loading || !wsConnected"
               class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
                      transition-colors
                      disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="currentPlayerReady 
-                ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' 
+              :class="currentPlayerReady
+                ? 'bg-green-100 text-green-700 border border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800 hover:bg-green-200 dark:hover:bg-green-900/30'
                 : 'bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700'"
             >
-              {{ currentPlayerReady ? '已准备' : '准备' }}
+              {{ currentPlayerReady ? '取消准备' : '准备' }}
             </button>
 
             <button 

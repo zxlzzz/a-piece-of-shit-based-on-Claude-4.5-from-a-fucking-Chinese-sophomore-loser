@@ -1,48 +1,5 @@
 [
   {
-    "id": 1,
-    "type": "CHOICE",
-    "text": "你们二人共同拥有一片土地，若种相同作物则收益减半。",
-    "calculateRule": null,
-    "strategyId": "Q003",
-    "options": [
-      {
-        "key": "A",
-        "text": "粮食作物（收获4，买种子消耗1）"
-      },
-      {
-        "key": "B",
-        "text": "经济作物（收获8，买种子消耗4）"
-      },
-      {
-        "key": "C",
-        "text": "什么都不种（获得对方一半分数）"
-      }
-    ],
-    "min": null,
-    "max": null,
-    "step": null,
-    "sequenceGroupId": null,
-    "sequenceOrder": null,
-    "totalSequenceCount": null,
-    "prerequisiteQuestionIds": null,
-    "isRepeatable": null,
-    "repeatTimes": null,
-    "repeatInterval": null,
-    "repeatGroupId": null,
-    "defaultChoice": "C",
-    "minPlayers": 2,
-    "maxPlayers": 2,
-    "tags": [
-      {
-        "id": 2,
-        "name": "类囚徒困境型",
-        "category": "mechanism",
-        "color": "#a78bfa"
-      }
-    ]
-  },
-  {
     "id": 2,
     "type": "BID",
     "text": "村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。",

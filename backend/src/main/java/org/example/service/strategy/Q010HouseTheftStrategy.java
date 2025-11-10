@@ -54,59 +54,29 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
-        Map<String, Integer> scores = new HashMap<>();
-
-        // 解析玩家选择
-        Map<String, Integer> playerChoices = new HashMap<>();
-        for (Map.Entry<String, String> entry : submissions.entrySet()) {
-            int choice = Integer.parseInt(entry.getValue());
-            playerChoices.put(entry.getKey(), choice);
-        }
-
-        // 初始化分数
-        for (String playerId : playerChoices.keySet()) {
-            scores.put(playerId, 0);
-        }
-
-        // 遍历每个房子，计算谁能获得分数
+        Map<String, Integer> playerChoices = submissions.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> Integer.parseInt(e.getValue())));
+        Map<String, Integer> scores = playerChoices.keySet().stream()
+                .collect(Collectors.toMap(k -> k, k -> 0));
         for (int house = 1; house <= 7; house++) {
             int value = HOUSE_VALUES[house];
-
-            // 计算每个玩家到这个房子的距离
-            Map<String, Integer> distances = new HashMap<>();
-            for (Map.Entry<String, Integer> entry : playerChoices.entrySet()) {
-                String playerId = entry.getKey();
-                int choice = entry.getValue();
-                int distance = Math.abs(choice - house);
-                distances.put(playerId, distance);
-            }
-
-            // 找出最小距离
-            int minDistance = distances.values().stream()
-                    .min(Integer::compareTo)
-                    .orElse(Integer.MAX_VALUE);
-
-            // 找出所有距离等于最小距离的玩家
-            List<String> closestPlayers = distances.entrySet().stream()
-                    .filter(e -> e.getValue() == minDistance)
+            int finalHouse = house;
+            Map<String, Integer> distances = playerChoices.entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                            e -> Math.abs(e.getValue() - finalHouse)));
+            int minDist = distances.values().stream().min(Integer::compareTo).orElse(Integer.MAX_VALUE);
+            List<String> closest = distances.entrySet().stream()
+                    .filter(e -> e.getValue() == minDist)
                     .map(Map.Entry::getKey)
                     .toList();
-
-            // 根据最近玩家数量分配分数
-            if (closestPlayers.size() == 1) {
-                // 唯一最近：独得全部价值
-                String playerId = closestPlayers.get(0);
-                scores.put(playerId, scores.get(playerId) + value);
-
-            } else if (closestPlayers.size() == 2) {
-                // 两人并列：平分（向下取整）
-                int shareValue = value / 2;
-                for (String playerId : closestPlayers) {
-                    scores.put(playerId, scores.get(playerId) + shareValue);
+            switch (closest.size()) {
+                case 1 -> scores.merge(closest.get(0), value, Integer::sum);
+                case 2 -> {
+                    int share = value / 2;
+                    closest.forEach(p -> scores.merge(p, share, Integer::sum));
                 }
             }
         }
-
         return scores;
     }
 

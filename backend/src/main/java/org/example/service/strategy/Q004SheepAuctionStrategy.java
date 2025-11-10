@@ -16,29 +16,40 @@ public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
         super(buffApplier);
     }
 
-    @Override
-    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
-        Map<String, Integer> scores = new HashMap<>();
-        Iterator<Map.Entry<String, String>> it = submissions.entrySet().iterator();
-        Map.Entry<String, String> p1 = it.next(), p2 = it.next();
-
-        int b1 = Integer.parseInt(p1.getValue()), b2 = Integer.parseInt(p2.getValue());
-        
-        if (b1 == b2) {
-            scores.put(p1.getKey(), 8 - b1);
-            scores.put(p2.getKey(), 8 - b2);
-        } else if (b1 > b2) {
-            scores.put(p1.getKey(), 8 - b1);
-            scores.put(p2.getKey(), 2);
-        } else {
-            scores.put(p1.getKey(), 2);
-            scores.put(p2.getKey(), 8 - b2);
-        }
-        return scores;
-    }
+//    @Override
+//    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+//        Map<String, Integer> scores = new HashMap<>();
+//        Iterator<Map.Entry<String, String>> it = submissions.entrySet().iterator();
+//        Map.Entry<String, String> p1 = it.next(), p2 = it.next();
+//
+//        int b1 = Integer.parseInt(p1.getValue()), b2 = Integer.parseInt(p2.getValue());
+//
+//        if (b1 == b2) {
+//            scores.put(p1.getKey(), 8 - b1);
+//            scores.put(p2.getKey(), 8 - b2);
+//        } else if (b1 > b2) {
+//            scores.put(p1.getKey(), 8 - b1);
+//            scores.put(p2.getKey(), 2);
+//        } else {
+//            scores.put(p1.getKey(), 2);
+//            scores.put(p2.getKey(), 8 - b2);
+//        }
+//        return scores;
+//    }
 
     @Override
     public String getQuestionIdentifier() {
         return "Q004";
+    }
+
+    @Override
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        List<Map.Entry<String, String>> sorted = submissions.entrySet().stream()
+                .sorted(Comparator.comparingInt(e->Integer.parseInt(e.getValue())))
+                .toList();
+        return Map.of(
+                sorted.get(0).getKey(), 2,
+                sorted.get(1).getValue(), 8- Integer.parseInt(sorted.get(1).getValue())
+        );
     }
 }

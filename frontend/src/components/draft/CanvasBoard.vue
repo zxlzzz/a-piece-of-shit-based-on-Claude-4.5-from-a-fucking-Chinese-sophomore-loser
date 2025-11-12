@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const emit = defineEmits(['update:modelValue'])
 
@@ -14,14 +14,42 @@ const historyStep = ref(-1)
 
 onMounted(() => {
   if (canvas.value) {
+    // 设置canvas实际尺寸为显示尺寸
+    resizeCanvas()
+
     ctx.value = canvas.value.getContext('2d')
     ctx.value.lineCap = 'round'
     ctx.value.lineJoin = 'round'
 
     // 加载保存的内容
     loadCanvas()
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', resizeCanvas)
   }
 })
+
+onUnmounted(() => {
+  window.removeEventListener('resize', resizeCanvas)
+})
+
+const resizeCanvas = () => {
+  if (!canvas.value) return
+
+  const rect = canvas.value.getBoundingClientRect()
+  const dpr = window.devicePixelRatio || 1
+
+  // 设置canvas实际尺寸（考虑设备像素比）
+  canvas.value.width = rect.width * dpr
+  canvas.value.height = rect.height * dpr
+
+  // 缩放绘图上下文以匹配设备像素比
+  if (ctx.value) {
+    ctx.value.scale(dpr, dpr)
+    ctx.value.lineCap = 'round'
+    ctx.value.lineJoin = 'round'
+  }
+}
 
 const loadCanvas = () => {
   const saved = sessionStorage.getItem('draftCanvas')
@@ -217,8 +245,6 @@ defineExpose({ clear, undo, redo })
     <div class="flex-1 bg-white dark:bg-gray-900 overflow-hidden">
       <canvas
         ref="canvas"
-        width="800"
-        height="600"
         class="w-full h-full cursor-crosshair touch-none"
         @mousedown="startDrawing"
         @mousemove="draw"

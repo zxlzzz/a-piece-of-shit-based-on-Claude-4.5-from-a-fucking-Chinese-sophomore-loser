@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import DraftDrawer from './DraftDrawer.vue'
 
 const props = defineProps({

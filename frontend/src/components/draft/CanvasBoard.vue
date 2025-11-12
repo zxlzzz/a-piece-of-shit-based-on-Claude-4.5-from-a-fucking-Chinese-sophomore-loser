@@ -245,6 +245,8 @@ defineExpose({ clear, undo, redo })
     <div class="flex-1 bg-white dark:bg-gray-900 overflow-hidden">
       <canvas
         ref="canvas"
+        width="800"
+        height="600"
         class="w-full h-full cursor-crosshair touch-none"
         @mousedown="startDrawing"
         @mousemove="draw"

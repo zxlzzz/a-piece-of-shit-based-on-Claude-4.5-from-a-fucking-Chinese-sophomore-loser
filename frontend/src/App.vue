@@ -7,12 +7,22 @@ const toast = useToast()
 
 // 监听 API 错误（api.js 触发的）
 const handleApiError = (event) => {
+  const { message, status, isDev } = event.detail
+
+  // 根据状态码调整严重程度
+  const severity = status === 401 || status === 403 ? 'warn' : 'error'
+
   toast.add({
-    severity: 'error',
-    summary: '请求错误',
-    detail: event.detail.message,
+    severity,
+    summary: status === 401 ? '未登录' : status === 403 ? '无权限' : '请求失败',
+    detail: message,
     life: 3000
   })
+
+  // 开发环境额外打印详情
+  if (isDev) {
+    console.error('[API Error]', event.detail)
+  }
 }
 
 // 监听 WebSocket 错误（ws.js 触发的）
@@ -58,12 +68,23 @@ const handleWelcome = (event) => {
   }
 }
 
+// 监听 Vue 运行时错误（main.js 触发的）
+const handleVueError = (event) => {
+  toast.add({
+    severity: 'error',
+    summary: '页面异常',
+    detail: event.detail.message,
+    life: 5000
+  })
+}
+
 onMounted(() => {
   // 注册全局事件监听
   window.addEventListener('api-error', handleApiError)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('room-deleted', handleRoomDeleted)
   window.addEventListener('websocket-welcome', handleWelcome)
+  window.addEventListener('vue-error', handleVueError)
 
   // 🔥 新增：检查并清理过期数据
   try {
@@ -86,11 +107,11 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-
   window.removeEventListener('api-error', handleApiError)
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('room-deleted', handleRoomDeleted)
   window.removeEventListener('websocket-welcome', handleWelcome)
+  window.removeEventListener('vue-error', handleVueError)
 })
 </script>
 

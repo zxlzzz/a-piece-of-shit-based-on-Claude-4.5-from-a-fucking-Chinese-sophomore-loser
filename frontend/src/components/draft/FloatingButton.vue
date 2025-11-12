@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import DraftDrawer from './DraftDrawer.vue'
+import { FLOATING_BUTTON_SIZE, FLOATING_BUTTON_DEFAULT_OFFSET } from '@/config/constants'
 
 const props = defineProps({
   enabled: {
@@ -21,8 +22,8 @@ onMounted(() => {
     position.value = JSON.parse(savedPos)
   } else {
     position.value = {
-      x: window.innerWidth - 80,
-      y: window.innerHeight - 80
+      x: window.innerWidth - FLOATING_BUTTON_DEFAULT_OFFSET,
+      y: window.innerHeight - FLOATING_BUTTON_DEFAULT_OFFSET
     }
   }
 })
@@ -51,8 +52,8 @@ const onDrag = (e) => {
   const clientY = e.clientY || e.touches[0].clientY
 
   position.value = {
-    x: Math.max(0, Math.min(window.innerWidth - 56, clientX - dragStart.value.x)),
-    y: Math.max(0, Math.min(window.innerHeight - 56, clientY - dragStart.value.y))
+    x: Math.max(0, Math.min(window.innerWidth - FLOATING_BUTTON_SIZE, clientX - dragStart.value.x)),
+    y: Math.max(0, Math.min(window.innerHeight - FLOATING_BUTTON_SIZE, clientY - dragStart.value.y))
   }
 }
 

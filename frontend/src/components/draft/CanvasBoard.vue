@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { CANVAS_LINE_WIDTHS, CANVAS_ERASER_MULTIPLIER, CANVAS_MAX_HISTORY } from '@/config/constants'
 
 const emit = defineEmits(['update:modelValue'])
 
@@ -7,7 +8,7 @@ const canvas = ref(null)
 const ctx = ref(null)
 const isDrawing = ref(false)
 const tool = ref('pen') // pen, eraser
-const lineWidth = ref(2) // 1, 2, 4
+const lineWidth = ref(CANVAS_LINE_WIDTHS[1]) // 默认中等粗细
 
 const history = ref([])
 const historyStep = ref(-1)
@@ -36,6 +37,9 @@ onUnmounted(() => {
 const resizeCanvas = () => {
   if (!canvas.value) return
 
+  // 🔥 保存当前画布内容
+  const imageData = ctx.value ? canvas.value.toDataURL() : null
+
   const rect = canvas.value.getBoundingClientRect()
   const dpr = window.devicePixelRatio || 1
 
@@ -48,6 +52,15 @@ const resizeCanvas = () => {
     ctx.value.scale(dpr, dpr)
     ctx.value.lineCap = 'round'
     ctx.value.lineJoin = 'round'
+
+    // 🔥 恢复保存的内容
+    if (imageData) {
+      const img = new Image()
+      img.onload = () => {
+        ctx.value.drawImage(img, 0, 0)
+      }
+      img.src = imageData
+    }
   }
 }
 
@@ -79,7 +92,7 @@ const saveState = () => {
   history.value = history.value.slice(0, historyStep.value)
   history.value.push(canvas.value.toDataURL())
 
-  if (history.value.length > 20) {
+  if (history.value.length > CANVAS_MAX_HISTORY) {
     history.value.shift()
     historyStep.value--
   }
@@ -137,7 +150,7 @@ const draw = (e) => {
 
   if (tool.value === 'eraser') {
     ctx.value.globalCompositeOperation = 'destination-out'
-    ctx.value.lineWidth = lineWidth.value * 8
+    ctx.value.lineWidth = lineWidth.value * CANVAS_ERASER_MULTIPLIER
   } else {
     ctx.value.globalCompositeOperation = 'source-over'
     ctx.value.lineWidth = lineWidth.value
@@ -188,7 +201,7 @@ defineExpose({ clear, undo, redo })
       <!-- 粗细选择 -->
       <div class="flex gap-1">
         <button
-          v-for="width in [1, 2, 4]"
+          v-for="width in CANVAS_LINE_WIDTHS"
           :key="width"
           @click="lineWidth = width"
           :class="lineWidth === width ? 'bg-blue-500' : 'bg-white dark:bg-gray-700'"

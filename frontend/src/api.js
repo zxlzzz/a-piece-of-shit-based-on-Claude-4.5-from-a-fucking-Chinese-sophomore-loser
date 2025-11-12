@@ -1,8 +1,9 @@
 import axios from "axios";
+import { API_TIMEOUT } from '@/config/constants';
 
 const api = axios.create({
   baseURL: "/api",
-  timeout: 10000,
+  timeout: API_TIMEOUT,
 });
 
 // ============ 请求拦截器（添加 token）============

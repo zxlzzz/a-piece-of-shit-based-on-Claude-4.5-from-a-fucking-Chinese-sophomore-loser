@@ -140,7 +140,7 @@ const handleGuestLogin = async () => {
     const resp = await guestLogin(guestName)
     const authData = resp.data
 
-    console.log('🎮 游客登录成功:', authData)
+    logger.info('🎮 游客登录成功:', authData)
 
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
@@ -158,7 +158,7 @@ const handleGuestLogin = async () => {
     }, 500)
 
   } catch (err) {
-    console.error('游客登录失败:', err)
+    logger.error('游客登录失败:', err)
 
     toast.add({
       severity: 'error',

@@ -26,4 +26,23 @@ app.component('Toast', Toast)
 app.component('Sidebar', Sidebar)
 app.component('InputNumber', InputNumber)
 
+// 🔥 全局错误处理（Vue 运行时错误）
+app.config.errorHandler = (err, instance, info) => {
+  console.error('[Vue Error]', err, info)
+
+  // 开发环境：不拦截，让错误在控制台显示
+  if (import.meta.env.DEV) {
+    return
+  }
+
+  // 生产环境：显示友好提示
+  window.dispatchEvent(new CustomEvent('vue-error', {
+    detail: {
+      message: '页面出现异常，请刷新重试',
+      error: err.message,
+      info
+    }
+  }))
+}
+
 app.mount('#app')

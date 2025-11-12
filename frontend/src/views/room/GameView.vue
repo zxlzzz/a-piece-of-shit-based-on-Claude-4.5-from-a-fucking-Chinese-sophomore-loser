@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
 import { useBreakpoints } from '@vueuse/core'
+import { logger } from '@/utils/logger'
 
 // 🔥 导入组件
 import GameHeader from '@/components/game/GameHeader.vue'
@@ -159,7 +160,7 @@ onMounted(() => {
         timeLimit.value = limit
         resetCountdown()
       } else {
-        console.warn('倒计时时间不合理，已跳过恢复:', { elapsed, limit })
+        logger.warn('倒计时时间不合理，已跳过恢复:', { elapsed, limit })
       }
     }
   }

@@ -62,7 +62,7 @@ onMounted(async () => {
   try {
     const res = await getAllQuestions()
     questions.value = res.data
-    console.log(questions.value)
+    logger.debug('题库加载成功:', questions.value)
   } catch (err) {
     logger.error("获取题库失败:", err)
     error.value = "加载失败，请刷新重试"

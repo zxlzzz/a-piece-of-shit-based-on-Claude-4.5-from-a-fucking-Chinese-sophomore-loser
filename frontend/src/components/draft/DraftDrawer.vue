@@ -1,6 +1,7 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import CanvasBoard from './CanvasBoard.vue'
+import { DRAWER_HEIGHT_VH, DRAWER_MAX_HEIGHT } from '@/config/constants'
 
 const props = defineProps({
   visible: {
@@ -12,6 +13,11 @@ const props = defineProps({
 const emit = defineEmits(['update:visible'])
 
 const canvasRef = ref(null)
+
+const drawerStyle = computed(() => ({
+  height: `${DRAWER_HEIGHT_VH}vh`,
+  maxHeight: `${DRAWER_MAX_HEIGHT}px`
+}))
 
 const close = () => {
   emit('update:visible', false)
@@ -39,7 +45,7 @@ const handleClear = () => {
     <div
       v-if="visible"
       class="fixed bottom-0 left-0 right-0 z-[101] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl"
-      style="height: 60vh; max-height: 600px;"
+      :style="drawerStyle"
       @click.stop
     >
       <div class="flex flex-col h-full">

@@ -1,0 +1,46 @@
+# ============================================
+# 开发环境配置
+# 启动命令：java -jar app.jar --spring.profiles.active=dev
+# ============================================
+
+spring:
+  # 数据库配置（开发环境）
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/game_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:gameuser}
+    password: ${DB_PASSWORD:123456}
+
+  # JPA 配置（开发环境）
+  jpa:
+    hibernate:
+      ddl-auto: update  # 开发环境允许自动更新表结构
+    show-sql: true      # 显示 SQL 语句
+    properties:
+      hibernate.format_sql: true  # 格式化 SQL 输出
+
+  # Redis 配置（开发环境）
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}  # 开发环境可以无密码
+
+# CORS 配置（开发环境 - 允许所有来源）
+cors:
+  allowed-origins: '*'
+
+# JWT 配置（开发环境 - 使用简单的密钥）
+jwt:
+  secret: ${JWT_SECRET:dev-secret-key-for-development-only-do-not-use-in-production}
+
+# 日志配置（开发环境 - 详细日志）
+logging:
+  level:
+    root: INFO
+    org.example: DEBUG              # 项目代码显示 DEBUG 级别
+    org.hibernate.SQL: DEBUG        # 显示 SQL
+    org.hibernate.type: TRACE       # 显示 SQL 参数
+    org.springframework.web: DEBUG  # Web 请求详细日志
+    org.springframework.security: DEBUG  # 安全框架日志
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

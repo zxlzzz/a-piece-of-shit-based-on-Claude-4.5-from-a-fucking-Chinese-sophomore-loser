@@ -1,13 +1,20 @@
 import { Client } from "@stomp/stompjs";
 import { logger } from "@/utils/logger";
+import {
+  WS_MAX_RECONNECT_ATTEMPTS,
+  WS_BASE_RECONNECT_DELAY,
+  WS_RECONNECT_DELAY,
+  WS_CONNECT_TIMEOUT,
+  WS_CONNECT_PROMISE_TIMEOUT
+} from "@/config/constants";
+
+const WS_URL = import.meta.env.VITE_WS_URL || '/ws';
 
 let stompClient = null;
 let connected = false;
 let currentPlayerId = null;
 let connectPromise = null;
 let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 5;
-const BASE_RECONNECT_DELAY = 1000; // 1秒
 let reconnectTimer = null;
 let isReconnecting = false; // 🔥 标记是否正在重连
 let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
@@ -30,10 +37,10 @@ export function connect(playerId, onConnect, onError) {
   // 🔥 修改：如果正在连接中，检查是否超时
   if (connectPromise) {
     const now = Date.now();
-    // 如果连接 Promise 存在超过 10 秒，强制重置
+    // 如果连接 Promise 存在超过设定时间，强制重置
     if (!connectPromise._startTime) {
       connectPromise._startTime = now;
-    } else if (now - connectPromise._startTime > 10000) {
+    } else if (now - connectPromise._startTime > WS_CONNECT_PROMISE_TIMEOUT) {
       logger.error('连接超时，强制重置');
       connectPromise = null;
       if (stompClient) {
@@ -61,19 +68,19 @@ export function connect(playerId, onConnect, onError) {
   connectPromise = new Promise((resolve, reject) => {
     // 添加超时保护
     const timeoutId = setTimeout(() => {
-      logger.error('连接超时（15秒）');
+      logger.error(`连接超时（${WS_CONNECT_TIMEOUT / 1000}秒）`);
       connectPromise = null;
       reject(new Error('连接超时'));
-    }, 15000);
+    }, WS_CONNECT_TIMEOUT);
 
     stompClient = new Client({
-      webSocketFactory: () => new SockJS("/ws"),
+      webSocketFactory: () => new SockJS(WS_URL),
 
       connectHeaders: {
         'playerId': playerId
       },
 
-      reconnectDelay: 3000,
+      reconnectDelay: WS_RECONNECT_DELAY,
 
       onConnect: (frame) => {
         clearTimeout(timeoutId);
@@ -112,16 +119,16 @@ export function connect(playerId, onConnect, onError) {
         }
 
         // 只有非手动断开才自动重连
-        if (!isReconnecting && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+        if (!isReconnecting && reconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
           isReconnecting = true;
-          const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
+          const delay = WS_BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
           reconnectAttempts++;
 
           // 触发重连中事件（带进度信息）
           window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
             detail: {
               attempts: reconnectAttempts,
-              maxAttempts: MAX_RECONNECT_ATTEMPTS,
+              maxAttempts: WS_MAX_RECONNECT_ATTEMPTS,
               delay: delay
             }
           }));
@@ -132,7 +139,7 @@ export function connect(playerId, onConnect, onError) {
               // 如果还没到最大次数，onDisconnect会再次触发重连
             });
           }, delay);
-        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+        } else if (reconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
           logger.error('已达到最大重连次数，停止重连');
           isReconnecting = false;
           window.dispatchEvent(new CustomEvent('websocket-max-reconnect-failed'));
@@ -484,7 +491,7 @@ export function getConnectionState() {
   return {
     connected,
     reconnectAttempts,
-    maxAttempts: MAX_RECONNECT_ATTEMPTS,
+    maxAttempts: WS_MAX_RECONNECT_ATTEMPTS,
     playerId: currentPlayerId
   };
 }

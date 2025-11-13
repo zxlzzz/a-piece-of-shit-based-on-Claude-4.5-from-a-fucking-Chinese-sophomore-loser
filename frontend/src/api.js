@@ -1,8 +1,9 @@
 import axios from "axios";
+import { API_TIMEOUT } from '@/config/constants';
 
 const api = axios.create({
   baseURL: "/api",
-  timeout: 10000,
+  timeout: API_TIMEOUT,
 });
 
 // ============ 请求拦截器（添加 token）============
@@ -28,15 +29,6 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // 🔥 处理 401 未授权错误
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('playerId');
-      localStorage.removeItem('playerName');
-      window.location.href = '/login';
-      return Promise.reject(error);
-    }
-
     // 🔥 检查是否需要静默处理（配置中设置了 silentError: true）
     const silentError = error.config?.silentError;
 
@@ -45,11 +37,13 @@ api.interceptors.response.use(
 
     // 只有需要提示的错误才触发全局事件
     if (shouldShowToast) {
+      const errorMessage = getErrorMessage(error);
       window.dispatchEvent(new CustomEvent('api-error', {
         detail: {
-          message: error.response?.data?.message || error.message || '请求失败',
+          message: errorMessage,
           status: error.response?.status,
-          url: error.config?.url
+          url: error.config?.url,
+          isDev: import.meta.env.DEV
         }
       }));
     }
@@ -57,6 +51,45 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// 🔥 根据错误类型返回友好的提示信息
+function getErrorMessage(error) {
+  const isDev = import.meta.env.DEV;
+  const status = error.response?.status;
+  const backendMessage = error.response?.data?.message;
+
+  // 有响应（HTTP 错误）
+  if (error.response) {
+    switch (status) {
+      case 400:
+        return backendMessage || '请求参数错误';
+      case 401:
+        return '请先登录';
+      case 403:
+        return '无权限访问';
+      case 404:
+        return backendMessage || '请求的资源不存在';
+      case 500:
+      case 502:
+      case 503:
+        return isDev
+          ? `服务器异常 (${status}): ${backendMessage || error.message}`
+          : '服务器异常，请稍后重试';
+      default:
+        return backendMessage || (isDev ? error.message : '请求失败');
+    }
+  }
+  // 请求发出去了但没收到响应（网络断了、后端没启动）
+  else if (error.request) {
+    return isDev
+      ? '网络连接失败（服务器可能未启动）'
+      : '网络连接失败，请检查网络';
+  }
+  // 请求配置错误
+  else {
+    return isDev ? `请求配置错误: ${error.message}` : '请求失败';
+  }
+}
 
 // 🔥 判断是否是可忽略的错误（不需要弹窗提示）
 function isIgnorableError(error) {

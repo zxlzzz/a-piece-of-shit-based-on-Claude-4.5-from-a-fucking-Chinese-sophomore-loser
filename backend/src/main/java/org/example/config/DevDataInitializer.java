@@ -6,6 +6,7 @@ import org.example.entity.PlayerEntity;
 import org.example.repository.PlayerRepository;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -14,8 +15,10 @@ import java.util.UUID;
 /**
  * 开发环境数据初始化器
  * 自动创建测试账号
+ * ⚠️ 只在开发环境运行（@Profile("dev")）
  */
 @Component
+@Profile("dev")  // 🔥 只在开发环境激活
 @RequiredArgsConstructor
 @Slf4j
 public class DevDataInitializer implements ApplicationRunner {

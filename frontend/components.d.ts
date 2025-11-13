@@ -8,10 +8,13 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     Button: typeof import('primevue/button')['default']
+    CanvasBoard: typeof import('./src/components/draft/CanvasBoard.vue')['default']
     ChatRoom: typeof import('./src/components/chat/ChatRoom.vue')['default']
     ChooseBar: typeof import('./src/components/game/ChooseBar.vue')['default']
     CreateRoomCard: typeof import('./src/components/room/CreateRoomCard.vue')['default']
     CustomForm: typeof import('./src/components/room/CustomForm.vue')['default']
+    DraftDrawer: typeof import('./src/components/draft/DraftDrawer.vue')['default']
+    FloatingButton: typeof import('./src/components/draft/FloatingButton.vue')['default']
     GameContent: typeof import('./src/components/game/GameContent.vue')['default']
     GameHeader: typeof import('./src/components/game/GameHeader.vue')['default']
     InputNumber: typeof import('primevue/inputnumber')['default']

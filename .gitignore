@@ -18,10 +18,13 @@ backend/application-local.properties
 backend/application-local.yml
 backend/.env
 
+# 忽略所有 application-*.yml，但保留必要的配置模板
 backend/src/main/resources/application-*.yml
 backend/src/main/resources/application-*.properties
-!backend/src/main/resources/application.yml         # 保留默认配置
-!backend/src/main/resources/application.properties  # 保留默认配置
+!backend/src/main/resources/application.yml           # 保留主配置
+!backend/src/main/resources/application.properties    # 保留主配置
+!backend/src/main/resources/application-dev.yml       # 保留开发环境配置模板
+!backend/src/main/resources/application-prod.yml      # 保留生产环境配置模板
 
 # Maven wrapper
 backend/.mvn/wrapper/maven-wrapper.jar

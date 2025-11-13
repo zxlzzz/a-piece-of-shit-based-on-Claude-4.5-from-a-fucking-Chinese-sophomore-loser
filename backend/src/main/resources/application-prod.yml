@@ -1,0 +1,71 @@
+# ============================================
+# 生产环境配置
+# 启动命令：java -jar app.jar --spring.profiles.active=prod
+# ⚠️  所有敏感配置必须通过环境变量设置！
+# ============================================
+
+spring:
+  # 数据库配置（生产环境 - 必须通过环境变量设置）
+  datasource:
+    url: ${DB_URL}         # ⚠️ 必需：生产数据库 URL
+    username: ${DB_USERNAME}  # ⚠️ 必需：数据库用户名
+    password: ${DB_PASSWORD}  # ⚠️ 必需：数据库密码
+
+  # JPA 配置（生产环境）
+  jpa:
+    hibernate:
+      ddl-auto: validate  # ⚠️ 生产环境：只验证表结构，不允许修改
+    show-sql: false       # 不显示 SQL（避免日志过大）
+    properties:
+      hibernate.format_sql: false
+
+  # Redis 配置（生产环境 - 必须通过环境变量设置）
+  data:
+    redis:
+      host: ${REDIS_HOST}      # ⚠️ 必需：Redis 主机
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD}  # ⚠️ 强烈建议：Redis 密码
+
+# CORS 配置（生产环境 - 必须指定具体域名）
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}  # ⚠️ 必需：允许的域名，如 https://yourdomain.com
+
+# JWT 配置（生产环境 - 必须使用强密钥）
+jwt:
+  secret: ${JWT_SECRET}  # ⚠️ 必需：至少 256 位随机字符串
+
+# 日志配置（生产环境 - 精简日志）
+logging:
+  level:
+    root: WARN                     # 只显示警告和错误
+    org.example: INFO              # 项目代码保留 INFO
+    org.hibernate: WARN            # Hibernate 只显示警告
+    org.springframework: WARN      # Spring 只显示警告
+    org.springframework.web: WARN
+    org.springframework.security: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/application.log     # 输出到文件
+    max-size: 100MB                # 单个日志文件最大 100MB
+    max-history: 30                # 保留 30 天
+    total-size-cap: 10GB           # 日志总大小限制 10GB
+
+# ============================================
+# 生产环境启动检查清单：
+# ============================================
+# 必需的环境变量：
+#   - DB_URL: 数据库连接地址
+#   - DB_USERNAME: 数据库用户名
+#   - DB_PASSWORD: 数据库密码
+#   - REDIS_HOST: Redis 主机地址
+#   - REDIS_PASSWORD: Redis 密码（强烈推荐）
+#   - CORS_ALLOWED_ORIGINS: 允许的前端域名
+#   - JWT_SECRET: JWT 密钥（至少 256 位）
+#
+# 可选的环境变量：
+#   - SERVER_PORT: 服务端口（默认 8080）
+#   - JWT_EXPIRATION: JWT 过期时间（默认 24 小时）
+#   - DB_POOL_MAX_SIZE: 数据库连接池最大连接数（默认 10）
+#   - DB_POOL_MIN_IDLE: 数据库连接池最小空闲连接（默认 5）
+# ============================================

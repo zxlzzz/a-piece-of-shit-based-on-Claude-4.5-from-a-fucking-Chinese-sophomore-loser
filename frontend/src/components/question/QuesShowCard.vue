@@ -1,5 +1,31 @@
+<script setup>
+import QuestionFeedback from '@/components/feedback/QuestionFeedback.vue'
+
+defineProps({
+  id: Number,  // 题目ID
+  text: String,
+  calculateRule: String,
+  type: {
+    type: String,
+    default: 'choice'
+  },
+  choice: {
+    type: [Array, String],
+    default: () => []
+  },
+  people: [Number, String],
+  min: Number,
+  max: Number,
+  step: Number,
+  tags: {
+    type: Array,
+    default: () => []
+  }
+})
+</script>
+
 <template>
-  <div class="break-inside-avoid mb-4 sm:mb-6 group bg-white dark:bg-gray-800 rounded-lg shadow-sm 
+  <div class="break-inside-avoid mb-4 sm:mb-6 group bg-white dark:bg-gray-800 rounded-lg shadow-sm
               hover:shadow-md transition-all duration-300
               border border-gray-100 dark:border-gray-700
               p-4 sm:p-6 flex flex-col">
@@ -118,28 +144,10 @@
         暂无选项
       </div>
     </div>
+
+    <!-- 🔥 题目反馈组件 -->
+    <div v-if="id" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <QuestionFeedback :questionId="id" />
+    </div>
   </div>
 </template>
-
-<script setup>
-defineProps({
-  text: String,
-  calculateRule: String,  // 🔥 计分规则（可选）
-  type: {
-    type: String,
-    default: 'choice' // choice 或 bid
-  },
-  choice: {
-    type: [Array, String],
-    default: () => []
-  },
-  people: [Number, String],
-  min: Number,
-  max: Number,
-  step: Number,
-  tags: {
-    type: Array,
-    default: () => []
-  }
-})
-</script>

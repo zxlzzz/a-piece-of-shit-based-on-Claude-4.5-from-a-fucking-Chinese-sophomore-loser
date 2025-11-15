@@ -15,12 +15,13 @@ const historyStep = ref(-1)
 
 onMounted(() => {
   if (canvas.value) {
-    // 设置canvas实际尺寸为显示尺寸
-    resizeCanvas()
-
+    // 🔥 先设置 context，再 resize（避免首次加载坐标偏移）
     ctx.value = canvas.value.getContext('2d')
     ctx.value.lineCap = 'round'
     ctx.value.lineJoin = 'round'
+
+    // 设置canvas实际尺寸为显示尺寸
+    resizeCanvas()
 
     // 加载保存的内容
     loadCanvas()

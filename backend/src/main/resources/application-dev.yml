@@ -33,14 +33,12 @@ cors:
 jwt:
   secret: ${JWT_SECRET:dev-secret-key-for-development-only-do-not-use-in-production}
 
-# 日志配置（开发环境 - 详细日志）
+# 日志配置（开发环境 - 精简日志）
 logging:
   level:
-    root: INFO
-    org.example: DEBUG              # 项目代码显示 DEBUG 级别
-    org.hibernate.SQL: DEBUG        # 显示 SQL
-    org.hibernate.type: TRACE       # 显示 SQL 参数
-    org.springframework.web: DEBUG  # Web 请求详细日志
-    org.springframework.security: DEBUG  # 安全框架日志
+    root: WARN                      # 框架只显示警告和错误
+    org.example: INFO               # 项目代码显示 INFO 及以上
+    org.hibernate: WARN             # Hibernate 只显示警告
+    org.springframework: WARN       # Spring 只显示警告
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

@@ -75,7 +75,7 @@ public class UserFeedbackService {
 
         UserFeedbackEntity saved = feedbackRepository.save(feedback);
 
-        log.info("收到用户反馈 - 类型: {}, 有昵称: {}, 有联系方式: {}",
+        log.debug("收到用户反馈 - 类型: {}, 有昵称: {}, 有联系方式: {}",
                 feedbackDTO.getType(),
                 feedbackDTO.getNickname() != null,
                 feedbackDTO.getContact() != null);

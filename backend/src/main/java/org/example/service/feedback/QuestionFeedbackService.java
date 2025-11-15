@@ -63,7 +63,7 @@ public class QuestionFeedbackService {
 
         QuestionFeedbackEntity saved = feedbackRepository.save(feedback);
 
-        log.info("收到题目反馈 - 题目ID: {}, 评分: {}, 有评论: {}",
+        log.debug("收到题目反馈 - 题目ID: {}, 评分: {}, 有评论: {}",
                 questionId, feedbackDTO.getRating(), feedbackDTO.getComment() != null);
 
         return saved;

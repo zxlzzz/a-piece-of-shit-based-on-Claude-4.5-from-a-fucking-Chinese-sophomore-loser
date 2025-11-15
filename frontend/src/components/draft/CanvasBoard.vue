@@ -54,11 +54,11 @@ const resizeCanvas = () => {
     ctx.value.lineCap = 'round'
     ctx.value.lineJoin = 'round'
 
-    // 🔥 恢复保存的内容
+    // 🔥 恢复保存的内容（使用逻辑尺寸，避免缩放问题）
     if (imageData) {
       const img = new Image()
       img.onload = () => {
-        ctx.value.drawImage(img, 0, 0)
+        ctx.value.drawImage(img, 0, 0, rect.width, rect.height)
       }
       img.src = imageData
     }

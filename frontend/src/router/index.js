@@ -105,11 +105,12 @@ router.beforeEach(async (to, from, next) => {
 
   // 🔥 进入房间页面时，订阅聊天（如果还没订阅）
   if (toRoom && to.params.roomId) {
-    // 延迟订阅，等待WebSocket连接建立
-    setTimeout(() => {
-      chatStore.subscribeToChat(to.params.roomId)
-      logger.info('✅ 路由守卫: 进入房间页面，订阅聊天', to.params.roomId)
-    }, 600)
+    // 异步订阅，chatStore内部会等待WebSocket连接
+    chatStore.subscribeToChat(to.params.roomId).then(() => {
+      logger.info('✅ 路由守卫: 进入房间页面，聊天订阅成功', to.params.roomId)
+    }).catch((err) => {
+      logger.error('❌ 路由守卫: 聊天订阅失败', err)
+    })
   }
 
   // 1. 检查是否需要登录

@@ -59,19 +59,23 @@ export const useChatStore = defineStore('chat', () => {
     // 设置房间码
     roomCode.value = code
 
-    // 🔥 检查并等待WebSocket连接
+    // 🔥 增加等待时间至10秒，每200ms检查一次
     if (!isConnected()) {
       logger.warn('⚠️ ChatStore: WebSocket未连接，等待连接...')
       let waited = 0
-      while (!isConnected() && waited < 3000) {
+      const maxWait = 10000 // 10秒
+      while (!isConnected() && waited < maxWait) {
         await new Promise(resolve => setTimeout(resolve, 200))
         waited += 200
       }
 
       if (!isConnected()) {
-        logger.error('❌ ChatStore: 等待超时，WebSocket仍未连接')
-        return
+        const error = new Error('WebSocket连接超时（10秒）')
+        logger.error('❌ ChatStore: 等待超时（10秒），WebSocket仍未连接')
+        throw error
       }
+
+      logger.info(`✅ ChatStore: WebSocket连接成功（等待${waited}ms）`)
     }
 
     try {
@@ -93,6 +97,7 @@ export const useChatStore = defineStore('chat', () => {
       sendJoinMessage()
     } catch (error) {
       logger.error('❌ ChatStore: 订阅聊天频道失败', error)
+      throw error
     }
   }
 

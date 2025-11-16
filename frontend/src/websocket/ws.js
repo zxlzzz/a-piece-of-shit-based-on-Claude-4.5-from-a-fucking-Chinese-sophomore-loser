@@ -82,6 +82,12 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
+      // 🔥 关键修复：配置心跳，与后端保持一致（25秒）
+      // heartbeatIncoming: 服务端发给客户端的心跳间隔
+      // heartbeatOutgoing: 客户端发给服务端的心跳间隔
+      heartbeatIncoming: 25000,
+      heartbeatOutgoing: 25000,
+
       onConnect: (frame) => {
         clearTimeout(timeoutId);
         connected = true;

@@ -34,18 +34,19 @@
         </div>
         
         <!-- 聊天切换按钮 -->
-        <button 
+        <button
           @click="$emit('toggleChat')"
-          class="relative p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
-                 rounded-lg transition-colors"
+          class="relative p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700
+                 hover:scale-110 active:scale-95
+                 rounded-lg transition-all duration-200"
         >
-          <i :class="showChat ? 'pi pi-times' : 'pi pi-comment'" 
-             class="text-sm sm:text-base text-gray-600 dark:text-gray-400"></i>
-          
+          <i :class="showChat ? 'pi pi-times text-blue-600 dark:text-blue-400' : 'pi pi-comment'"
+             class="text-sm sm:text-base text-gray-600 dark:text-gray-400 transition-colors"></i>
+
           <!-- 未读消息红点 -->
           <span v-if="hasUnreadMessages && !showChat"
-                class="absolute -top-0.5 -right-0.5 
-                       w-2 h-2 bg-red-500 rounded-full 
+                class="absolute -top-0.5 -right-0.5
+                       w-2 h-2 bg-red-500 rounded-full
                        animate-pulse"></span>
         </button>
       </div>

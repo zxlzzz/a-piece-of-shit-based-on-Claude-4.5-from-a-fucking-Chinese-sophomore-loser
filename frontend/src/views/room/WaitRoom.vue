@@ -532,7 +532,7 @@ const refreshRoomState = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6"
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-[padding] duration-300 ease-in-out"
        :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
 
     <!-- 连接状态 -->
@@ -560,10 +560,11 @@ const refreshRoomState = async () => {
                 @click="chatStore.toggleChat(isMobile)"
                 class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
                        border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700
-                       rounded-lg text-sm font-medium transition-colors"
+                       hover:scale-105 active:scale-95
+                       rounded-lg text-sm font-medium transition-all duration-200"
                 :title="chatStore.visible ? '关闭聊天' : '打开聊天'"
               >
-                <i class="pi" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
+                <i class="pi transition-transform" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
               </button>
             </div>
 

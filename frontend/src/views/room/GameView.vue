@@ -159,7 +159,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6"
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-[padding] duration-300 ease-in-out"
        :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
     <!-- 连接状态 -->
     <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">

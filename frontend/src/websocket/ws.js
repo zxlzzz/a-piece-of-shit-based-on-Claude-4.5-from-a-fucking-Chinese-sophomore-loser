@@ -113,37 +113,59 @@ export function connect(playerId, onConnect, onError) {
         connected = false;
         connectPromise = null;
 
-        // 手动断开或已经在重连中，不再触发新的重连
+        // 手动断开不自动重连
         if (manualDisconnect) {
+          logger.debug('手动断开，不进行重连');
           return;
         }
 
-        // 只有非手动断开才自动重连
-        if (!isReconnecting && reconnectAttempts < WS_MAX_RECONNECT_ATTEMPTS) {
-          isReconnecting = true;
-          const delay = WS_BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
-          reconnectAttempts++;
-
-          // 触发重连中事件（带进度信息）
-          window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
-            detail: {
-              attempts: reconnectAttempts,
-              maxAttempts: WS_MAX_RECONNECT_ATTEMPTS,
-              delay: delay
-            }
-          }));
-
-          reconnectTimer = setTimeout(() => {
-            reconnect().catch(err => {
-              logger.error('重连失败:', err);
-              // 如果还没到最大次数，onDisconnect会再次触发重连
-            });
-          }, delay);
-        } else if (reconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
+        // 检查是否已达最大重连次数
+        if (reconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
           logger.error('已达到最大重连次数，停止重连');
           isReconnecting = false;
           window.dispatchEvent(new CustomEvent('websocket-max-reconnect-failed'));
+          return;
         }
+
+        // 避免重复触发重连
+        if (isReconnecting && reconnectTimer) {
+          logger.debug('已在重连中，跳过本次断开事件');
+          return;
+        }
+
+        // 开始重连流程
+        isReconnecting = true;
+        const delay = WS_BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
+        reconnectAttempts++;
+
+        logger.debug(`开始第 ${reconnectAttempts} 次重连，延迟 ${delay}ms`);
+
+        // 触发重连中事件（带进度信息）
+        window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
+          detail: {
+            attempts: reconnectAttempts,
+            maxAttempts: WS_MAX_RECONNECT_ATTEMPTS,
+            delay: delay
+          }
+        }));
+
+        // 清除旧的重连定时器（如果有）
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+        }
+
+        reconnectTimer = setTimeout(async () => {
+          reconnectTimer = null;
+          try {
+            await reconnect();
+            // 重连成功会触发 onConnect，在那里重置状态
+          } catch (err) {
+            logger.error('重连失败:', err);
+            isReconnecting = false;
+            // 如果还没到最大次数，下次 onDisconnect 会再次触发重连
+            // 如果已到最大次数，上面的检查会阻止重连
+          }
+        }, delay);
       },
 
       onStompError: (frame) => {

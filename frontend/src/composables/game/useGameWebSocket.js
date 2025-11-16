@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { connect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
+import { connect, isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
@@ -21,6 +21,7 @@ export function useGameWebSocket(
 ) {
   const subscriptions = ref([])
   const wsConnected = ref(false) // 🔥 新增：连接状态
+  let isSubscribed = false // 🔥 新增：标记是否已订阅
 
   const handleReconnecting = (event) => {
     wsConnected.value = false // 🔥 更新连接状态
@@ -32,18 +33,28 @@ export function useGameWebSocket(
     })
   }
 
+  const handleReconnected = () => {
+    wsConnected.value = true
+    toast.add({
+      severity: 'success',
+      summary: '重连成功',
+      detail: '连接已恢复',
+      life: 2000
+    })
+  }
+
   const handleMaxReconnectFailed = () => {
     logger.error('❌ GameView: WebSocket 重连失败')
-    
+
     toast.add({
       severity: 'error',
       summary: '连接失败',
       detail: '连接已断开，请刷新页面',
       life: 0
     })
-    
+
     clearCountdown()
-    
+
     setTimeout(() => {
       if (confirm('连接已断开，是否重新连接？')) {
         window.location.reload()
@@ -102,6 +113,13 @@ export function useGameWebSocket(
   }
 
   const setupRoomSubscription = () => {
+    // 🔥 避免重复订阅
+    if (isSubscribed && subscriptions.value.length > 0) {
+      logger.debug('已存在订阅，先取消旧订阅');
+      unsubscribeAll(subscriptions.value);
+      subscriptions.value = [];
+    }
+
     const subs = subscribeRoom(
       roomCode.value,
       (update) => {
@@ -186,8 +204,20 @@ export function useGameWebSocket(
         }
       }
     )
-    
+
     subscriptions.value = subs
+    isSubscribed = true
+  }
+
+  // 🔥 订阅恢复回调（重连后自动调用）
+  const subscriptionRestoreCallback = () => {
+    logger.debug('GameView: 重连后恢复订阅');
+    try {
+      setupRoomSubscription();
+      refreshRoomState();
+    } catch (err) {
+      logger.error('GameView: 恢复订阅失败:', err);
+    }
   }
 
   const connectWebSocket = async () => {
@@ -217,7 +247,11 @@ export function useGameWebSocket(
 
   onMounted(() => {
     window.addEventListener('websocket-reconnecting', handleReconnecting)
+    window.addEventListener('websocket-reconnected', handleReconnected)
     window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
+
+    // 🔥 注册订阅恢复回调
+    registerSubscriptionCallback(subscriptionRestoreCallback)
   })
 
   onUnmounted(() => {
@@ -225,7 +259,13 @@ export function useGameWebSocket(
       unsubscribeAll(subscriptions.value)
     }
     window.removeEventListener('websocket-reconnecting', handleReconnecting)
+    window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
+
+    // 🔥 取消注册订阅恢复回调
+    unregisterSubscriptionCallback(subscriptionRestoreCallback)
+
+    isSubscribed = false
   })
 
   return {

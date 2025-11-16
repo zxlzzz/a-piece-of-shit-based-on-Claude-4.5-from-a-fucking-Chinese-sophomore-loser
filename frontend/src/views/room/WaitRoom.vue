@@ -559,14 +559,27 @@ const refreshRoomState = async () => {
           
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
+            <!-- Toggle Chat Button -->
+            <div class="flex justify-end mb-3">
+              <button
+                @click="chatStore.toggleChat(isMobile)"
+                class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                       border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700
+                       rounded-lg text-sm font-medium transition-colors"
+                :title="chatStore.visible ? '关闭聊天' : '打开聊天'"
+              >
+                <i class="pi" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
+              </button>
+            </div>
+
             <div class="text-center">
               <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
                   {{ roomCode }}
                 </h1>
-                <button 
+                <button
                   @click="copyRoomCode"
-                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700
                          rounded-lg transition-colors"
                   title="复制房间码"
                 >

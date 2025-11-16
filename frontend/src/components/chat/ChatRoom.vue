@@ -1,8 +1,6 @@
 <script setup>
-import { logger } from '@/utils/logger'
-import { getStompClient, isConnected, sendMessage } from '@/websocket/ws'
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
-// 注意：不再直接导入 SockJS，通过 ws.js 使用
+import { useChatStore } from '@/stores/chat'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   roomCode: {
@@ -19,12 +17,14 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['newMessage', 'close'])
+const emit = defineEmits(['close'])
 
-const messages = ref([])
+const chatStore = useChatStore()
 const inputMessage = ref('')
 const chatContainer = ref(null)
-let chatSubscription = null
+
+// 从chatStore获取消息
+const messages = computed(() => chatStore.messages)
 
 // 消息类型样式映射
 const messageTypeClass = computed(() => ({
@@ -38,91 +38,12 @@ const messageTypeClass = computed(() => ({
   GAME_END: 'game-end-message'
 }))
 
-// 订阅聊天频道
-const subscribeChatChannel = async () => {
-  // 🔥 检查并等待连接
-  if (!isConnected()) {
-    
-    // 等待最多 3 秒
-    let waited = 0
-    while (!isConnected() && waited < 3000) {
-      await new Promise(resolve => setTimeout(resolve, 200))
-      waited += 200
-    }
-    
-    if (!isConnected()) {
-      logger.error('❌ ChatRoom: 等待超时，WebSocket 仍未连接')
-      return
-    }
-  }
-  
-  const client = getStompClient()
-  
-  // 订阅房间聊天频道
-  chatSubscription = client.subscribe(`/topic/room/${props.roomCode}/chat`, (message) => {
-    try {
-      const chatMessage = JSON.parse(message.body)
-      addMessage(chatMessage)
-    } catch (error) {
-      logger.error('解析聊天消息失败:', error)
-    }
-  })
-
-
-  // 发送加入消息
-  sendJoinMessage()
-}
-
-// 发送加入消息
-const sendJoinMessage = () => {
-  const joinMsg = {
-    type: 'JOIN',
-    senderId: props.playerId,
-    senderName: props.playerName,
-    roomCode: props.roomCode
-  }
-  sendMessage(`/app/room/${props.roomCode}/join`, joinMsg)
-}
-
 // 发送聊天消息
 const sendChatMessage = () => {
   if (!inputMessage.value.trim()) return
 
-  const chatMsg = {
-    type: 'CHAT',
-    senderId: props.playerId,
-    senderName: props.playerName,
-    content: inputMessage.value,
-    roomCode: props.roomCode
-  }
-
-  sendMessage(`/app/chat/${props.roomCode}`, chatMsg)
+  chatStore.sendChatMessage(inputMessage.value)
   inputMessage.value = ''
-}
-
-// 发送准备消息（供外部调用）
-const sendReadyMessage = (isReady) => {
-  const readyMsg = {
-    type: isReady ? 'READY' : 'UNREADY',
-    senderId: props.playerId,
-    senderName: props.playerName,
-    roomCode: props.roomCode
-  }
-  sendMessage(`/app/room/${props.roomCode}/ready`, readyMsg)
-}
-
-// 添加消息到列表
-const addMessage = (message) => {
-  messages.value.push(message)
-  // 滚动到底部
-  if (message.type === 'CHAT' && message.senderId !== props.playerId) {
-    emit('newMessage', message)
-  }
-  nextTick(() => {
-    if (chatContainer.value) {
-      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
-    }
-  })
 }
 
 // 判断是否是自己的消息
@@ -130,28 +51,14 @@ const isOwnMessage = (message) => {
   return message.senderId === props.playerId
 }
 
-// 取消订阅
-const unsubscribe = () => {
-  if (chatSubscription) {
-    chatSubscription.unsubscribe()
-    chatSubscription = null
-  }
-}
-
-// 暴露方法给父组件调用
-defineExpose({
-  sendReadyMessage
-})
-
-onMounted(() => {
-  setTimeout(() => {
-    subscribeChatChannel()
-  }, 500)
-})
-
-onUnmounted(() => {
-  unsubscribe()
-})
+// 监听消息变化，自动滚动到底部
+watch(messages, () => {
+  nextTick(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight
+    }
+  })
+}, { deep: true })
 
 // 按 Enter 发送消息
 const handleKeyPress = (event) => {

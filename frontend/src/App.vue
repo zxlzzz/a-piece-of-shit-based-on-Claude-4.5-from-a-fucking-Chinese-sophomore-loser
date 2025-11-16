@@ -167,9 +167,10 @@ onUnmounted(() => {
   <!-- 🔥 全局ChatRoom - 桌面端固定在右侧 -->
   <teleport to="body">
     <transition name="slide-left">
-      <div v-if="chatStore.visible && chatStore.roomCode && isDesktop"
+      <div v-show="chatStore.visible && chatStore.roomCode && isDesktop"
            class="fixed top-0 right-0 h-screen w-[400px] z-[60] shadow-2xl">
         <ChatRoom
+          v-if="chatStore.roomCode"
           :roomCode="chatStore.roomCode"
           :playerId="playerStore.playerId"
           :playerName="playerStore.playerName"

@@ -23,6 +23,7 @@ const breakpoints = useBreakpoints({
   desktop: 1024,
 })
 const isMobile = breakpoints.smaller('desktop')
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 const roomCode = ref(route.params.roomId)
 const room = ref(null)
@@ -109,9 +110,6 @@ onMounted(async () => {
 
   // 开始连接
   await connectWebSocket()
-
-  // 🔥 设置全局ChatRoom
-  chatStore.setChatRoom(roomCode.value)
 })
 
 onUnmounted(() => {
@@ -534,13 +532,14 @@ const refreshRoomState = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
-    
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6"
+       :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
+
     <!-- 连接状态 -->
     <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">
       <div class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium border"
-           :class="wsConnected 
-             ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' 
+           :class="wsConnected
+             ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
              : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'">
         <i :class="wsConnected ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
         <span class="hidden sm:inline ml-1">
@@ -550,12 +549,8 @@ const refreshRoomState = async () => {
     </div>
 
     <!-- 主容器 -->
-    <div class="max-w-7xl mx-auto">
-      <!-- 🔥 改：移动端单列，大屏幕3列布局 -->
-      <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        
-        <!-- 左侧：房间信息 + 玩家列表 -->
-        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="space-y-4 sm:space-y-6">
           
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
@@ -794,9 +789,6 @@ const refreshRoomState = async () => {
               开始游戏
             </button>
           </div>
-        </div>
-
-        <!-- 🔥 ChatRoom已移至全局App.vue，通过chatStore控制 -->
       </div>
     </div>
 

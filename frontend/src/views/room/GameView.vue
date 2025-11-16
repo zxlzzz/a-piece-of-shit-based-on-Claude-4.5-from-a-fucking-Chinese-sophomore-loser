@@ -29,6 +29,7 @@ const breakpoints = useBreakpoints({
   desktop: 1024,
 })
 const isMobile = breakpoints.smaller('desktop')
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 // 基础状态
 const roomCode = ref(route.params.roomId)
@@ -145,9 +146,6 @@ onMounted(() => {
     }
   }
 
-  // 🔥 设置全局ChatRoom
-  chatStore.setChatRoom(roomCode.value)
-
   connectWebSocket()
 })
 
@@ -161,7 +159,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6"
+       :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
     <!-- 连接状态 -->
     <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">
       <div class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium border"
@@ -175,7 +174,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto">
+    <div class="max-w-4xl mx-auto">
       <!-- 游戏主区域 -->
       <div class="space-y-4 sm:space-y-6">
         <!-- 顶部信息栏 -->

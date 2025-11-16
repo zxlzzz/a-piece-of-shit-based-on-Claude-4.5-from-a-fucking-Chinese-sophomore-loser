@@ -34,9 +34,6 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-
-  // 🔥 设置全局ChatRoom（保持聊天室连续）
-  chatStore.setChatRoom(roomCode.value)
 })
 </script>
 

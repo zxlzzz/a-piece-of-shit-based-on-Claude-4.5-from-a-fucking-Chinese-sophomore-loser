@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { connect, isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
+import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
@@ -221,14 +221,30 @@ export function useGameWebSocket(
   }
 
   const connectWebSocket = async () => {
-    if (!isConnected()) {
+    // 🔥 简化：不再管理连接，只管理订阅
+    // 连接由 App.vue 全局管理
 
-      try {
-        await connect(playerStore.playerId)
-        wsConnected.value = true // 🔥 连接成功，更新状态
-      } catch (err) {
-        logger.error('❌ GameView: WebSocket 连接失败', err)
-        wsConnected.value = false // 🔥 连接失败，更新状态
+    wsConnected.value = isConnected()
+
+    if (!wsConnected.value) {
+      logger.error('❌ GameView: WebSocket 未连接，等待全局连接建立')
+      toast.add({
+        severity: 'warn',
+        summary: '等待连接',
+        detail: '正在建立连接，请稍候...',
+        life: 3000
+      })
+
+      // 等待连接建立（最多3秒）
+      let waited = 0
+      while (!isConnected() && waited < 3000) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        waited += 200
+      }
+
+      wsConnected.value = isConnected()
+
+      if (!wsConnected.value) {
         toast.add({
           severity: 'error',
           summary: '连接失败',
@@ -237,10 +253,9 @@ export function useGameWebSocket(
         })
         return
       }
-    } else {
-      wsConnected.value = true // 🔥 已连接，更新状态
     }
 
+    // 设置订阅
     setupRoomSubscription()
     await refreshRoomState()
   }

@@ -1,11 +1,14 @@
 <script setup>
 import { logger } from '@/utils/logger'
 import { useToast } from 'primevue/usetoast'
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { usePlayerStore } from '@/stores/player'
 import WebSocketStatus from './components/common/WebSocketStatus.vue'
 import { TOAST_DEBOUNCE_TIME, TOAST_CLEANUP_DELAY, TOAST_DEFAULT_LIFE, ROOM_DATA_EXPIRY_TIME } from '@/config/constants'
+import { connect, disconnect, isConnected } from '@/websocket/ws'
 
 const toast = useToast()
+const playerStore = usePlayerStore()
 
 // 🔥 Toast 去重：记录最近显示的消息（key: message, value: timestamp）
 const recentToasts = ref(new Map())
@@ -74,6 +77,36 @@ const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
 
+// 🔥 全局 WebSocket 连接管理
+const connectGlobalWebSocket = async () => {
+  // 只有在有 playerId 时才连接
+  if (!playerStore.playerId) {
+    logger.debug('App: 没有 playerId，跳过 WebSocket 连接')
+    return
+  }
+
+  // 如果已经连接，不重复连接
+  if (isConnected()) {
+    logger.debug('App: WebSocket 已连接')
+    return
+  }
+
+  try {
+    await connect(playerStore.playerId)
+    logger.debug('App: 全局 WebSocket 连接成功')
+  } catch (err) {
+    logger.error('App: 全局 WebSocket 连接失败', err)
+  }
+}
+
+// 监听 playerId 变化，自动建立连接
+watch(() => playerStore.playerId, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    logger.debug('App: playerId 变化，建立 WebSocket 连接')
+    connectGlobalWebSocket()
+  }
+}, { immediate: true })
+
 onMounted(() => {
   // 注册全局事件监听
   window.addEventListener('api-error', handleApiError)
@@ -82,7 +115,7 @@ onMounted(() => {
   window.addEventListener('websocket-welcome', handleWelcome)
   window.addEventListener('vue-error', handleVueError)
 
-  // 🔥 新增：检查并清理过期数据
+  // 🔥 清理过期数据
   try {
     const savedRoom = localStorage.getItem('currentRoom')
     if (savedRoom) {
@@ -96,10 +129,9 @@ onMounted(() => {
     logger.error('清理 localStorage 失败:', error)
     localStorage.removeItem('currentRoom')
   }
-  // 🔥 新增：页面加载时清理旧连接状态（注册在 onMounted 而不是 window.load）
-  import('@/websocket/ws').then(({ disconnect }) => {
-    disconnect()
-  })
+
+  // 🔥 建立全局 WebSocket 连接
+  connectGlobalWebSocket()
 })
 
 onUnmounted(() => {
@@ -108,6 +140,9 @@ onUnmounted(() => {
   window.removeEventListener('room-deleted', handleRoomDeleted)
   window.removeEventListener('websocket-welcome', handleWelcome)
   window.removeEventListener('vue-error', handleVueError)
+
+  // 🔥 应用卸载时断开连接
+  disconnect()
 })
 </script>
 

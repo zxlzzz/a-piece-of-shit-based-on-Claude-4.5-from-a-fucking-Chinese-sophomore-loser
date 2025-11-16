@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref } from 'vue'
-import { connect, disconnect, isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
+import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
@@ -153,61 +153,56 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const connectWebSocket = async (room, onRoomUpdate) => {
+    // 🔥 简化：不再管理连接，只管理订阅
+    // 连接由 App.vue 全局管理
 
     wsConnected.value = isConnected()
 
-    if (wsConnected.value) {
+    if (!wsConnected.value) {
+      logger.error('❌ WaitRoom: WebSocket 未连接，等待全局连接建立')
+      toast.add({
+        severity: 'warn',
+        summary: '等待连接',
+        detail: '正在建立连接，请稍候...',
+        life: 3000
+      })
 
-      try {
-        setupRoomSubscription(room, onRoomUpdate)
+      // 等待连接建立（最多3秒）
+      let waited = 0
+      while (!isConnected() && waited < 3000) {
+        await new Promise(resolve => setTimeout(resolve, 200))
+        waited += 200
+      }
+
+      wsConnected.value = isConnected()
+
+      if (!wsConnected.value) {
+        toast.add({
+          severity: 'error',
+          summary: '连接失败',
+          detail: 'WebSocket 连接失败，请刷新页面',
+          life: 5000
+        })
         return
-      } catch (err) {
-        logger.error('❌ 订阅失败，可能连接已断开，尝试重连', err)
-        disconnect(true)
-        wsConnected.value = false
       }
     }
 
-
+    // 设置订阅
     try {
       loading.value = true
-
-      await connect(playerStore.playerId)
-
-
-      wsConnected.value = true
-
-      await new Promise(resolve => setTimeout(resolve, 100))
-
+      setupRoomSubscription(room, onRoomUpdate)
+      await refreshRoomState(room)
     } catch (err) {
-      logger.error('❌ WaitRoom: WebSocket 连接失败', err)
-
-      wsConnected.value = false
-
+      logger.error('❌ WaitRoom: 订阅失败', err)
       toast.add({
         severity: 'error',
-        summary: '连接失败',
-        detail: err.message === '连接超时'
-          ? 'WebSocket 连接超时，请刷新页面'
-          : 'WebSocket 连接失败：' + err.message,
+        summary: '订阅失败',
+        detail: '订阅房间失败，请刷新页面',
         life: 5000
       })
-
-      loading.value = false
-
-      if (confirm('WebSocket 连接失败，是否重试？')) {
-        await connectWebSocket(room, onRoomUpdate)
-        return
-      } else {
-        router.push('/find')
-        return
-      }
     } finally {
       loading.value = false
     }
-
-    setupRoomSubscription(room, onRoomUpdate)
-    await refreshRoomState(room)
   }
 
   // 🔥 订阅恢复回调（重连后自动调用）

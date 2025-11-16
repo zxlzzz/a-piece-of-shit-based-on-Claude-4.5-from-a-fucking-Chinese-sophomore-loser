@@ -1,6 +1,6 @@
 <script setup>
 import { logger } from '@/utils/logger'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useBreakpoints } from '@vueuse/core'
@@ -9,7 +9,6 @@ import ChatRoom from '@/components/chat/ChatRoom.vue'
 import MobileChatDrawer from '@/components/game/MobileChatDrawer.vue'
 import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { getGameHistory } from '@/api'
-import { connect, disconnect, isConnected } from '@/websocket/ws'
 
 const route = useRoute()
 const playerStore = usePlayerStore()
@@ -19,7 +18,7 @@ const breakpoints = useBreakpoints({
   tablet: 768,
   desktop: 1024,
 })
-const isDesktop = breakpoints.greaterOrEqual('desktop')  // 🔥 新增：大于等于 1024px 是桌面端
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 const roomCode = ref(route.params.roomId)
 const gameHistory = ref(null)
@@ -27,7 +26,6 @@ const loading = ref(true)
 const showChat = ref(false)
 const unreadCount = ref(0)
 const hasUnreadMessages = computed(() => unreadCount.value > 0)
-const wsConnected = ref(false)
 
 const toggleChat = () => {
   showChat.value = !showChat.value
@@ -42,22 +40,6 @@ const handleNewMessage = () => {
   }
 }
 
-// 建立 WebSocket 连接（用于聊天功能）
-const connectWebSocket = async () => {
-  if (!isConnected() && playerStore.playerId) {
-    try {
-      await connect(playerStore.playerId)
-      wsConnected.value = true
-      logger.debug('ResultView: WebSocket 连接成功')
-    } catch (err) {
-      logger.error('ResultView: WebSocket 连接失败', err)
-      wsConnected.value = false
-    }
-  } else {
-    wsConnected.value = isConnected()
-  }
-}
-
 onMounted(async () => {
   try {
     const response = await getGameHistory(roomCode.value)
@@ -67,22 +49,16 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-
-  // 建立 WebSocket 连接以支持聊天功能
-  await connectWebSocket()
-})
-
-onUnmounted(() => {
-  // 注意：不主动断开 WebSocket，因为可能在其他页面还需要使用
-  // disconnect() 会在用户离开应用时由其他页面负责
+  // 🔥 WebSocket 连接由 App.vue 全局管理，这里不需要建立连接
 })
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
-    <div class="max-w-7xl mx-auto">
+    <!-- 🔥 修复布局：不使用max-w，改用条件宽度 -->
+    <div :class="showChat && isDesktop ? 'max-w-[1600px]' : 'max-w-4xl'" class="mx-auto">
       <!-- 🔥 只在桌面端且显示聊天时才分栏 -->
-      <div class="grid gap-4 sm:gap-6" 
+      <div class="grid gap-4 sm:gap-6"
            :class="showChat && isDesktop ? 'lg:grid-cols-[1fr_400px]' : 'grid-cols-1'">
         
         <!-- 主内容区 -->

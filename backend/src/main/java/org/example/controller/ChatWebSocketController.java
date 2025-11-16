@@ -3,6 +3,7 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.ChatMessage;
+import org.example.service.chat.ChatRoomManager;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 @Slf4j
 public class ChatWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
+    private final ChatRoomManager chatRoomManager;
 
     /**
      * 发送聊天消息
@@ -30,7 +32,10 @@ public class ChatWebSocketController {
         message.setTimestamp(LocalDateTime.now());
         message.setRoomCode(roomCode);
 
-        log.info("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
+        log.debug("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
+
+        // 🔥 记录聊天室活动
+        chatRoomManager.recordActivity(roomCode);
 
         // 广播到房间的所有订阅者
         messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
@@ -49,10 +54,13 @@ public class ChatWebSocketController {
         headerAccessor.getSessionAttributes().put("playerName", message.getSenderName());
         headerAccessor.getSessionAttributes().put("roomCode", roomCode);
 
+        // 🔥 记录玩家加入聊天室
+        chatRoomManager.playerJoin(roomCode, message.getSenderId());
+
         // 创建加入消息
         ChatMessage joinMessage = ChatMessage.join(roomCode, message.getSenderName());
 
-        log.info("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
+        log.debug("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
 
         // 广播加入消息
         messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);

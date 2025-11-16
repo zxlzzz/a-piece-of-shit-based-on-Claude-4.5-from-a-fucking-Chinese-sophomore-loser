@@ -49,10 +49,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registry.setApplicationDestinationPrefixes("/app");
 
         // 启用简单消息代理，支持主题和队列
-        // 🔥 优化心跳间隔，减少不必要的心跳消息（从10秒改为25秒）
+        // 🔥 禁用心跳检测 - 本地开发环境不需要，避免答题时因无操作超时断连
         registry.enableSimpleBroker("/topic", "/queue", "/user")
                 .setTaskScheduler(taskScheduler())
-                .setHeartbeatValue(new long[]{25000, 25000});
+                .setHeartbeatValue(new long[]{0, 0});
 
         // 用户目标消息前缀
         registry.setUserDestinationPrefix("/user");

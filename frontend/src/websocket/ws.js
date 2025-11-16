@@ -82,11 +82,10 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
-      // 🔥 关键修复：配置心跳，与后端保持一致（25秒）
-      // heartbeatIncoming: 服务端发给客户端的心跳间隔
-      // heartbeatOutgoing: 客户端发给服务端的心跳间隔
-      heartbeatIncoming: 25000,
-      heartbeatOutgoing: 25000,
+      // 🔥 禁用STOMP心跳 - 本地开发环境不需要心跳检测
+      // 设置为0表示完全禁用心跳，避免在答题时因无操作被判定为超时断连
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
 
       onConnect: (frame) => {
         clearTimeout(timeoutId);

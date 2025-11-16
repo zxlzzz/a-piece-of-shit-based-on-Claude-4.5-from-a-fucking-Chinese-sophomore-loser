@@ -23,7 +23,7 @@ export const DRAWER_HEIGHT_VH = 60 // 抽屉高度（vh）
 export const DRAWER_MAX_HEIGHT = 600 // 抽屉最大高度（像素）
 
 // ============ WebSocket 相关 ============
-export const WS_MAX_RECONNECT_ATTEMPTS = 5 // WebSocket最大重连次数
+export const WS_MAX_RECONNECT_ATTEMPTS = 2 // WebSocket最大重连次数（本地开发环境，简化重连）
 export const WS_BASE_RECONNECT_DELAY = 1000 // WebSocket基础重连延迟（毫秒）
 export const WS_RECONNECT_DELAY = 3000 // WebSocket自动重连延迟（毫秒）
 export const WS_CONNECT_TIMEOUT = 15000 // WebSocket连接超时时间（毫秒）

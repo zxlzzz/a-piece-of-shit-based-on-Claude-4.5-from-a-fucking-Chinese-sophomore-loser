@@ -1,19 +1,28 @@
 <script setup>
 import { updateRoomSettings, getRoomStatus, kickPlayer } from '@/api'
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
 import { logger } from '@/utils/logger'
 import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ChatRoom from '@/components/chat/ChatRoom.vue'
 import CustomForm from '@/components/room/CustomForm.vue'
+import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
+const chatStore = useChatStore()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+
+const breakpoints = useBreakpoints({
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+})
+const isMobile = breakpoints.smaller('desktop')
 
 const roomCode = ref(route.params.roomId)
 const room = ref(null)
@@ -24,8 +33,6 @@ const showCustomForm = ref(false)
 
 // 🔥 改用 ref 而不是 computed，手动管理连接状态
 const wsConnected = ref(false)
-
-const chatRoomRef = ref(null)
 
 const isAllReady = computed(() => {
   if (!room.value || !room.value.players) return false
@@ -102,6 +109,9 @@ onMounted(async () => {
 
   // 开始连接
   await connectWebSocket()
+
+  // 🔥 设置全局ChatRoom
+  chatStore.setChatRoom(roomCode.value)
 })
 
 onUnmounted(() => {
@@ -110,11 +120,14 @@ onUnmounted(() => {
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('websocket-reconnecting', handleReconnecting)
   window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
-  
+
   if (subscriptions.value.length > 0) {
     unsubscribeAll(subscriptions.value)
     subscriptions.value = []
   }
+
+  // 🔥 离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
+  // chatStore.clearChat() - 保留chatRoom
 })
 
 const handleRoomDeleted = (event) => {
@@ -341,9 +354,7 @@ const handleReady = async () => {
       ready: newReadyState
     })
 
-    if (chatRoomRef.value) {
-      chatRoomRef.value.sendReadyMessage(newReadyState)
-    }
+    // 🔥 准备消息已通过WebSocket发送，ChatRoom会自动接收并显示
 
     toast.add({
       severity: 'success',
@@ -772,16 +783,7 @@ const refreshRoomState = async () => {
           </div>
         </div>
 
-        <!-- 右侧：聊天室 -->
-        <div class="lg:col-span-1">
-          <ChatRoom
-            v-if="roomCode"
-            ref="chatRoomRef"
-            :roomCode="roomCode"
-            :playerId="playerStore.playerId"
-            :playerName="playerStore.playerName"
-          />
-        </div>
+        <!-- 🔥 ChatRoom已移至全局App.vue，通过chatStore控制 -->
       </div>
     </div>
 

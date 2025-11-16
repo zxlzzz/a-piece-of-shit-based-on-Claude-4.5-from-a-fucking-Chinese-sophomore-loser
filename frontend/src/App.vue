@@ -3,12 +3,24 @@ import { logger } from '@/utils/logger'
 import { useToast } from 'primevue/usetoast'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
 import WebSocketStatus from './components/common/WebSocketStatus.vue'
+import ChatRoom from './components/chat/ChatRoom.vue'
+import MobileChatDrawer from './components/game/MobileChatDrawer.vue'
 import { TOAST_DEBOUNCE_TIME, TOAST_CLEANUP_DELAY, TOAST_DEFAULT_LIFE, ROOM_DATA_EXPIRY_TIME } from '@/config/constants'
 import { connect, disconnect, isConnected } from '@/websocket/ws'
+import { useBreakpoints } from '@vueuse/core'
 
 const toast = useToast()
 const playerStore = usePlayerStore()
+const chatStore = useChatStore()
+
+const breakpoints = useBreakpoints({
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+})
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 // 🔥 Toast 去重：记录最近显示的消息（key: message, value: timestamp）
 const recentToasts = ref(new Map())
@@ -149,7 +161,40 @@ onUnmounted(() => {
 <template>
   <WebSocketStatus />
   <Toast />
+
   <router-view />
+
+  <!-- 🔥 全局ChatRoom - 桌面端固定在右侧 -->
+  <teleport to="body">
+    <transition name="slide-left">
+      <div v-if="chatStore.visible && chatStore.roomCode && isDesktop"
+           class="fixed top-0 right-0 h-screen w-[400px] z-[60] shadow-2xl">
+        <ChatRoom
+          :roomCode="chatStore.roomCode"
+          :playerId="playerStore.playerId"
+          :playerName="playerStore.playerName"
+          @close="chatStore.hideChat"
+        />
+      </div>
+    </transition>
+  </teleport>
+
+  <!-- 🔥 全局ChatRoom - 移动端抽屉 -->
+  <MobileChatDrawer
+    v-if="chatStore.roomCode"
+    :show="chatStore.visible && !isDesktop"
+    :roomCode="chatStore.roomCode"
+    :playerId="playerStore.playerId"
+    :playerName="playerStore.playerName"
+    @close="chatStore.hideChat"
+  />
 </template>
 
-<style scoped></style>
+<style scoped>
+.slide-left-enter-active, .slide-left-leave-active {
+  transition: transform 0.3s ease;
+}
+.slide-left-enter-from, .slide-left-leave-to {
+  transform: translateX(100%);
+}
+</style>

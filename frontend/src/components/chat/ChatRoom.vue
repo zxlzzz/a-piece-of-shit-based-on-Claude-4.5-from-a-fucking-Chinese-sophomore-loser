@@ -19,7 +19,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['newMessage'])
+const emit = defineEmits(['newMessage', 'close'])
 
 const messages = ref([])
 const inputMessage = ref('')
@@ -163,12 +163,19 @@ const handleKeyPress = (event) => {
 </script>
 <template>
   <div class="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-    
+
     <!-- 标题 -->
-    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+    <div class="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
       <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
         聊天
       </h3>
+      <button
+        @click="emit('close')"
+        class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+        title="关闭聊天"
+      >
+        <i class="pi pi-times text-sm text-gray-600 dark:text-gray-400"></i>
+      </button>
     </div>
 
     <!-- 消息列表 -->

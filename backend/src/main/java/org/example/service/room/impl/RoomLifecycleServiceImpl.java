@@ -602,7 +602,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .finished(gameRoom.isFinished())  // 🔥 添加 finished 字段
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())
-                .timeLimit(gameRoom.getTimeLimit())
+                .timeLimit(gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() :
+                        (roomEntity != null && roomEntity.getTimeLimit() != null ? roomEntity.getTimeLimit() : 30))
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)

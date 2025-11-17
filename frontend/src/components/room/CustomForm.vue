@@ -134,7 +134,6 @@
                 class="sr-only peer"
               />
               <div
-                @click="formData.chatEnabled = !formData.chatEnabled"
                 class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer
                        peer-checked:after:translate-x-full peer-checked:after:border-white
                        after:content-[''] after:absolute after:top-[2px] after:left-[2px]
@@ -143,7 +142,7 @@
                        peer-checked:bg-blue-600
                        hover:bg-gray-300 dark:hover:bg-gray-600
                        peer-checked:hover:bg-blue-700
-                       transition-colors cursor-pointer"
+                       transition-colors pointer-events-none"
               ></div>
             </div>
           </label>

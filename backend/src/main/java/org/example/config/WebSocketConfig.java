@@ -89,6 +89,16 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         public Message<?> preSend(Message<?> message, MessageChannel channel) {
             StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
 
+            // 🔥 核心修复：对所有消息类型，如果user为null，从session恢复
+            // 这确保了Spring的SimpUserRegistry能正确维护用户和session的映射
+            if (accessor.getUser() == null && accessor.getSessionAttributes() != null) {
+                String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
+                if (sessionPlayerId != null) {
+                    StompPrincipal restoredPrincipal = new StompPrincipal(sessionPlayerId);
+                    accessor.setUser(restoredPrincipal);
+                }
+            }
+
             switch (accessor.getCommand()) {
                 case CONNECT:
                     // 连接时的处理
@@ -117,34 +127,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     Principal user = accessor.getUser();
                     if (user != null) {
                         log.info("🔌 WebSocket连接断开，playerId: {}", user.getName());
-                    } else {
-                        // 🔥 如果user为null，尝试从session获取
-                        if (accessor.getSessionAttributes() != null) {
-                            String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
-                            if (sessionPlayerId != null) {
-                                log.info("🔌 WebSocket连接断开，playerId: {} (从session获取)", sessionPlayerId);
-                            }
-                        }
                     }
                     break;
 
                 case SUBSCRIBE:
-                    // 🔥 订阅时恢复用户身份
+                    // 订阅时的处理 - 记录日志
                     Principal subUser = accessor.getUser();
-
-                    // 🔥 如果user为null，从session恢复
-                    if (subUser == null && accessor.getSessionAttributes() != null) {
-                        String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
-                        if (sessionPlayerId != null) {
-                            StompPrincipal restoredPrincipal = new StompPrincipal(sessionPlayerId);
-                            accessor.setUser(restoredPrincipal);
-                            subUser = restoredPrincipal;
-                            log.debug("🔄 从session恢复用户身份: {}", sessionPlayerId);
-                        }
-                    }
-
                     String destination = accessor.getDestination();
                     String sessionId = accessor.getSessionId();
+
                     log.info("📡 WebSocket订阅: sessionId={}, user={}, destination={}",
                         sessionId,
                         subUser != null ? subUser.getName() : "null",

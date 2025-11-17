@@ -49,32 +49,31 @@ public class ChatWebSocketController {
 
             // 发送给所有收件人
             for (String recipientId : message.getRecipientIds()) {
-                log.info("  ➡️ 尝试发送给收件人: recipientId={}, destination=/queue/private", recipientId);
-                log.info("     实际路径应为: /user/{}/queue/private", recipientId);
+                log.info("  ➡️ 发送给收件人: recipientId={}", recipientId);
                 try {
+                    // 🔥 使用convertAndSendToUser，Spring会自动转换为 /user/{recipientId}/queue/private
                     messagingTemplate.convertAndSendToUser(
                         recipientId,
                         "/queue/private",
                         message
                     );
-                    log.info("     ✓ 发送成功");
+                    log.info("     ✓ convertAndSendToUser调用成功 (user={}, dest=/queue/private)", recipientId);
                 } catch (Exception e) {
-                    log.error("     ✗ 发送失败: {}", e.getMessage());
+                    log.error("     ✗ convertAndSendToUser调用失败: {}", e.getMessage(), e);
                 }
             }
 
             // 也发送给发送者自己（让发送者看到自己发的私聊）
-            log.info("  ➡️ 尝试发送给发送者自己: senderId={}, destination=/queue/private", message.getSenderId());
-            log.info("     实际路径应为: /user/{}/queue/private", message.getSenderId());
+            log.info("  ➡️ 发送给发送者自己: senderId={}", message.getSenderId());
             try {
                 messagingTemplate.convertAndSendToUser(
                     message.getSenderId(),
                     "/queue/private",
                     message
                 );
-                log.info("     ✓ 发送成功");
+                log.info("     ✓ convertAndSendToUser调用成功 (user={}, dest=/queue/private)", message.getSenderId());
             } catch (Exception e) {
-                log.error("     ✗ 发送失败: {}", e.getMessage());
+                log.error("     ✗ convertAndSendToUser调用失败: {}", e.getMessage(), e);
             }
 
             log.info("✅ 私聊消息发送完成，共发送给 {} 个用户", message.getRecipientIds().size() + 1);

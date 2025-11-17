@@ -606,10 +606,12 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)
+                .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .submittedPlayerIds(submittedPlayerIds)  // 🔥 P1-1: 已提交玩家列表
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)
+                .chatEnabled(roomEntity != null ? roomEntity.getChatEnabled() : true)
                 .build();
     }
 

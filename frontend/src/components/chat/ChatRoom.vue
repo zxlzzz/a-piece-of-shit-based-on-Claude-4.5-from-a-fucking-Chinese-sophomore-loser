@@ -1,7 +1,7 @@
 <script setup>
 import { useChatStore } from '@/stores/chat'
 import { usePlayerStore } from '@/stores/player'
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch, onUnmounted } from 'vue'
 
 const props = defineProps({
   roomCode: {
@@ -97,14 +97,46 @@ const removeRecipient = (recipientId) => {
   chatStore.removeRecipient(recipientId)
 }
 
+// 🔥 点击外部关闭玩家列表
+const closePlayerListOnClickOutside = (event) => {
+  // 如果点击的不是玩家列表按钮或下拉菜单内部，关闭列表
+  const playerListButton = event.target.closest('.player-list-trigger')
+  const playerListMenu = event.target.closest('.player-list-menu')
+
+  if (!playerListButton && !playerListMenu) {
+    showPlayerList.value = false
+  }
+}
+
+// 监听点击事件
+watch(showPlayerList, (newVal) => {
+  if (newVal) {
+    document.addEventListener('click', closePlayerListOnClickOutside)
+  } else {
+    document.removeEventListener('click', closePlayerListOnClickOutside)
+  }
+})
+
+// 组件卸载时清理事件
+onUnmounted(() => {
+  document.removeEventListener('click', closePlayerListOnClickOutside)
+})
+
 // 🔥 判断消息是否显示收件人（私聊消息）
 const getRecipientNames = (message) => {
   if (!message.isPrivate || !message.recipientIds) return null
 
+  // 🔥 修复：从 room prop 获取玩家列表，而不是 playerStore.currentRoom
+  const room = playerStore.currentRoom || playerStore.room
+  if (!room || !room.players) {
+    console.warn('无法获取房间玩家列表', { room })
+    return message.recipientIds.join(', ')
+  }
+
   // 获取收件人名字列表
   const names = message.recipientIds
     .map(id => {
-      const player = playerStore.currentRoom?.players?.find(p => p.playerId === id)
+      const player = room.players.find(p => p.playerId === id)
       return player?.playerName || id
     })
     .join(', ')
@@ -125,8 +157,8 @@ const getRecipientNames = (message) => {
           <!-- 🔥 玩家列表按钮 - 只在启用私聊时显示 -->
           <div v-if="privateChatEnabled" class="relative">
             <button
-              @click="showPlayerList = !showPlayerList"
-              class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              @click.stop="showPlayerList = !showPlayerList"
+              class="player-list-trigger p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="选择私聊对象"
             >
               <i class="pi pi-users text-sm text-gray-600 dark:text-gray-400"></i>
@@ -135,7 +167,7 @@ const getRecipientNames = (message) => {
             <!-- 玩家列表下拉菜单 -->
             <transition name="fade">
               <div v-if="showPlayerList"
-                   class="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800
+                   class="player-list-menu absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800
                           rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50
                           max-h-64 overflow-y-auto">
                 <div class="p-2">

@@ -107,16 +107,19 @@ export const useChatStore = defineStore('chat', () => {
       // 🔥 订阅私聊频道
       privateSubscription = client.subscribe('/user/queue/private', (message) => {
         try {
+          logger.debug('📨 ChatStore: 收到私聊消息', message.body)
           const chatMessage = JSON.parse(message.body)
+          logger.info('✅ ChatStore: 私聊消息解析成功', chatMessage)
           addMessage(chatMessage)
 
           // 🔥 如果聊天室未打开且不是自己发的消息，增加未读计数
           const playerStore = usePlayerStore()
           if (!visible.value && chatMessage.senderId !== playerStore.playerId) {
             unreadPrivateCount.value++
+            logger.debug('🔔 ChatStore: 未读私聊计数+1，当前:', unreadPrivateCount.value)
           }
         } catch (error) {
-          logger.error('ChatStore: 解析私聊消息失败:', error)
+          logger.error('❌ ChatStore: 解析私聊消息失败:', error)
         }
       })
 
@@ -173,6 +176,13 @@ export const useChatStore = defineStore('chat', () => {
     if (selectedRecipients.value.length > 0) {
       chatMsg.recipientIds = selectedRecipients.value.map(r => r.id)
       chatMsg.isPrivate = true
+      logger.info('📤 ChatStore: 发送私聊消息', {
+        收件人: selectedRecipients.value,
+        收件人IDs: chatMsg.recipientIds,
+        内容: content.trim()
+      })
+    } else {
+      logger.debug('📤 ChatStore: 发送公共消息', content.trim())
     }
 
     sendMessage(`/app/chat/${roomCode.value}`, chatMsg)

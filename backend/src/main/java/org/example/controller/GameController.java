@@ -208,8 +208,10 @@ public class GameController {
     public static class UpdateRoomSettingsRequest {
         private Integer questionCount;
         private Integer timeLimit;
+        private Boolean chatEnabled;
         private String rankingMode;
         private Integer targetScore;
         private RoomDTO.WinConditions winConditions;
+        private List<Long> questionTagIds;
     }
 }

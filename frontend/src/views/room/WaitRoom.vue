@@ -470,9 +470,11 @@ const handleCustomFormSubmit = async (formData) => {
     const response = await updateRoomSettings(roomCode.value, {
       questionCount: formData.questionCount,
       timeLimit: formData.timeLimit,
+      chatEnabled: formData.chatEnabled,
       rankingMode: formData.rankingMode,
       targetScore: formData.targetScore,
-      winConditions: formData.winConditions
+      winConditions: formData.winConditions,
+      questionTagIds: formData.questionTagIds
     })
     
     // 🔥 更新本地房间数据

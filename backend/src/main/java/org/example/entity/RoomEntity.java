@@ -120,6 +120,13 @@ public class RoomEntity implements Serializable {
     @Column(columnDefinition = "TEXT")
     private String questionTagIdsJson;
 
+    /**
+     * 是否启用聊天室
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean chatEnabled = true;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;  // 创建时间

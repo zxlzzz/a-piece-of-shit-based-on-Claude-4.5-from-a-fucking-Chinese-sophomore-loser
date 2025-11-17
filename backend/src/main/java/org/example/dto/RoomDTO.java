@@ -32,6 +32,7 @@ public class RoomDTO {
     private String rankingMode;          // 排名模式
     private Integer targetScore;         // 目标分数
     private WinConditions winConditions; // 通关条件对象
+    private Boolean chatEnabled;         // 是否启用聊天室
 
     // 内部类：通关条件
     @Data

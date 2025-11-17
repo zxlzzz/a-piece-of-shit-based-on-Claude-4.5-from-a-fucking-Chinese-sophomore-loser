@@ -124,12 +124,21 @@ onUnmounted(() => {
 
 // 🔥 判断消息是否显示收件人（私聊消息）
 const getRecipientNames = (message) => {
-  if (!message.isPrivate || !message.recipientIds) return null
+  if (!message.isPrivate || !message.recipientIds || message.recipientIds.length === 0) {
+    return null
+  }
 
-  // 🔥 修复：从 room prop 获取玩家列表，而不是 playerStore.currentRoom
-  const room = playerStore.currentRoom || playerStore.room
-  if (!room || !room.players) {
-    console.warn('无法获取房间玩家列表', { room })
+  // 🔥 从 playerStore.currentRoom 获取玩家列表
+  const room = playerStore.currentRoom
+
+  // 🔥 如果无法获取房间信息，直接返回ID（降级处理）
+  if (!room || !room.players || room.players.length === 0) {
+    console.warn('ChatRoom: 无法获取房间玩家列表，使用ID显示', {
+      hasRoom: !!room,
+      hasPlayers: !!(room?.players),
+      playerCount: room?.players?.length || 0,
+      recipientIds: message.recipientIds
+    })
     return message.recipientIds.join(', ')
   }
 
@@ -137,11 +146,15 @@ const getRecipientNames = (message) => {
   const names = message.recipientIds
     .map(id => {
       const player = room.players.find(p => p.playerId === id)
-      return player?.playerName || id
+      if (!player) {
+        console.warn('ChatRoom: 找不到玩家', { id, availablePlayers: room.players.map(p => ({ id: p.playerId, name: p.playerName })) })
+        return id // 找不到就用ID
+      }
+      return player.playerName
     })
     .join(', ')
 
-  return names
+  return names || '未知收件人'
 }
 </script>
 <template>

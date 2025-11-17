@@ -209,6 +209,7 @@ public class GameController {
         private Integer questionCount;
         private Integer timeLimit;
         private Boolean chatEnabled;
+        private Boolean privateChatEnabled;  // 🔥 是否启用私聊功能
         private String rankingMode;
         private Integer targetScore;
         private RoomDTO.WinConditions winConditions;

@@ -613,6 +613,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)
                 .chatEnabled(roomEntity != null ? roomEntity.getChatEnabled() : true)
+                .privateChatEnabled(roomEntity != null ? roomEntity.getPrivateChatEnabled() : true)  // 🔥 是否启用私聊
                 .build();
     }
 

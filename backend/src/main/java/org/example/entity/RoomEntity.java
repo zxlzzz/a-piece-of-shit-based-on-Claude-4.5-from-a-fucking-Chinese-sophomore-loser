@@ -127,6 +127,13 @@ public class RoomEntity implements Serializable {
     @Builder.Default
     private Boolean chatEnabled = true;
 
+    /**
+     * 🔥 是否启用私聊功能
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean privateChatEnabled = true;
+
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;  // 创建时间

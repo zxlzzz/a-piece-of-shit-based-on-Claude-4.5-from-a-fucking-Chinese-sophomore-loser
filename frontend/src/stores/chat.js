@@ -12,6 +12,11 @@ export const useChatStore = defineStore('chat', () => {
   // 🔥 聊天消息和订阅
   const messages = ref([])
   let chatSubscription = null
+  let privateSubscription = null  // 🔥 私聊订阅
+
+  // 🔥 私聊相关状态
+  const selectedRecipients = ref([])  // 选中的收件人 [{id, name}, ...]
+  const unreadPrivateCount = ref(0)   // 未读私聊消息数
 
   // 设置当前聊天室
   const setChatRoom = (code) => {
@@ -22,6 +27,8 @@ export const useChatStore = defineStore('chat', () => {
   const showChat = (mobile = false) => {
     visible.value = true
     isMobile.value = mobile
+    // 🔥 打开聊天室时清空未读计数
+    unreadPrivateCount.value = 0
   }
 
   // 隐藏聊天室
@@ -33,6 +40,10 @@ export const useChatStore = defineStore('chat', () => {
   const toggleChat = (mobile = false) => {
     visible.value = !visible.value
     isMobile.value = mobile
+    // 🔥 如果打开了聊天室，清空未读计数
+    if (visible.value) {
+      unreadPrivateCount.value = 0
+    }
   }
 
   // 清除聊天室（离开房间时调用）
@@ -40,6 +51,8 @@ export const useChatStore = defineStore('chat', () => {
     roomCode.value = null
     visible.value = false
     messages.value = []
+    selectedRecipients.value = []
+    unreadPrivateCount.value = 0
   }
 
   // 🔥 订阅聊天频道
@@ -91,7 +104,23 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
-      logger.info('✅ ChatStore: 订阅聊天频道成功', code)
+      // 🔥 订阅私聊频道
+      privateSubscription = client.subscribe('/user/queue/private', (message) => {
+        try {
+          const chatMessage = JSON.parse(message.body)
+          addMessage(chatMessage)
+
+          // 🔥 如果聊天室未打开且不是自己发的消息，增加未读计数
+          const playerStore = usePlayerStore()
+          if (!visible.value && chatMessage.senderId !== playerStore.playerId) {
+            unreadPrivateCount.value++
+          }
+        } catch (error) {
+          logger.error('ChatStore: 解析私聊消息失败:', error)
+        }
+      })
+
+      logger.info('✅ ChatStore: 订阅聊天频道和私聊频道成功', code)
 
       // 发送加入消息
       sendJoinMessage()
@@ -107,6 +136,11 @@ export const useChatStore = defineStore('chat', () => {
       chatSubscription.unsubscribe()
       chatSubscription = null
       logger.info('✅ ChatStore: 取消订阅聊天频道')
+    }
+    if (privateSubscription) {
+      privateSubscription.unsubscribe()
+      privateSubscription = null
+      logger.info('✅ ChatStore: 取消订阅私聊频道')
     }
   }
 
@@ -135,12 +169,42 @@ export const useChatStore = defineStore('chat', () => {
       roomCode: roomCode.value
     }
 
+    // 🔥 如果有选中的收件人，发送私聊
+    if (selectedRecipients.value.length > 0) {
+      chatMsg.recipientIds = selectedRecipients.value.map(r => r.id)
+      chatMsg.isPrivate = true
+    }
+
     sendMessage(`/app/chat/${roomCode.value}`, chatMsg)
+
+    // 🔥 发送后清空收件人（可选：也可以保留选择）
+    // clearSelectedRecipients()
   }
 
   // 🔥 添加消息到列表
   const addMessage = (message) => {
     messages.value.push(message)
+  }
+
+  // 🔥 私聊收件人管理
+  const addRecipient = (recipient) => {
+    // 避免重复添加
+    if (!selectedRecipients.value.find(r => r.id === recipient.id)) {
+      selectedRecipients.value.push(recipient)
+    }
+  }
+
+  const removeRecipient = (recipientId) => {
+    selectedRecipients.value = selectedRecipients.value.filter(r => r.id !== recipientId)
+  }
+
+  const clearSelectedRecipients = () => {
+    selectedRecipients.value = []
+  }
+
+  // 🔥 清空未读计数
+  const clearUnreadPrivate = () => {
+    unreadPrivateCount.value = 0
   }
 
   return {
@@ -155,6 +219,13 @@ export const useChatStore = defineStore('chat', () => {
     clearChat,
     subscribeToChat,
     unsubscribeFromChat,
-    sendChatMessage
+    sendChatMessage,
+    // 🔥 私聊相关
+    selectedRecipients,
+    unreadPrivateCount,
+    addRecipient,
+    removeRecipient,
+    clearSelectedRecipients,
+    clearUnreadPrivate
   }
 })

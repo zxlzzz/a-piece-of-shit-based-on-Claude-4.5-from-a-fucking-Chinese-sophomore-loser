@@ -23,7 +23,8 @@ public class ChatWebSocketController {
     /**
      * 发送聊天消息
      * 客户端发送到: /app/chat/{roomCode}
-     * 广播到: /topic/room/{roomCode}/chat
+     * 广播到: /topic/room/{roomCode}/chat (公共消息)
+     * 或点对点发送到: /user/queue/private (私聊消息)
      */
     @MessageMapping("/chat/{roomCode}")
     public void sendMessage(@DestinationVariable String roomCode,
@@ -37,8 +38,34 @@ public class ChatWebSocketController {
         // 🔥 记录聊天室活动
         chatRoomManager.recordActivity(roomCode);
 
-        // 广播到房间的所有订阅者
-        messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
+        // 🔥 判断是否私聊消息
+        if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {
+            // 私聊消息：点对点发送
+            message.setIsPrivate(true);
+
+            log.debug("发送私聊消息 from {} to {}: {}",
+                message.getSenderName(), message.getRecipientIds(), message.getContent());
+
+            // 发送给所有收件人
+            for (String recipientId : message.getRecipientIds()) {
+                messagingTemplate.convertAndSendToUser(
+                    recipientId,
+                    "/queue/private",
+                    message
+                );
+            }
+
+            // 也发送给发送者自己（让发送者看到自己发的私聊）
+            messagingTemplate.convertAndSendToUser(
+                message.getSenderId(),
+                "/queue/private",
+                message
+            );
+        } else {
+            // 公共消息：广播到房间的所有订阅者
+            message.setIsPrivate(false);
+            messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
+        }
     }
 
     /**

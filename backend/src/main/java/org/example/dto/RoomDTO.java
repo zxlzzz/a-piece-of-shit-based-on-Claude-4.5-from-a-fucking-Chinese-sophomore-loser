@@ -33,6 +33,7 @@ public class RoomDTO {
     private Integer targetScore;         // 目标分数
     private WinConditions winConditions; // 通关条件对象
     private Boolean chatEnabled;         // 是否启用聊天室
+    private Boolean privateChatEnabled;  // 🔥 是否启用私聊功能
 
     // 内部类：通关条件
     @Data

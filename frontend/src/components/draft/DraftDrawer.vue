@@ -35,7 +35,7 @@ const handleClear = () => {
   <transition name="mask">
     <div
       v-if="visible"
-      class="fixed inset-0 bg-black/20 z-[100] backdrop-blur-sm"
+      class="fixed inset-0 bg-black/10 z-[100]"
       @click="close"
     ></div>
   </transition>

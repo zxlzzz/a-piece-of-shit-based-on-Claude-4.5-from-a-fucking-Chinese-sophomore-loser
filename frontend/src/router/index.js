@@ -1,5 +1,6 @@
 import { logger } from '@/utils/logger'
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
 import { createRouter, createWebHistory } from 'vue-router'
 
 const router = createRouter({
@@ -77,22 +78,39 @@ const router = createRouter({
 
 router.beforeEach(async (to, from, next) => {
   const playerStore = usePlayerStore()
+  const chatStore = useChatStore()
 
-
-  // 🔥 离开房间页面时断开 WebSocket
+  // 🔥 管理聊天订阅和WebSocket连接
   const roomPages = ['wait', 'game', 'result']
   const fromRoom = roomPages.includes(from.name)
   const toRoom = roomPages.includes(to.name)
 
+  // 🔥 离开房间页面去其他页面时，断开聊天订阅和WebSocket
   if (fromRoom && !toRoom) {
     try {
+      // 取消聊天订阅
+      chatStore.unsubscribeFromChat()
+      chatStore.clearChat()
+
+      // 断开WebSocket
       const { disconnect, isConnected } = await import('@/websocket/ws')
       if (isConnected()) {
         disconnect()
       }
+      logger.info('✅ 路由守卫: 离开房间页面，已断开聊天订阅和WebSocket')
     } catch (error) {
       logger.error('断开WebSocket失败:', error)
     }
+  }
+
+  // 🔥 进入房间页面时，订阅聊天（如果还没订阅）
+  if (toRoom && to.params.roomId) {
+    // 异步订阅，chatStore内部会等待WebSocket连接
+    chatStore.subscribeToChat(to.params.roomId).then(() => {
+      logger.info('✅ 路由守卫: 进入房间页面，聊天订阅成功', to.params.roomId)
+    }).catch((err) => {
+      logger.error('❌ 路由守卫: 聊天订阅失败', err)
+    })
   }
 
   // 1. 检查是否需要登录

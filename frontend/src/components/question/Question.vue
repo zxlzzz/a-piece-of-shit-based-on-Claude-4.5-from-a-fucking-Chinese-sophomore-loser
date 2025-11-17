@@ -31,6 +31,7 @@
         <QuesShowCard
           v-for="q in questions"
           :key="q.id"
+          :id="q.id"
           :type="q.type"
           :people="q.minPlayers === q.maxPlayers
             ? (q.minPlayers || '?')

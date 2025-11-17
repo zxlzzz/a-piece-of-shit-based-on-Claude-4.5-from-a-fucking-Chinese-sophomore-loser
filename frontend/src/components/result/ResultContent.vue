@@ -1,6 +1,7 @@
 <script setup>
 import { usePlayerStore } from '@/stores/player'
 import { computed, ref } from 'vue'
+import QuestionFeedback from '@/components/feedback/QuestionFeedback.vue'
 
 const props = defineProps({
   gameHistory: {
@@ -208,7 +209,7 @@ const getMyChoice = (questionDetail) => {
             </div>
             
             <!-- 玩家详情 -->
-            <div>
+            <div class="mb-4 sm:mb-5">
               <h3 class="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">玩家详情</h3>
               <div class="space-y-2">
                 <div
@@ -230,6 +231,9 @@ const getMyChoice = (questionDetail) => {
                 </div>
               </div>
             </div>
+
+            <!-- 🔥 题目反馈组件 -->
+            <QuestionFeedback :questionId="detail.questionId" />
           </div>
         </div>
       </div>

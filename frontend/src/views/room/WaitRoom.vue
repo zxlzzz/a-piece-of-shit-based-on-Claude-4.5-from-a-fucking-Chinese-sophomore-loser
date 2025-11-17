@@ -1,19 +1,29 @@
 <script setup>
 import { updateRoomSettings, getRoomStatus, kickPlayer } from '@/api'
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
 import { logger } from '@/utils/logger'
 import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import ChatRoom from '@/components/chat/ChatRoom.vue'
 import CustomForm from '@/components/room/CustomForm.vue'
+import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
+const chatStore = useChatStore()
 const route = useRoute()
 const router = useRouter()
 const toast = useToast()
+
+const breakpoints = useBreakpoints({
+  mobile: 0,
+  tablet: 768,
+  desktop: 1024,
+})
+const isMobile = breakpoints.smaller('desktop')
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 const roomCode = ref(route.params.roomId)
 const room = ref(null)
@@ -24,8 +34,6 @@ const showCustomForm = ref(false)
 
 // 🔥 改用 ref 而不是 computed，手动管理连接状态
 const wsConnected = ref(false)
-
-const chatRoomRef = ref(null)
 
 const isAllReady = computed(() => {
   if (!room.value || !room.value.players) return false
@@ -110,11 +118,14 @@ onUnmounted(() => {
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('websocket-reconnecting', handleReconnecting)
   window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
-  
+
   if (subscriptions.value.length > 0) {
     unsubscribeAll(subscriptions.value)
     subscriptions.value = []
   }
+
+  // 🔥 离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
+  // chatStore.clearChat() - 保留chatRoom
 })
 
 const handleRoomDeleted = (event) => {
@@ -341,9 +352,7 @@ const handleReady = async () => {
       ready: newReadyState
     })
 
-    if (chatRoomRef.value) {
-      chatRoomRef.value.sendReadyMessage(newReadyState)
-    }
+    // 🔥 准备消息已通过WebSocket发送，ChatRoom会自动接收并显示
 
     toast.add({
       severity: 'success',
@@ -523,13 +532,14 @@ const refreshRoomState = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
-    
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-[padding] duration-300 ease-in-out"
+       :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
+
     <!-- 连接状态 -->
     <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">
       <div class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium border"
-           :class="wsConnected 
-             ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800' 
+           :class="wsConnected
+             ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800'
              : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'">
         <i :class="wsConnected ? 'pi pi-check-circle' : 'pi pi-exclamation-circle'"></i>
         <span class="hidden sm:inline ml-1">
@@ -539,23 +549,33 @@ const refreshRoomState = async () => {
     </div>
 
     <!-- 主容器 -->
-    <div class="max-w-7xl mx-auto">
-      <!-- 🔥 改：移动端单列，大屏幕3列布局 -->
-      <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        
-        <!-- 左侧：房间信息 + 玩家列表 -->
-        <div class="lg:col-span-2 space-y-4 sm:space-y-6">
+    <div class="max-w-4xl mx-auto">
+      <div class="space-y-4 sm:space-y-6">
           
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
+            <!-- Toggle Chat Button -->
+            <div class="flex justify-end mb-3">
+              <button
+                @click="chatStore.toggleChat(isMobile)"
+                class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
+                       border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700
+                       hover:scale-105 active:scale-95
+                       rounded-lg text-sm font-medium transition-all duration-200"
+                :title="chatStore.visible ? '关闭聊天' : '打开聊天'"
+              >
+                <i class="pi transition-transform" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
+              </button>
+            </div>
+
             <div class="text-center">
               <div class="flex items-center justify-center gap-2 sm:gap-3 mb-2 sm:mb-3">
                 <h1 class="text-2xl sm:text-3xl font-semibold text-gray-900 dark:text-white">
                   {{ roomCode }}
                 </h1>
-                <button 
+                <button
                   @click="copyRoomCode"
-                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700 
+                  class="p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700
                          rounded-lg transition-colors"
                   title="复制房间码"
                 >
@@ -770,18 +790,6 @@ const refreshRoomState = async () => {
               开始游戏
             </button>
           </div>
-        </div>
-
-        <!-- 右侧：聊天室 -->
-        <div class="lg:col-span-1">
-          <ChatRoom
-            v-if="roomCode"
-            ref="chatRoomRef"
-            :roomCode="roomCode"
-            :playerId="playerStore.playerId"
-            :playerName="playerStore.playerName"
-          />
-        </div>
       </div>
     </div>
 

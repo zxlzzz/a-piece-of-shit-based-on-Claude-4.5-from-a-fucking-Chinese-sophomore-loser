@@ -217,6 +217,25 @@ export const getSuitableQuestions = (playerCount, questionCount = 10) =>
     params: { playerCount, questionCount }
   });
 
+/**
+ * 提交题目反馈
+ * @param {number} questionId - 题目ID
+ * @param {object} feedback - 反馈内容 { rating?: number, comment?: string }
+ * @returns {Promise}
+ */
+export const submitQuestionFeedback = (questionId, feedback) =>
+  api.post(`/question/${questionId}/feedback`, feedback);
+
+// ============ 用户反馈相关API ============
+
+/**
+ * 提交用户反馈
+ * @param {object} feedback - 反馈内容 { type: string, content: string, nickname?: string, contact?: string }
+ * @returns {Promise}
+ */
+export const submitUserFeedback = (feedback) =>
+  api.post('/feedback', feedback);
+
 // ============ 游戏历史相关API ============
 
 export const getGameHistory = (roomCode) => 

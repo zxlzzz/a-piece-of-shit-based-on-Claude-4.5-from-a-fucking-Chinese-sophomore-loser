@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
 import { useToast } from 'primevue/usetoast'
 import { useBreakpoints } from '@vueuse/core'
 import { logger } from '@/utils/logger'
@@ -9,8 +10,6 @@ import { logger } from '@/utils/logger'
 // 🔥 导入组件
 import GameHeader from '@/components/game/GameHeader.vue'
 import GameContent from '@/components/game/GameContent.vue'
-import MobileChatDrawer from '@/components/game/MobileChatDrawer.vue'
-import ChatRoom from '@/components/chat/ChatRoom.vue'
 
 // 🔥 导入 composables
 import { useGameCountdown } from '@/composables/game/useGameCountdown'
@@ -22,21 +21,20 @@ const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 const playerStore = usePlayerStore()
+const chatStore = useChatStore()
 
 const breakpoints = useBreakpoints({
   mobile: 0,
   tablet: 768,
   desktop: 1024,
 })
-const isMobile = breakpoints.smaller('tablet')
+const isMobile = breakpoints.smaller('desktop')
+const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 // 基础状态
 const roomCode = ref(route.params.roomId)
 const room = ref(null)
 const question = ref(null)
-const showChat = ref(!isMobile.value)
-const unreadCount = ref(0)
-const hasUnreadMessages = computed(() => unreadCount.value > 0)
 
 // 计算属性
 const currentQuestionIndex = computed(() => {
@@ -78,7 +76,7 @@ const {
 } = useGameCountdown(handleAutoSubmit)
 
 // 🔥 传递 isSpectator 防止观战者通过键盘提交
-useGameKeyboard(showChat, hasSubmitted, question, computed(() => playerStore.isSpectator))
+useGameKeyboard(computed(() => chatStore.visible), hasSubmitted, question, computed(() => playerStore.isSpectator))
 
 const { connectWebSocket, wsConnected } = useGameWebSocket(
   roomCode,
@@ -96,23 +94,6 @@ const { connectWebSocket, wsConnected } = useGameWebSocket(
   getSubmissionKey,
   verifySubmissionState  // 🔥 P1-1: 传递验证函数
 )
-
-// 聊天相关
-watch(showChat, (newVal) => {
-  if (newVal) {
-    unreadCount.value = 0
-  }
-})
-
-const handleNewMessage = (message) => {
-  if (!showChat.value) {
-    unreadCount.value++
-  }
-}
-
-const toggleChat = () => {
-  showChat.value = !showChat.value
-}
 
 // 生命周期
 onMounted(() => {
@@ -171,11 +152,15 @@ onMounted(() => {
 onUnmounted(() => {
   clearCountdown()
   cleanupSubmission()
+
+  // 🔥 离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
+  // chatStore.clearChat()
 })
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6">
+  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-[padding] duration-300 ease-in-out"
+       :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
     <!-- 连接状态 -->
     <div class="fixed top-3 right-3 sm:top-6 sm:right-6 z-50">
       <div class="px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-medium border"
@@ -189,76 +174,43 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div class="max-w-7xl mx-auto">
-      <div class="grid gap-4 sm:gap-6"
-           :class="showChat && !isMobile ? 'lg:grid-cols-[1fr_400px]' : 'lg:grid-cols-1'">
+    <div class="max-w-4xl mx-auto">
+      <!-- 游戏主区域 -->
+      <div class="space-y-4 sm:space-y-6">
+        <!-- 顶部信息栏 -->
+        <GameHeader
+          :roomCode="roomCode"
+          :currentQuestionIndex="currentQuestionIndex"
+          :totalQuestions="totalQuestions"
+          :countdown="countdown"
+          :submittedPlayers="submittedPlayers"
+          :totalPlayers="totalPlayers"
+          :showChat="chatStore.visible"
+          :hasUnreadMessages="false"
+          @toggleChat="chatStore.toggleChat(isMobile)"
+        />
 
-        <!-- 游戏主区域 -->
-        <div class="space-y-4 sm:space-y-6">
-          <!-- 顶部信息栏 -->
-          <GameHeader
-            :roomCode="roomCode"
-            :currentQuestionIndex="currentQuestionIndex"
-            :totalQuestions="totalQuestions"
-            :countdown="countdown"
-            :submittedPlayers="submittedPlayers"
-            :totalPlayers="totalPlayers"
-            :showChat="showChat"
-            :hasUnreadMessages="hasUnreadMessages"
-            @toggleChat="toggleChat"
-          />
-
-          <!-- 🔥 新增：观战模式提示 -->
-          <div v-if="playerStore.isSpectator"
-               class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200
-                      dark:border-purple-800 rounded-lg p-3 sm:p-4 text-center">
-            <i class="pi pi-eye text-purple-600 dark:text-purple-400"></i>
-            <span class="ml-2 text-sm sm:text-base text-purple-700 dark:text-purple-400 font-medium">
-              观战模式 - 您可以观看但不能答题
-            </span>
-          </div>
-
-          <!-- 游戏内容 -->
-          <GameContent
-            :question="question"
-            :hasSubmitted="hasSubmitted"
-            @choose="handleChoose"
-          />
+        <!-- 🔥 新增：观战模式提示 -->
+        <div v-if="playerStore.isSpectator"
+             class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200
+                    dark:border-purple-800 rounded-lg p-3 sm:p-4 text-center">
+          <i class="pi pi-eye text-purple-600 dark:text-purple-400"></i>
+          <span class="ml-2 text-sm sm:text-base text-purple-700 dark:text-purple-400 font-medium">
+            观战模式 - 您可以观看但不能答题
+          </span>
         </div>
 
-        <!-- PC 端聊天 -->
-        <transition name="slide">
-          <div v-show="showChat && !isMobile" class="hidden lg:block">
-            <ChatRoom
-              v-if="roomCode"
-              :roomCode="roomCode"
-              :playerId="playerStore.playerId"
-              :playerName="playerStore.playerName"
-              @newMessage="handleNewMessage"
-            />
-          </div>
-        </transition>
+        <!-- 游戏内容 -->
+        <GameContent
+          :question="question"
+          :hasSubmitted="hasSubmitted"
+          @choose="handleChoose"
+        />
       </div>
     </div>
-
-    <!-- 移动端聊天抽屉 -->
-    <MobileChatDrawer
-      :show="showChat && isMobile"
-      :roomCode="roomCode"
-      :playerId="playerStore.playerId"
-      :playerName="playerStore.playerName"
-      @newMessage="handleNewMessage"
-      @close="toggleChat"
-    />
   </div>
 </template>
 
 <style scoped>
-.slide-enter-active, .slide-leave-active {
-  transition: all 0.3s;
-}
-.slide-enter-from, .slide-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
+/* 样式已移除，聊天室在全局App.vue中管理 */
 </style>

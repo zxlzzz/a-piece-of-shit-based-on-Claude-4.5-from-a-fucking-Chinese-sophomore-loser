@@ -104,9 +104,15 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
-      // 🔥 订阅私聊频道
-      logger.info('🔥 ChatStore: 准备订阅私聊频道 /user/queue/private')
-      privateSubscription = client.subscribe('/user/queue/private', (message) => {
+      // 🔥 订阅私聊频道 - 使用完整路径
+      const playerStore = usePlayerStore()
+      const privateChannelPath = `/user/queue/private`
+      logger.info('🔥 ChatStore: 准备订阅私聊频道', {
+        playerId: playerStore.playerId,
+        订阅路径: privateChannelPath
+      })
+
+      privateSubscription = client.subscribe(privateChannelPath, (message) => {
         try {
           logger.info('📨 ChatStore: 收到私聊消息！', message.body)
           const chatMessage = JSON.parse(message.body)
@@ -120,7 +126,6 @@ export const useChatStore = defineStore('chat', () => {
           addMessage(chatMessage)
 
           // 🔥 如果聊天室未打开且不是自己发的消息，增加未读计数
-          const playerStore = usePlayerStore()
           if (!visible.value && chatMessage.senderId !== playerStore.playerId) {
             unreadPrivateCount.value++
             logger.debug('🔔 ChatStore: 未读私聊计数+1，当前:', unreadPrivateCount.value)
@@ -132,9 +137,11 @@ export const useChatStore = defineStore('chat', () => {
 
       logger.info('✅ ChatStore: 订阅聊天频道和私聊频道成功', {
         房间: code,
+        当前玩家ID: playerStore.playerId,
         公共频道: `/topic/room/${code}/chat`,
-        私聊频道: '/user/queue/private',
-        订阅ID: privateSubscription?.id
+        私聊频道: privateChannelPath,
+        公共订阅ID: chatSubscription?.id,
+        私聊订阅ID: privateSubscription?.id
       })
 
       // 发送加入消息

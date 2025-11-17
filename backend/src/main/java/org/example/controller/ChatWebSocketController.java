@@ -49,24 +49,35 @@ public class ChatWebSocketController {
 
             // 发送给所有收件人
             for (String recipientId : message.getRecipientIds()) {
-                log.info("  ➡️ 发送给收件人: {}, 路径: /user/{}/queue/private", recipientId, recipientId);
-                messagingTemplate.convertAndSendToUser(
-                    recipientId,
-                    "/queue/private",
-                    message
-                );
+                log.info("  ➡️ 尝试发送给收件人: recipientId={}, destination=/queue/private", recipientId);
+                log.info("     实际路径应为: /user/{}/queue/private", recipientId);
+                try {
+                    messagingTemplate.convertAndSendToUser(
+                        recipientId,
+                        "/queue/private",
+                        message
+                    );
+                    log.info("     ✓ 发送成功");
+                } catch (Exception e) {
+                    log.error("     ✗ 发送失败: {}", e.getMessage());
+                }
             }
 
             // 也发送给发送者自己（让发送者看到自己发的私聊）
-            log.info("  ➡️ 发送给发送者自己: {}, 路径: /user/{}/queue/private",
-                message.getSenderId(), message.getSenderId());
-            messagingTemplate.convertAndSendToUser(
-                message.getSenderId(),
-                "/queue/private",
-                message
-            );
+            log.info("  ➡️ 尝试发送给发送者自己: senderId={}, destination=/queue/private", message.getSenderId());
+            log.info("     实际路径应为: /user/{}/queue/private", message.getSenderId());
+            try {
+                messagingTemplate.convertAndSendToUser(
+                    message.getSenderId(),
+                    "/queue/private",
+                    message
+                );
+                log.info("     ✓ 发送成功");
+            } catch (Exception e) {
+                log.error("     ✗ 发送失败: {}", e.getMessage());
+            }
 
-            log.info("✅ 私聊消息发送完成");
+            log.info("✅ 私聊消息发送完成，共发送给 {} 个用户", message.getRecipientIds().size() + 1);
         } else {
             // 公共消息：广播到房间的所有订阅者
             message.setIsPrivate(false);

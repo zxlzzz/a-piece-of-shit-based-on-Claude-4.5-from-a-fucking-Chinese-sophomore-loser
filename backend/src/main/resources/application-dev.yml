@@ -14,9 +14,9 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop  # 开发环境允许自动更新表结构
-    show-sql: true      # 显示 SQL 语句
+    show-sql: false     # 不显示 SQL 语句
     properties:
-      hibernate.format_sql: true  # 格式化 SQL 输出
+      hibernate.format_sql: false  # 不格式化 SQL 输出
 
   # Redis 配置（开发环境）
   data:
@@ -40,7 +40,5 @@ logging:
     org.example: INFO               # 项目代码显示 INFO 及以上
     org.hibernate: WARN             # Hibernate 只显示警告
     org.springframework: WARN       # Spring 只显示警告
-    org.springframework.messaging: DEBUG  # 🔥 WebSocket消息路由调试日志
-    org.springframework.web.socket: DEBUG # 🔥 WebSocket调试日志
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

@@ -43,34 +43,15 @@ public class ChatWebSocketController {
             // 私聊消息：点对点发送
             message.setIsPrivate(true);
 
-            log.info("🔥 发送私聊消息: from={} (ID={}), to={}, content={}",
-                message.getSenderName(), message.getSenderId(),
-                message.getRecipientIds(), message.getContent());
-
-            // 🔥 改用直接topic路径，绕过Spring的/user机制（因为SimpUserRegistry映射不可靠）
             // 发送给所有收件人
             for (String recipientId : message.getRecipientIds()) {
                 String destination = "/topic/player/" + recipientId + "/private";
-                log.info("  ➡️ 发送给收件人: recipientId={}, destination={}", recipientId, destination);
-                try {
-                    messagingTemplate.convertAndSend(destination, message);
-                    log.info("     ✓ 发送成功");
-                } catch (Exception e) {
-                    log.error("     ✗ 发送失败: {}", e.getMessage(), e);
-                }
+                messagingTemplate.convertAndSend(destination, message);
             }
 
             // 也发送给发送者自己（让发送者看到自己发的私聊）
             String senderDestination = "/topic/player/" + message.getSenderId() + "/private";
-            log.info("  ➡️ 发送给发送者自己: senderId={}, destination={}", message.getSenderId(), senderDestination);
-            try {
-                messagingTemplate.convertAndSend(senderDestination, message);
-                log.info("     ✓ 发送成功");
-            } catch (Exception e) {
-                log.error("     ✗ 发送失败: {}", e.getMessage(), e);
-            }
-
-            log.info("✅ 私聊消息发送完成，共发送给 {} 个用户", message.getRecipientIds().size() + 1);
+            messagingTemplate.convertAndSend(senderDestination, message);
         } else {
             // 公共消息：广播到房间的所有订阅者
             message.setIsPrivate(false);

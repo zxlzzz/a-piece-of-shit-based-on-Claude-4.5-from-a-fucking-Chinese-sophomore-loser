@@ -123,11 +123,13 @@ export function useGameWebSocket(
     const subs = subscribeRoom(
       roomCode.value,
       (update) => {
-        
+
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
 
         room.value = update
+        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
+        playerStore.setRoom(update)
 
         // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
         if (verifySubmissionState && update.submittedPlayerIds) {

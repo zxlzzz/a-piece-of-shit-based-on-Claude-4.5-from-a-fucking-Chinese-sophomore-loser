@@ -131,20 +131,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     break;
 
                 case SUBSCRIBE:
-                    // 订阅时的处理 - 记录日志
-                    Principal subUser = accessor.getUser();
-                    String destination = accessor.getDestination();
-                    String sessionId = accessor.getSessionId();
-
-                    log.info("📡 WebSocket订阅: sessionId={}, user={}, destination={}",
-                        sessionId,
-                        subUser != null ? subUser.getName() : "null",
-                        destination);
-
-                    // 🔥 如果订阅的是私聊频道，额外记录（新方案使用 /topic/player/{playerId}/private）
-                    if (destination != null && destination.matches(".*/player/.+/private")) {
-                        log.info("   ⭐ 私聊频道订阅成功！destination={}", destination);
-                    }
+                    // 订阅时的处理
                     break;
 
                 default:

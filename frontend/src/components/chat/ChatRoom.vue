@@ -128,29 +128,15 @@ const getRecipientNames = (message) => {
     return null
   }
 
-  // 🔥 从 playerStore.currentRoom 获取玩家列表
   const room = playerStore.currentRoom
-
-  // 🔥 如果无法获取房间信息，直接返回ID（降级处理）
-  if (!room || !room.players || room.players.length === 0) {
-    console.warn('ChatRoom: 无法获取房间玩家列表，使用ID显示', {
-      hasRoom: !!room,
-      hasPlayers: !!(room?.players),
-      playerCount: room?.players?.length || 0,
-      recipientIds: message.recipientIds
-    })
+  if (!room || !room.players) {
     return message.recipientIds.join(', ')
   }
 
-  // 获取收件人名字列表
   const names = message.recipientIds
     .map(id => {
       const player = room.players.find(p => p.playerId === id)
-      if (!player) {
-        console.warn('ChatRoom: 找不到玩家', { id, availablePlayers: room.players.map(p => ({ id: p.playerId, name: p.playerName })) })
-        return id // 找不到就用ID
-      }
-      return player.playerName
+      return player?.playerName || id
     })
     .join(', ')
 

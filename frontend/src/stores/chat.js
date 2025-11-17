@@ -104,45 +104,22 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
-      // 🔥 订阅私聊频道 - 使用基于playerId的topic路径，绕过Spring的/user机制
+      // 🔥 订阅私聊频道 - 使用基于playerId的topic路径
       const playerStore = usePlayerStore()
       const privateChannelPath = `/topic/player/${playerStore.playerId}/private`
-      logger.info('🔥 ChatStore: 准备订阅私聊频道', {
-        playerId: playerStore.playerId,
-        订阅路径: privateChannelPath
-      })
 
       privateSubscription = client.subscribe(privateChannelPath, (message) => {
         try {
-          logger.info('📨 ChatStore: 收到私聊消息！', message.body)
           const chatMessage = JSON.parse(message.body)
-          logger.info('✅ ChatStore: 私聊消息解析成功', {
-            senderId: chatMessage.senderId,
-            senderName: chatMessage.senderName,
-            recipientIds: chatMessage.recipientIds,
-            isPrivate: chatMessage.isPrivate,
-            content: chatMessage.content
-          })
           addMessage(chatMessage)
 
           // 🔥 如果聊天室未打开且不是自己发的消息，增加未读计数
           if (!visible.value && chatMessage.senderId !== playerStore.playerId) {
             unreadPrivateCount.value++
-            logger.debug('🔔 ChatStore: 未读私聊计数+1，当前:', unreadPrivateCount.value)
           }
         } catch (error) {
-          logger.error('❌ ChatStore: 解析私聊消息失败:', error, message.body)
+          logger.error('ChatStore: 解析私聊消息失败:', error)
         }
-      })
-
-      logger.info('✅ ChatStore: 订阅聊天频道和私聊频道成功', {
-        房间: code,
-        当前玩家ID: playerStore.playerId,
-        公共频道: `/topic/room/${code}/chat`,
-        私聊频道: privateChannelPath,
-        公共订阅ID: chatSubscription?.id,
-        私聊订阅ID: privateSubscription?.id,
-        说明: '私聊使用topic路径，绕过Spring的/user机制'
       })
 
       // 发送加入消息
@@ -196,13 +173,6 @@ export const useChatStore = defineStore('chat', () => {
     if (selectedRecipients.value.length > 0) {
       chatMsg.recipientIds = selectedRecipients.value.map(r => r.id)
       chatMsg.isPrivate = true
-      logger.info('📤 ChatStore: 发送私聊消息', {
-        收件人: selectedRecipients.value,
-        收件人IDs: chatMsg.recipientIds,
-        内容: content.trim()
-      })
-    } else {
-      logger.debug('📤 ChatStore: 发送公共消息', content.trim())
     }
 
     sendMessage(`/app/chat/${roomCode.value}`, chatMsg)

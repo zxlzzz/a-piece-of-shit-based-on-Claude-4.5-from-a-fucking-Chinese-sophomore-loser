@@ -104,9 +104,9 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
-      // 🔥 订阅私聊频道 - 使用完整路径
+      // 🔥 订阅私聊频道 - 使用基于playerId的topic路径，绕过Spring的/user机制
       const playerStore = usePlayerStore()
-      const privateChannelPath = `/user/queue/private`
+      const privateChannelPath = `/topic/player/${playerStore.playerId}/private`
       logger.info('🔥 ChatStore: 准备订阅私聊频道', {
         playerId: playerStore.playerId,
         订阅路径: privateChannelPath
@@ -141,7 +141,8 @@ export const useChatStore = defineStore('chat', () => {
         公共频道: `/topic/room/${code}/chat`,
         私聊频道: privateChannelPath,
         公共订阅ID: chatSubscription?.id,
-        私聊订阅ID: privateSubscription?.id
+        私聊订阅ID: privateSubscription?.id,
+        说明: '私聊使用topic路径，绕过Spring的/user机制'
       })
 
       // 发送加入消息

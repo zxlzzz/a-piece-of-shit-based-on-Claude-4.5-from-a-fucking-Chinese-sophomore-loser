@@ -141,10 +141,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         subUser != null ? subUser.getName() : "null",
                         destination);
 
-                    // 🔥 如果订阅的是私聊频道，额外记录
-                    if (destination != null && destination.contains("/user/queue/private")) {
-                        log.info("   ⭐ 私聊频道订阅成功！playerId={}, 该用户将能收到发送给此ID的私聊消息",
-                            subUser != null ? subUser.getName() : "unknown");
+                    // 🔥 如果订阅的是私聊频道，额外记录（新方案使用 /topic/player/{playerId}/private）
+                    if (destination != null && destination.matches(".*/player/.+/private")) {
+                        log.info("   ⭐ 私聊频道订阅成功！destination={}", destination);
                     }
                     break;
 

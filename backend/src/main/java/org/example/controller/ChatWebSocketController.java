@@ -47,33 +47,27 @@ public class ChatWebSocketController {
                 message.getSenderName(), message.getSenderId(),
                 message.getRecipientIds(), message.getContent());
 
+            // 🔥 改用直接topic路径，绕过Spring的/user机制（因为SimpUserRegistry映射不可靠）
             // 发送给所有收件人
             for (String recipientId : message.getRecipientIds()) {
-                log.info("  ➡️ 发送给收件人: recipientId={}", recipientId);
+                String destination = "/topic/player/" + recipientId + "/private";
+                log.info("  ➡️ 发送给收件人: recipientId={}, destination={}", recipientId, destination);
                 try {
-                    // 🔥 使用convertAndSendToUser，Spring会自动转换为 /user/{recipientId}/queue/private
-                    messagingTemplate.convertAndSendToUser(
-                        recipientId,
-                        "/queue/private",
-                        message
-                    );
-                    log.info("     ✓ convertAndSendToUser调用成功 (user={}, dest=/queue/private)", recipientId);
+                    messagingTemplate.convertAndSend(destination, message);
+                    log.info("     ✓ 发送成功");
                 } catch (Exception e) {
-                    log.error("     ✗ convertAndSendToUser调用失败: {}", e.getMessage(), e);
+                    log.error("     ✗ 发送失败: {}", e.getMessage(), e);
                 }
             }
 
             // 也发送给发送者自己（让发送者看到自己发的私聊）
-            log.info("  ➡️ 发送给发送者自己: senderId={}", message.getSenderId());
+            String senderDestination = "/topic/player/" + message.getSenderId() + "/private";
+            log.info("  ➡️ 发送给发送者自己: senderId={}, destination={}", message.getSenderId(), senderDestination);
             try {
-                messagingTemplate.convertAndSendToUser(
-                    message.getSenderId(),
-                    "/queue/private",
-                    message
-                );
-                log.info("     ✓ convertAndSendToUser调用成功 (user={}, dest=/queue/private)", message.getSenderId());
+                messagingTemplate.convertAndSend(senderDestination, message);
+                log.info("     ✓ 发送成功");
             } catch (Exception e) {
-                log.error("     ✗ convertAndSendToUser调用失败: {}", e.getMessage(), e);
+                log.error("     ✗ 发送失败: {}", e.getMessage(), e);
             }
 
             log.info("✅ 私聊消息发送完成，共发送给 {} 个用户", message.getRecipientIds().size() + 1);

@@ -43,11 +43,13 @@ public class ChatWebSocketController {
             // 私聊消息：点对点发送
             message.setIsPrivate(true);
 
-            log.debug("发送私聊消息 from {} to {}: {}",
-                message.getSenderName(), message.getRecipientIds(), message.getContent());
+            log.info("🔥 发送私聊消息: from={} (ID={}), to={}, content={}",
+                message.getSenderName(), message.getSenderId(),
+                message.getRecipientIds(), message.getContent());
 
             // 发送给所有收件人
             for (String recipientId : message.getRecipientIds()) {
+                log.info("  ➡️ 发送给收件人: {}, 路径: /user/{}/queue/private", recipientId, recipientId);
                 messagingTemplate.convertAndSendToUser(
                     recipientId,
                     "/queue/private",
@@ -56,11 +58,15 @@ public class ChatWebSocketController {
             }
 
             // 也发送给发送者自己（让发送者看到自己发的私聊）
+            log.info("  ➡️ 发送给发送者自己: {}, 路径: /user/{}/queue/private",
+                message.getSenderId(), message.getSenderId());
             messagingTemplate.convertAndSendToUser(
                 message.getSenderId(),
                 "/queue/private",
                 message
             );
+
+            log.info("✅ 私聊消息发送完成");
         } else {
             // 公共消息：广播到房间的所有订阅者
             message.setIsPrivate(false);

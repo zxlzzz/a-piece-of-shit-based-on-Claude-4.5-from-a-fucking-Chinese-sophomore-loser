@@ -105,11 +105,18 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       // 🔥 订阅私聊频道
+      logger.info('🔥 ChatStore: 准备订阅私聊频道 /user/queue/private')
       privateSubscription = client.subscribe('/user/queue/private', (message) => {
         try {
-          logger.debug('📨 ChatStore: 收到私聊消息', message.body)
+          logger.info('📨 ChatStore: 收到私聊消息！', message.body)
           const chatMessage = JSON.parse(message.body)
-          logger.info('✅ ChatStore: 私聊消息解析成功', chatMessage)
+          logger.info('✅ ChatStore: 私聊消息解析成功', {
+            senderId: chatMessage.senderId,
+            senderName: chatMessage.senderName,
+            recipientIds: chatMessage.recipientIds,
+            isPrivate: chatMessage.isPrivate,
+            content: chatMessage.content
+          })
           addMessage(chatMessage)
 
           // 🔥 如果聊天室未打开且不是自己发的消息，增加未读计数
@@ -119,11 +126,16 @@ export const useChatStore = defineStore('chat', () => {
             logger.debug('🔔 ChatStore: 未读私聊计数+1，当前:', unreadPrivateCount.value)
           }
         } catch (error) {
-          logger.error('❌ ChatStore: 解析私聊消息失败:', error)
+          logger.error('❌ ChatStore: 解析私聊消息失败:', error, message.body)
         }
       })
 
-      logger.info('✅ ChatStore: 订阅聊天频道和私聊频道成功', code)
+      logger.info('✅ ChatStore: 订阅聊天频道和私聊频道成功', {
+        房间: code,
+        公共频道: `/topic/room/${code}/chat`,
+        私聊频道: '/user/queue/private',
+        订阅ID: privateSubscription?.id
+      })
 
       // 发送加入消息
       sendJoinMessage()

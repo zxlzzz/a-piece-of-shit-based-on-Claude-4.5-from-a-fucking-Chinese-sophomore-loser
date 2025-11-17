@@ -24,6 +24,7 @@ declare module 'vue' {
     QuesShowCard: typeof import('./src/components/question/QuesShowCard.vue')['default']
     Question: typeof import('./src/components/question/Question.vue')['default']
     QuestionCard: typeof import('./src/components/game/QuestionCard.vue')['default']
+    QuestionFeedback: typeof import('./src/components/feedback/QuestionFeedback.vue')['default']
     ResultContent: typeof import('./src/components/result/ResultContent.vue')['default']
     RoomCard: typeof import('./src/components/room/RoomCard.vue')['default']
     RoomInfoCard: typeof import('./src/components/room/RoomInfoCard.vue')['default']

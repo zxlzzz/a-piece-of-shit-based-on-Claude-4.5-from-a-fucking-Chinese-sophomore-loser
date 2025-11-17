@@ -25,15 +25,28 @@ const statusText = computed(() => {
 
 const statusClass = computed(() => {
   switch (props.room.status) {
-    case 'WAITING': 
+    case 'WAITING':
       return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-    case 'PLAYING': 
+    case 'PLAYING':
       return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    case 'FINISHED': 
+    case 'FINISHED':
       return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
-    default: 
+    default:
       return 'bg-gray-100 text-gray-700'
   }
+})
+
+const rankingModeText = computed(() => {
+  switch (props.room.rankingMode) {
+    case 'closest_to_avg': return '接近平均分'
+    case 'closest_to_target': return '接近目标分'
+    default: return null
+  }
+})
+
+const hasWinConditions = computed(() => {
+  const wc = props.room.winConditions
+  return wc && (wc.minScorePerPlayer || wc.minTotalScore || wc.minAvgScore)
 })
 </script>
 
@@ -65,7 +78,7 @@ const statusClass = computed(() => {
     </div>
     
     <!-- 玩家数量 -->
-    <div class="flex items-center justify-between py-3 px-4 
+    <div class="flex items-center justify-between py-3 px-4
                 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-4">
       <span class="text-sm text-gray-600 dark:text-gray-400">
         玩家数量
@@ -74,7 +87,64 @@ const statusClass = computed(() => {
         {{ room.currentPlayers }}/{{ room.maxPlayers }}
       </span>
     </div>
-    
+
+    <!-- 房间配置 -->
+    <div class="mb-4">
+      <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+        房间配置
+      </p>
+      <div class="grid grid-cols-2 gap-2">
+        <!-- 题目数量 -->
+        <div class="flex items-center gap-2 py-2 px-3
+                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <i class="pi pi-book text-blue-500 text-xs"></i>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            {{ room.questionCount }}题
+          </span>
+        </div>
+
+        <!-- 每题时长 -->
+        <div class="flex items-center gap-2 py-2 px-3
+                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <i class="pi pi-clock text-purple-500 text-xs"></i>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            {{ room.timeLimit }}秒/题
+          </span>
+        </div>
+
+        <!-- 聊天室状态 -->
+        <div class="flex items-center gap-2 py-2 px-3
+                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <i :class="room.chatEnabled ? 'pi pi-comment text-green-500' : 'pi pi-comment-slash text-gray-400'"
+             class="text-xs"></i>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            {{ room.chatEnabled ? '聊天启用' : '聊天禁用' }}
+          </span>
+        </div>
+
+        <!-- 排名模式（仅非标准模式显示） -->
+        <div v-if="rankingModeText"
+             class="flex items-center gap-2 py-2 px-3
+                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+          <i class="pi pi-chart-bar text-orange-500 text-xs"></i>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            {{ rankingModeText }}
+          </span>
+        </div>
+
+        <!-- 额外获胜方式 -->
+        <div v-if="hasWinConditions"
+             class="flex items-center gap-2 py-2 px-3
+                    bg-gray-50 dark:bg-gray-700/50 rounded-lg"
+             :class="rankingModeText ? '' : 'col-span-2'">
+          <i class="pi pi-trophy text-yellow-500 text-xs"></i>
+          <span class="text-xs text-gray-600 dark:text-gray-400">
+            有额外获胜方式
+          </span>
+        </div>
+      </div>
+    </div>
+
     <!-- 玩家列表 -->
     <div v-if="room.players && room.players.length > 0" class="mb-4">
       <p class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">

@@ -114,6 +114,74 @@
           </p>
         </div>
 
+        <!-- 聊天室开关 -->
+        <div>
+          <label class="flex items-center justify-between cursor-pointer group">
+            <div>
+              <span class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                启用聊天室
+              </span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                玩家可在游戏中交流
+              </span>
+            </div>
+
+            <!-- Toggle Switch -->
+            <div class="relative">
+              <input
+                v-model="formData.chatEnabled"
+                type="checkbox"
+                class="sr-only peer"
+              />
+              <div
+                class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer
+                       peer-checked:after:translate-x-full peer-checked:after:border-white
+                       after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                       after:bg-white after:border-gray-300 after:border after:rounded-full
+                       after:h-5 after:w-5 after:transition-all
+                       peer-checked:bg-blue-600
+                       hover:bg-gray-300 dark:hover:bg-gray-600
+                       peer-checked:hover:bg-blue-700
+                       transition-colors pointer-events-none"
+              ></div>
+            </div>
+          </label>
+        </div>
+
+        <!-- 🔥 私聊开关 -->
+        <div v-if="formData.chatEnabled">
+          <label class="flex items-center justify-between cursor-pointer group">
+            <div>
+              <span class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                启用私聊
+              </span>
+              <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                玩家可发送私密消息
+              </span>
+            </div>
+
+            <!-- Toggle Switch -->
+            <div class="relative">
+              <input
+                v-model="formData.privateChatEnabled"
+                type="checkbox"
+                class="sr-only peer"
+              />
+              <div
+                class="w-11 h-6 bg-gray-200 dark:bg-gray-700 rounded-full peer
+                       peer-checked:after:translate-x-full peer-checked:after:border-white
+                       after:content-[''] after:absolute after:top-[2px] after:left-[2px]
+                       after:bg-white after:border-gray-300 after:border after:rounded-full
+                       after:h-5 after:w-5 after:transition-all
+                       peer-checked:bg-purple-600
+                       hover:bg-gray-300 dark:hover:bg-gray-600
+                       peer-checked:hover:bg-purple-700
+                       transition-colors pointer-events-none"
+              ></div>
+            </div>
+          </label>
+        </div>
+
         <!-- ========================================= -->
         <!-- 🔥 高级规则区域（可折叠） -->
         <!-- ========================================= -->
@@ -384,6 +452,8 @@ const tagError = ref(false)
 const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
   timeLimit: props.currentSettings?.timeLimit || 30,
+  chatEnabled: props.currentSettings?.chatEnabled ?? true,
+  privateChatEnabled: props.currentSettings?.privateChatEnabled ?? true,  // 🔥 私聊开关
   rankingMode: props.currentSettings?.rankingMode || 'standard',
   targetScore: props.currentSettings?.targetScore || null,
   winConditions: {

@@ -73,6 +73,8 @@ export function connect(playerId, onConnect, onError) {
       reject(new Error('连接超时'));
     }, WS_CONNECT_TIMEOUT);
 
+    logger.info('🔌 WebSocket: 准备连接', { playerId, WS_URL })
+
     stompClient = new Client({
       webSocketFactory: () => new SockJS(WS_URL),
 

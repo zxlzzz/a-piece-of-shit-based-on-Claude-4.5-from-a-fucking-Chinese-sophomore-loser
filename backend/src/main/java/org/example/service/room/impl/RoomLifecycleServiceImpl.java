@@ -324,6 +324,12 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 log.info("⏱️ 房间 {} 每题时长更新为: {}秒", roomCode, request.getTimeLimit());
             }
 
+            // 更新聊天室开关
+            if (request.getChatEnabled() != null) {
+                room.setChatEnabled(request.getChatEnabled());
+                log.info("💬 房间 {} 聊天室状态更新为: {}", roomCode, request.getChatEnabled() ? "启用" : "禁用");
+            }
+
             // 更新排名模式
             if (request.getRankingMode() != null) {
                 room.setRankingMode(request.getRankingMode());
@@ -345,6 +351,19 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 }
             }
             room.setWinConditionsJson(winConditionsJson);
+
+            // 更新题目标签筛选
+            String questionTagIdsJson = null;
+            if (request.getQuestionTagIds() != null) {
+                try {
+                    questionTagIdsJson = objectMapper.writeValueAsString(request.getQuestionTagIds());
+                    log.info("🏷️ 房间 {} 题目标签筛选更新为: {}", roomCode, questionTagIdsJson);
+                } catch (Exception e) {
+                    log.error("序列化题目标签失败", e);
+                    throw new BusinessException("题目标签格式错误");
+                }
+            }
+            room.setQuestionTagIdsJson(questionTagIdsJson);
 
             // 保存到数据库
             RoomEntity savedRoom = roomRepository.save(room);
@@ -583,14 +602,18 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .finished(gameRoom.isFinished())  // 🔥 添加 finished 字段
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())
-                .timeLimit(gameRoom.getTimeLimit())
+                .timeLimit(gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() :
+                        (roomEntity != null && roomEntity.getTimeLimit() != null ? roomEntity.getTimeLimit() : 30))
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)  // ✅ 直接使用
                 .questionCount(questionCount)
+                .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .submittedPlayerIds(submittedPlayerIds)  // 🔥 P1-1: 已提交玩家列表
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)
+                .chatEnabled(roomEntity != null ? roomEntity.getChatEnabled() : true)
+                .privateChatEnabled(roomEntity != null ? roomEntity.getPrivateChatEnabled() : true)  // 🔥 是否启用私聊
                 .build();
     }
 

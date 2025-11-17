@@ -144,10 +144,13 @@ public class GameFlowServiceImpl implements GameFlowService {
             gameRoom.setStarted(true);
             gameRoom.setCurrentIndex(0);
             gameRoom.setQuestionStartTime(LocalDateTime.now());
-            gameRoom.setTimeLimit(30);
 
-            // 启动第一题的定时器
-            timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
+            // 🔥 从 RoomEntity 中获取 timeLimit，如果没有则使用默认值 30
+            Integer timeLimit = room.getTimeLimit() != null ? room.getTimeLimit() : 30;
+            gameRoom.setTimeLimit(timeLimit);
+
+            // 启动第一题的定时器（使用房间设置的 timeLimit）
+            timerService.scheduleTimeout(roomCode, timeLimit,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
             log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {} (观战者: {})",
@@ -199,7 +202,8 @@ public class GameFlowServiceImpl implements GameFlowService {
                     // 🔥 重复题：继续下一轮（同一题）
                     if (gameRoom.nextQuestion()) {
                         gameRoom.setQuestionStartTime(LocalDateTime.now());
-                        timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
+                        Integer questionTimeout = gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() : 30;
+                        timerService.scheduleTimeout(roomCode, questionTimeout,
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
                         log.info("🔁 房间 {} 重复题下一轮，题目索引 {} (轮次 {}/{})",
@@ -226,7 +230,8 @@ public class GameFlowServiceImpl implements GameFlowService {
 
                     if (gameRoom.nextQuestion()) {
                         gameRoom.setQuestionStartTime(LocalDateTime.now());
-                        timerService.scheduleTimeout(roomCode, defaultQuestionTimeoutSeconds,
+                        Integer questionTimeout = gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() : 30;
+                        timerService.scheduleTimeout(roomCode, questionTimeout,
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
                         log.info("➡️ 房间 {} 推进到题目索引 {}", roomCode, gameRoom.getCurrentIndex());

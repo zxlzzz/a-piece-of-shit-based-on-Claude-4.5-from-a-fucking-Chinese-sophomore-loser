@@ -370,7 +370,7 @@
   {
     "id": 13,
     "type": "CHOICE",
-    "text": "选择一项（x初始为0，偶数次取反后为正数）",
+    "text": "选择一项（x初始为1，偶数次取反后为正数）",
     "calculateRule": null,
     "strategyId": "Q012",
     "options": [

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -41,6 +42,12 @@ public class ChatMessage {
      * 发送时间
      */
     private LocalDateTime timestamp;
+
+    /**
+     * 🔥 私聊相关字段
+     */
+    private List<String> recipientIds;  // 收件人ID列表（null或空表示公共消息）
+    private Boolean isPrivate;          // 是否私聊消息
 
     /**
      * 消息类型枚举

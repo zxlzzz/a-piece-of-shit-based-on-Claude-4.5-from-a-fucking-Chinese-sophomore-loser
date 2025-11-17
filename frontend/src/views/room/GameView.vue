@@ -186,7 +186,8 @@ onUnmounted(() => {
           :submittedPlayers="submittedPlayers"
           :totalPlayers="totalPlayers"
           :showChat="chatStore.visible"
-          :hasUnreadMessages="false"
+          :hasUnreadMessages="chatStore.unreadPrivateCount > 0"
+          :chatEnabled="room?.chatEnabled ?? true"
           @toggleChat="chatStore.toggleChat(isMobile)"
         />
 
@@ -204,6 +205,7 @@ onUnmounted(() => {
         <GameContent
           :question="question"
           :hasSubmitted="hasSubmitted"
+          :room="room"
           @choose="handleChoose"
         />
       </div>

@@ -95,7 +95,7 @@ const handleSubmit = async () => {
                   class="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 cursor-pointer"
                 />
                 <span class="ml-2 text-sm sm:text-base text-gray-700 dark:text-gray-300 group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                  题目建议
+                  题目
                 </span>
               </label>
               <label class="flex items-center cursor-pointer group">

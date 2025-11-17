@@ -95,7 +95,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     String playerId = accessor.getFirstNativeHeader("playerId");
                     if (playerId != null) {
                         accessor.setUser(new StompPrincipal(playerId));
-                        log.info("WebSocket连接建立，playerId: {}", playerId);
+                        log.info("🔌 WebSocket连接建立，playerId: {}, sessionId: {}",
+                            playerId, accessor.getSessionId());
+                    } else {
+                        log.warn("⚠️ WebSocket连接但未提供playerId header！sessionId: {}",
+                            accessor.getSessionId());
                     }
                     break;
 
@@ -103,8 +107,25 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     // 断开连接时的处理
                     Principal user = accessor.getUser();
                     if (user != null) {
-                        log.info("WebSocket连接断开，playerId: {}", user.getName());
+                        log.info("🔌 WebSocket连接断开，playerId: {}", user.getName());
                         // 这里可以添加清理逻辑，比如从房间中移除玩家
+                    }
+                    break;
+
+                case SUBSCRIBE:
+                    // 订阅时的处理 - 添加调试日志
+                    Principal subUser = accessor.getUser();
+                    String destination = accessor.getDestination();
+                    String sessionId = accessor.getSessionId();
+                    log.info("📡 WebSocket订阅: sessionId={}, user={}, destination={}",
+                        sessionId,
+                        subUser != null ? subUser.getName() : "null",
+                        destination);
+
+                    // 🔥 如果订阅的是私聊频道，额外记录
+                    if (destination != null && destination.contains("/user/queue/private")) {
+                        log.info("   ⭐ 私聊频道订阅成功！playerId={}, 该用户将能收到发送给此ID的私聊消息",
+                            subUser != null ? subUser.getName() : "unknown");
                     }
                     break;
 

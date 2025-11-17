@@ -49,6 +49,7 @@ onMounted(async () => {
             <h1 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">游戏结果</h1>
             <!-- 🔥 切换全局聊天 -->
             <button
+              v-if="playerStore.room?.chatEnabled ?? true"
               @click="chatStore.toggleChat(isMobile)"
               class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
                      border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700
@@ -57,6 +58,13 @@ onMounted(async () => {
               :title="chatStore.visible ? '关闭聊天' : '打开聊天'"
             >
               <i class="pi transition-transform" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
+
+              <!-- 🔥 未读私聊消息红点 -->
+              <span v-if="chatStore.unreadPrivateCount > 0 && !chatStore.visible"
+                    class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs
+                           rounded-full flex items-center justify-center animate-pulse">
+                {{ chatStore.unreadPrivateCount }}
+              </span>
             </button>
           </div>
         </div>

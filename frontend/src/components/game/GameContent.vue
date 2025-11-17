@@ -4,6 +4,7 @@
     <div class="flex justify-center">
       <QuestionCard
         v-if="question"
+        :key="room?.questionStartTime"
         :question="question"
         :disabled="hasSubmitted"
         @choose="$emit('choose', $event)"
@@ -37,7 +38,8 @@ import QuestionCard from './QuestionCard.vue'
 
 defineProps({
   question: Object,
-  hasSubmitted: Boolean
+  hasSubmitted: Boolean,
+  room: Object
 })
 
 defineEmits(['choose'])

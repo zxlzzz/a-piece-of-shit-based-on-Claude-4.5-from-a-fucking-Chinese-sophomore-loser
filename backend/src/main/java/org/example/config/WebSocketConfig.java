@@ -94,9 +94,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     // 连接时的处理
                     String playerId = accessor.getFirstNativeHeader("playerId");
                     if (playerId != null) {
-                        accessor.setUser(new StompPrincipal(playerId));
-                        log.info("🔌 WebSocket连接建立，playerId: {}, sessionId: {}",
-                            playerId, accessor.getSessionId());
+                        // 🔥 创建Principal并设置到accessor
+                        StompPrincipal principal = new StompPrincipal(playerId);
+                        accessor.setUser(principal);
+
+                        // 🔥 关键修复：将playerId保存到session attributes，确保后续消息能获取到用户身份
+                        if (accessor.getSessionAttributes() != null) {
+                            accessor.getSessionAttributes().put("playerId", playerId);
+                            log.info("🔌 WebSocket连接建立，playerId: {}, sessionId: {}, 已保存到session",
+                                playerId, accessor.getSessionId());
+                        } else {
+                            log.warn("⚠️ Session attributes为null，无法保存playerId");
+                        }
                     } else {
                         log.warn("⚠️ WebSocket连接但未提供playerId header！sessionId: {}",
                             accessor.getSessionId());
@@ -108,13 +117,32 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     Principal user = accessor.getUser();
                     if (user != null) {
                         log.info("🔌 WebSocket连接断开，playerId: {}", user.getName());
-                        // 这里可以添加清理逻辑，比如从房间中移除玩家
+                    } else {
+                        // 🔥 如果user为null，尝试从session获取
+                        if (accessor.getSessionAttributes() != null) {
+                            String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
+                            if (sessionPlayerId != null) {
+                                log.info("🔌 WebSocket连接断开，playerId: {} (从session获取)", sessionPlayerId);
+                            }
+                        }
                     }
                     break;
 
                 case SUBSCRIBE:
-                    // 订阅时的处理 - 添加调试日志
+                    // 🔥 订阅时恢复用户身份
                     Principal subUser = accessor.getUser();
+
+                    // 🔥 如果user为null，从session恢复
+                    if (subUser == null && accessor.getSessionAttributes() != null) {
+                        String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
+                        if (sessionPlayerId != null) {
+                            StompPrincipal restoredPrincipal = new StompPrincipal(sessionPlayerId);
+                            accessor.setUser(restoredPrincipal);
+                            subUser = restoredPrincipal;
+                            log.debug("🔄 从session恢复用户身份: {}", sessionPlayerId);
+                        }
+                    }
+
                     String destination = accessor.getDestination();
                     String sessionId = accessor.getSessionId();
                     log.info("📡 WebSocket订阅: sessionId={}, user={}, destination={}",

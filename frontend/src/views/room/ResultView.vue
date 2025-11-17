@@ -49,6 +49,7 @@ onMounted(async () => {
             <h1 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">游戏结果</h1>
             <!-- 🔥 切换全局聊天 -->
             <button
+              v-if="playerStore.room?.chatEnabled ?? true"
               @click="chatStore.toggleChat(isMobile)"
               class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
                      border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700

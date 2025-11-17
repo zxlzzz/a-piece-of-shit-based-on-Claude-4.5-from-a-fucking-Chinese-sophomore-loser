@@ -35,6 +35,7 @@
         
         <!-- 聊天切换按钮 -->
         <button
+          v-if="chatEnabled"
           @click="$emit('toggleChat')"
           class="relative p-1.5 sm:p-2 hover:bg-gray-100 dark:hover:bg-gray-700
                  hover:scale-110 active:scale-95
@@ -63,7 +64,11 @@ defineProps({
   submittedPlayers: Number,
   totalPlayers: Number,
   showChat: Boolean,
-  hasUnreadMessages: Boolean
+  hasUnreadMessages: Boolean,
+  chatEnabled: {
+    type: Boolean,
+    default: true
+  }
 })
 
 defineEmits(['toggleChat'])

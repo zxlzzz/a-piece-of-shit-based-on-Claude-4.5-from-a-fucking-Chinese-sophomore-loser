@@ -557,7 +557,7 @@ const refreshRoomState = async () => {
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
             <!-- Toggle Chat Button -->
-            <div class="flex justify-end mb-3">
+            <div v-if="room?.chatEnabled" class="flex justify-end mb-3">
               <button
                 @click="chatStore.toggleChat(isMobile)"
                 class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300

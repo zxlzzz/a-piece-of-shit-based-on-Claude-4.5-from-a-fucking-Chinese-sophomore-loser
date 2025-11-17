@@ -408,21 +408,37 @@ const handleLogout = () => {
                       {{ room.currentPlayers }}/{{ room.maxPlayers }} 人
                     </p>
                   </div>
-                  
+
                   <!-- 状态标签 -->
                   <span
                     class="px-3 py-1 text-xs font-medium rounded-full"
                     :class="{
-                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400': 
+                      'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400':
                         room.status === 'WAITING',
-                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400': 
+                      'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400':
                         room.status === 'PLAYING',
-                      'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400': 
+                      'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400':
                         room.status === 'FINISHED'
                     }"
                   >
-                    {{ room.status === 'WAITING' ? '等待中' : 
+                    {{ room.status === 'WAITING' ? '等待中' :
                        room.status === 'PLAYING' ? '游戏中' : '已结束' }}
+                  </span>
+                </div>
+
+                <!-- 房间配置 -->
+                <div class="flex flex-wrap gap-2 mb-3 text-xs">
+                  <span class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 rounded-md text-gray-600 dark:text-gray-400">
+                    <i class="pi pi-book text-blue-500"></i>
+                    {{ room.questionCount }}题
+                  </span>
+                  <span class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 rounded-md text-gray-600 dark:text-gray-400">
+                    <i class="pi pi-clock text-purple-500"></i>
+                    {{ room.timeLimit }}s
+                  </span>
+                  <span v-if="room.chatEnabled" class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 rounded-md text-gray-600 dark:text-gray-400">
+                    <i class="pi pi-comment text-green-500"></i>
+                    聊天
                   </span>
                 </div>
 

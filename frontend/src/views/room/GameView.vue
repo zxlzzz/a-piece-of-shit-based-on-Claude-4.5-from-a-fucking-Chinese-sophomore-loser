@@ -205,6 +205,7 @@ onUnmounted(() => {
         <GameContent
           :question="question"
           :hasSubmitted="hasSubmitted"
+          :room="room"
           @choose="handleChoose"
         />
       </div>

@@ -13,7 +13,7 @@ spring:
   # JPA 配置（开发环境）
   jpa:
     hibernate:
-      ddl-auto: update  # 开发环境允许自动更新表结构
+      ddl-auto: create-drop  # 开发环境允许自动更新表结构
     show-sql: true      # 显示 SQL 语句
     properties:
       hibernate.format_sql: true  # 格式化 SQL 输出

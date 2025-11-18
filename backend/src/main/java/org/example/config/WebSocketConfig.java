@@ -1,7 +1,12 @@
 package org.example.config;
 
+import lombok.RequiredArgsConstructor;
+import org.example.entity.PlayerEntity;
+import org.example.repository.PlayerRepository;
+import org.example.service.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,14 +22,19 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.config.annotation.*;
 
 import java.security.Principal;
+import java.util.Optional;
 
 
 @Configuration
 @EnableWebSocketMessageBroker
+@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
+
+    private final SessionManager sessionManager;
+    private final PlayerRepository playerRepository;
 
     // 🔥 先定义 TaskScheduler bean
     @Bean
@@ -62,7 +72,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new WebSocketChannelInterceptor());
+        registration.interceptors(new WebSocketChannelInterceptor(sessionManager, playerRepository));
 
         // 🔥 大幅增加队列容量和线程池，防止消息队列满导致断连
         // 这是防止 "Failed to send message to ExecutorSubscribableChannel" 错误的关键
@@ -82,10 +92,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     // WebSocket通道拦截器，用于处理连接和断开事件
-    @Component
+    @RequiredArgsConstructor
     public static class WebSocketChannelInterceptor implements ChannelInterceptor {
 
         public static final Logger log = LoggerFactory.getLogger(WebSocketChannelInterceptor.class);
+
+        private final SessionManager sessionManager;
+        private final PlayerRepository playerRepository;
 
         @Override
         public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -113,8 +126,35 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         // 🔥 关键修复：将playerId保存到session attributes，确保后续消息能获取到用户身份
                         if (accessor.getSessionAttributes() != null) {
                             accessor.getSessionAttributes().put("playerId", playerId);
-                            log.info("🔌 WebSocket连接建立，playerId: {}, sessionId: {}, 已保存到session",
-                                playerId, accessor.getSessionId());
+
+                            // 🔥 查询玩家信息，检查是否在房间中
+                            Optional<PlayerEntity> playerOpt = playerRepository.findByPlayerId(playerId);
+                            if (playerOpt.isPresent()) {
+                                PlayerEntity player = playerOpt.get();
+                                String playerName = player.getName();
+                                boolean isRegisteredUser = player.getUsername() != null;
+                                String roomCode = player.getRoom() != null ? player.getRoom().getRoomCode() : null;
+
+                                // 保存玩家名称到session
+                                accessor.getSessionAttributes().put("playerName", playerName);
+                                if (roomCode != null) {
+                                    accessor.getSessionAttributes().put("roomCode", roomCode);
+                                }
+
+                                // 🔥 注册会话，检测重复登录
+                                sessionManager.registerSession(
+                                    accessor.getSessionId(),
+                                    playerId,
+                                    playerName,
+                                    isRegisteredUser,
+                                    roomCode
+                                );
+
+                                log.info("🔌 WebSocket连接建立: playerId={}, name={}, sessionId={}, isRegistered={}, roomCode={}",
+                                    playerId, playerName, accessor.getSessionId(), isRegisteredUser, roomCode);
+                            } else {
+                                log.warn("⚠️ WebSocket连接但未找到玩家: playerId={}", playerId);
+                            }
                         } else {
                             log.warn("⚠️ Session attributes为null，无法保存playerId");
                         }
@@ -127,8 +167,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 case DISCONNECT:
                     // 断开连接时的处理
                     Principal user = accessor.getUser();
+                    String sessionId = accessor.getSessionId();
                     if (user != null) {
-                        log.info("🔌 WebSocket连接断开，playerId: {}", user.getName());
+                        log.info("🔌 WebSocket连接断开: playerId={}, sessionId={}", user.getName(), sessionId);
+                    }
+                    // 🔥 清理会话
+                    if (sessionId != null) {
+                        sessionManager.removeSession(sessionId);
                     }
                     break;
 

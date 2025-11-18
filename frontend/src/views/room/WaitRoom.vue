@@ -142,16 +142,17 @@ const handleRoomDeleted = (event) => {
 }
 
 const handlePlayerKicked = (event) => {
+  const reason = event.detail?.reason || event.detail?.message || '您已被房主踢出房间'
   toast.add({
-    severity: 'error',
-    summary: '您已被踢出',
-    detail: event.detail?.message || '您已被房主踢出房间',
-    life: 3000
+    severity: 'warn',
+    summary: '账号登录提示',
+    detail: reason,
+    life: 4000
   })
   playerStore.clearRoom()
   setTimeout(() => {
     router.push('/find')
-  }, 1000)
+  }, 1500)
 }
 
 // 🔥 新增：监听 WebSocket 错误

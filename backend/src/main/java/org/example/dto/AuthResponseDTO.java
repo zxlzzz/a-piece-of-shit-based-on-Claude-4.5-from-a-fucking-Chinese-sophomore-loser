@@ -15,4 +15,10 @@ public class AuthResponseDTO {
     private String playerId;
     private String username;
     private String name;
+
+    /**
+     * 玩家当前所在的房间代码（如果有）
+     * 前端收到此字段后应自动跳转到房间
+     */
+    private String roomCode;
 }

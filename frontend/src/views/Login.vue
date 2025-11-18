@@ -91,9 +91,14 @@ const handleSubmit = async () => {
       life: 2000
     })
 
-    // 跳转到主页
+    // 🔥 检查是否在房间中，自动进入房间
     setTimeout(() => {
-      router.push('/find')
+      if (authData.roomCode) {
+        logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)
+        router.push(`/room/${authData.roomCode}`)
+      } else {
+        router.push('/find')
+      }
     }, 500)
 
   } catch (err) {
@@ -152,9 +157,14 @@ const handleGuestLogin = async () => {
       life: 2000
     })
 
-    // 跳转到主页
+    // 🔥 检查是否在房间中（游客通常不会在房间中）
     setTimeout(() => {
-      router.push('/find')
+      if (authData.roomCode) {
+        logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)
+        router.push(`/room/${authData.roomCode}`)
+      } else {
+        router.push('/find')
+      }
     }, 500)
 
   } catch (err) {

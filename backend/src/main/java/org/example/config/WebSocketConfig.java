@@ -5,8 +5,10 @@ import org.example.repository.PlayerRepository;
 import org.example.service.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -35,19 +37,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Value("${cors.allowed-origins}")
     private String allowedOrigins;
 
-    private final SessionManager sessionManager;
     private final PlayerRepository playerRepository;
-    private final Executor wsConnectionExecutor;
 
-    // 🔥 手动构造器，使用 @Lazy 打破循环依赖
-    // SessionManager 需要 SimpMessagingTemplate，而 SimpMessagingTemplate 由 WebSocket 配置创建
-    // 🔥 修复：添加@Qualifier指定使用wsConnectionExecutor这个bean，避免依赖注入歧义
-    public WebSocketConfig(@Lazy SessionManager sessionManager,
-                          PlayerRepository playerRepository,
-                          @Qualifier("wsConnectionExecutor") Executor wsConnectionExecutor) {
-        this.sessionManager = sessionManager;
+    @Autowired
+    private ApplicationContext applicationContext;
+
+    // 🔥 修复循环依赖：不在构造函数注入SessionManager
+    // 将在拦截器Bean中使用@Lazy注入，实现真正的懒加载
+    public WebSocketConfig(PlayerRepository playerRepository) {
         this.playerRepository = playerRepository;
-        this.wsConnectionExecutor = wsConnectionExecutor;
     }
 
     // 🔥 先定义 TaskScheduler bean（用于心跳检测，虽然已禁用但仍需配置）
@@ -74,6 +72,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         return executor;
     }
 
+    // 🔥 拦截器Bean - 使用@Lazy注入SessionManager打破循环依赖
+    @Bean
+    public WebSocketChannelInterceptor webSocketChannelInterceptor(
+            @Lazy SessionManager sessionManager,
+            PlayerRepository playerRepository,
+            @Qualifier("wsConnectionExecutor") Executor wsConnectionExecutor) {
+        return new WebSocketChannelInterceptor(sessionManager, playerRepository, wsConnectionExecutor);
+    }
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
@@ -97,7 +104,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new WebSocketChannelInterceptor(sessionManager, playerRepository, wsConnectionExecutor));
+        // 🔥 从ApplicationContext获取拦截器bean，避免循环依赖
+        registration.interceptors(applicationContext.getBean(WebSocketChannelInterceptor.class));
 
         // 🔥 配置消息处理线程池和队列
         // 🔥 修复P2-2：队列容量从50000降到5000，避免OOM风险

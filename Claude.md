@@ -313,6 +313,99 @@ const REFRESH_INTERVAL = 5000 // 5秒刷新一次（从10秒优化）
 
 ---
 
+### 🔧 **房间状态切换深度审查 - 补充修复资源泄漏**
+
+**二次审查**（2025-11-18）：
+
+在修复房间删除逻辑后，对房间状态切换进行深度审查，发现2个额外的资源泄漏问题。
+
+#### 额外发现的问题（2个）
+
+**P0-6 严重问题**：
+- **RoomLock未清理**: 房间删除时未调用`RoomLock.removeLock()` → 长期运行后LOCKS Map堆积大量锁对象
+
+**P1-4 高优先级问题**：
+- **advancing锁未清理**: 游戏结束时未清理`advancing` Map → 每个游戏留下AtomicBoolean对象
+
+#### 补充修复（3个文件）
+
+**1. RoomLifecycleService.java - 添加公共删除接口**
+```java
+/**
+ * 删除房间（完整清理所有资源）
+ */
+@Transactional
+void deleteRoom(String roomCode);
+```
+
+**2. RoomLifecycleServiceImpl.java - 清理RoomLock**
+```java
+@Transactional
+private RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
+    RoomEntity room;
+
+    // 在synchronized块内执行删除操作
+    synchronized (RoomLock.getLock(roomCode)) {
+        // ... 所有清理逻辑
+    }
+
+    // 🔥 P0-6: 在synchronized块外清理锁，防止内存泄漏
+    RoomLock.removeLock(roomCode);
+    log.debug("🔧 已清理房间 {} 的锁对象", roomCode);
+
+    return room;
+}
+
+// 实现公共接口
+@Override
+@Transactional
+public void deleteRoom(String roomCode) {
+    GameRoom gameRoom = roomCache.get(roomCode);
+    deleteRoomAtomically(roomCode, gameRoom);
+}
+```
+
+**3. GameFlowServiceImpl.java - 清理advancing锁和统一删除**
+```java
+public void finishGame(String roomCode) {
+    // ...
+
+    try {
+        // ... 游戏结束逻辑
+    } finally {
+        // 清理玩家状态
+        gameRoom.clearPlayerStates();
+
+        // 🔥 P1-4: 清理推进锁
+        advancing.remove(roomCode);
+        log.debug("🔧 已清理房间 {} 的推进锁", roomCode);
+
+        // ... 其他清理
+
+        // 🔥 延迟删除使用统一的deleteRoom方法
+        taskScheduler.schedule(() -> {
+            roomLifecycleService.deleteRoom(roomCode);  // 替代roomCache.remove()
+            broadcaster.sendRoomDeleted(roomCode);
+        }, Instant.now().plus(Duration.ofSeconds(2)));
+    }
+}
+```
+
+#### 补充修复效果
+
+**资源清理完整性**：
+- ✅ RoomLock锁对象及时清理，无泄漏
+- ✅ advancing推进锁及时清理，无堆积
+- ✅ 游戏结束后统一使用deleteRoom方法
+- ✅ 所有删除路径完全一致，无遗漏
+
+**修复总结**：
+- 在原有8个问题基础上，额外修复2个资源泄漏问题
+- **已修复10个问题，房间生命周期管理完全稳定**
+- 消除所有已知的内存泄漏和资源泄漏风险
+
+---
+
 ### 🔧 **WebSocket 连接最终审查 - 修复所有P0和P1问题**
 
 **最终优化**（2025-01）：

@@ -335,18 +335,22 @@ public class GameFlowServiceImpl implements GameFlowService {
                 // 7. 清理玩家状态
                 gameRoom.clearPlayerStates();
 
-                // 🔥 8. 同步最终状态到 Redis
+                // 🔥 8. 清理推进锁（P1-4修复）
+                advancing.remove(roomCode);
+                log.debug("🔧 已清理房间 {} 的推进锁", roomCode);
+
+                // 9. 同步最终状态到 Redis
                 roomCache.syncToRedis(roomCode);
 
-                // 9. 广播结束
+                // 10. 广播结束
                 broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
 
                 log.info("🎉 房间 {} 游戏结束流程完成", roomCode);
-                // 🔥 10. 延迟删除房间（给前端时间接收结束广播并跳转到结果页）
+                // 🔥 11. 延迟删除房间（给前端时间接收结束广播并跳转到结果页）
+                // 使用统一的deleteRoom方法，确保完整清理所有资源
                 taskScheduler.schedule(() -> {
                     try {
-                        timerService.cancelTimeout(roomCode);
-                        roomCache.remove(roomCode);
+                        roomLifecycleService.deleteRoom(roomCode);
                         broadcaster.sendRoomDeleted(roomCode);
                         log.info("✅ 游戏结束后自动删除房间: {}", roomCode);
                     } catch (Exception e) {

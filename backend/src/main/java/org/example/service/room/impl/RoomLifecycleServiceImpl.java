@@ -609,16 +609,24 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void deleteRoom(String roomCode) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        deleteRoomAtomically(roomCode, gameRoom);
+    }
+
     // ==================== 私有方法 ====================
 
     /**
-     * 🔥 原子删除房间（修复问题1/2/3/4/5/7）
+     * 🔥 原子删除房间（修复问题1/2/3/4/5/7 + P0-6）
      * - 问题1: 真正删除数据库记录，而不是只标记FINISHED
      * - 问题2: 清理所有关联的玩家记录
      * - 问题3: 主动清理聊天室，不等待5分钟定时任务
      * - 问题4: 统一删除方法，确保通知只发送一次
      * - 问题5: 使用带重试的缓存删除
      * - 问题7: 原子操作，防止并发竞态条件
+     * - P0-6: 清理RoomLock，防止锁对象泄漏
      *
      * @param roomCode 房间代码
      * @param gameRoom 内存中的房间对象（可选，如果已经获取）
@@ -626,18 +634,22 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
      */
     @Transactional
     private RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
+        RoomEntity room;
+
         // 🔥 使用RoomLock确保原子性（问题7）
         synchronized (RoomLock.getLock(roomCode)) {
             // 1. 查询房间实体
-            RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
+            room = roomRepository.findByRoomCode(roomCode).orElse(null);
             if (room == null) {
                 log.warn("⚠️ 房间 {} 已不存在，跳过删除", roomCode);
+                RoomLock.removeLock(roomCode); // 清理锁
                 return null;
             }
 
             // 2. 检查房间状态，防止重复删除（问题7）
             if (room.getStatus() == RoomStatus.FINISHED && room.getId() == null) {
                 log.warn("⚠️ 房间 {} 已处于删除状态，跳过重复删除", roomCode);
+                RoomLock.removeLock(roomCode); // 清理锁
                 return null;
             }
 
@@ -675,9 +687,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             // 7. 真正删除数据库记录（问题1）
             roomRepository.delete(room);
             log.info("✅ 房间 {} 已从数据库删除", roomCode);
-
-            return room;
         }
+
+        // 🔥 P0-6: 在synchronized块外清理锁，防止内存泄漏
+        RoomLock.removeLock(roomCode);
+        log.debug("🔧 已清理房间 {} 的锁对象", roomCode);
+
+        return room;
     }
 
     private String generateRoomCode() {

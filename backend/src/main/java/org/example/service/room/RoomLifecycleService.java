@@ -60,4 +60,11 @@ public interface RoomLifecycleService {
 
     @Transactional
     void removeDisconnectedPlayer(String roomCode, String playerId);
+
+    /**
+     * 删除房间（完整清理所有资源）
+     * @param roomCode 房间代码
+     */
+    @Transactional
+    void deleteRoom(String roomCode);
 }

@@ -84,11 +84,9 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
-      // 🔥 启用STOMP心跳，保持WebSocket连接稳定
-      // 客户端每25秒发送心跳，期望服务器每25秒也发送心跳
-      // 防止长时间无消息时连接被关闭
-      heartbeatIncoming: 25000, // 期望从服务器收到心跳的间隔（毫秒）
-      heartbeatOutgoing: 25000, // 客户端发送心跳的间隔（毫秒）
+      // ⚠️ 禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
+      heartbeatIncoming: 0,
+      heartbeatOutgoing: 0,
 
       onConnect: (frame) => {
         clearTimeout(timeoutId);

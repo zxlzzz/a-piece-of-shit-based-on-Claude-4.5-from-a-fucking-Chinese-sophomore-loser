@@ -7,6 +7,44 @@
 
 ---
 
+## ⚠️ 重要约定 - 必须遵守
+
+### 🚫 **禁用 WebSocket 心跳检测机制**
+
+**严格要求**：WebSocket **不允许启用心跳检测**（heartbeat）
+
+**原因**：
+1. 玩家答题时需要专注思考，可能15-30秒不发送任何消息
+2. 心跳检测会在无操作时将连接判定为"超时"，强制断开连接
+3. 本项目为本地开发/小规模部署，不需要心跳保活
+4. 已在开发和测试中验证，禁用心跳更稳定
+
+**配置要求**：
+
+后端 (`backend/src/main/java/org/example/config/WebSocketConfig.java`):
+```java
+// ✅ 正确配置：禁用心跳
+registry.enableSimpleBroker("/topic", "/queue", "/user")
+    .setTaskScheduler(taskScheduler());
+// ❌ 错误：不要添加 .setHeartbeatValue()
+```
+
+前端 (`frontend/src/websocket/ws.js`):
+```javascript
+// ✅ 正确配置：禁用心跳
+stompClient = new Client({
+  heartbeatIncoming: 0,  // 必须为 0
+  heartbeatOutgoing: 0,  // 必须为 0
+})
+```
+
+**违规处理**：
+- 如果发现任何心跳配置，必须立即删除
+- 不允许以"优化稳定性"为由添加心跳
+- 如需修改，必须先与用户讨论
+
+---
+
 ## 📋 目录
 
 1. [分支概览](#分支概览)

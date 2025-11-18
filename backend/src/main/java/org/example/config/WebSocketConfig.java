@@ -1,15 +1,14 @@
 package org.example.config;
 
-import lombok.RequiredArgsConstructor;
 import org.example.entity.PlayerEntity;
 import org.example.repository.PlayerRepository;
 import org.example.service.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
@@ -18,7 +17,6 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
-import org.springframework.stereotype.Component;
 import org.springframework.web.socket.config.annotation.*;
 
 import java.security.Principal;
@@ -27,7 +25,6 @@ import java.util.Optional;
 
 @Configuration
 @EnableWebSocketMessageBroker
-@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Value("${cors.allowed-origins}")
@@ -35,6 +32,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final SessionManager sessionManager;
     private final PlayerRepository playerRepository;
+
+    // 🔥 手动构造器，使用 @Lazy 打破循环依赖
+    // SessionManager 需要 SimpMessagingTemplate，而 SimpMessagingTemplate 由 WebSocket 配置创建
+    public WebSocketConfig(@Lazy SessionManager sessionManager, PlayerRepository playerRepository) {
+        this.sessionManager = sessionManager;
+        this.playerRepository = playerRepository;
+    }
 
     // 🔥 先定义 TaskScheduler bean
     @Bean
@@ -92,13 +96,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     // WebSocket通道拦截器，用于处理连接和断开事件
-    @RequiredArgsConstructor
     public static class WebSocketChannelInterceptor implements ChannelInterceptor {
 
         public static final Logger log = LoggerFactory.getLogger(WebSocketChannelInterceptor.class);
 
         private final SessionManager sessionManager;
         private final PlayerRepository playerRepository;
+
+        public WebSocketChannelInterceptor(SessionManager sessionManager, PlayerRepository playerRepository) {
+            this.sessionManager = sessionManager;
+            this.playerRepository = playerRepository;
+        }
 
         @Override
         public Message<?> preSend(Message<?> message, MessageChannel channel) {

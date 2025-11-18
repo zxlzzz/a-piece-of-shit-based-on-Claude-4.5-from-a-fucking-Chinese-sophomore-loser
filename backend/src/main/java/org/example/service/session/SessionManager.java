@@ -36,6 +36,18 @@ public class SessionManager {
     private final Map<String, String> sessionToPlayer = new ConcurrentHashMap<>();
 
     /**
+     * 🔥 P0-2修复：立即注册会话ID映射（在异步查询DB之前）
+     * 确保后续消息能通过sessionId找到playerId，避免状态不一致
+     *
+     * @param sessionId WebSocket会话ID
+     * @param playerId 玩家ID
+     */
+    public void registerSessionIdMapping(String sessionId, String playerId) {
+        sessionToPlayer.put(sessionId, playerId);
+        log.debug("✅ 立即注册会话映射: sessionId={}, playerId={}", sessionId, playerId);
+    }
+
+    /**
      * 注册新会话
      * 如果是注册用户且已有会话，则踢出旧会话
      *
@@ -186,20 +198,20 @@ public class SessionManager {
 
     /**
      * 🔥 定时清理过期会话（防止内存泄漏）
-     * 🔥 修复：每5分钟执行一次，清理超过30分钟未活动的会话
-     * 注意：由于心跳已禁用，这里使用登录时间作为判断依据
-     * 30分钟阈值既能及时清理僵尸会话，又不会误杀正常答题用户
+     * 🔥 P0-5修复：每5分钟执行一次，清理超过60分钟未活动的会话
+     * 使用lastHeartbeat（最后活动时间）而非loginTime
+     * 60分钟阈值确保长时间游戏的用户不会被误清理
      */
     @Scheduled(fixedDelay = 300000) // 5分钟
     public void cleanupStaleSessions() {
         try {
-            LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
+            LocalDateTime threshold = LocalDateTime.now().minusMinutes(60);
             List<String> toRemove = new ArrayList<>();
 
             // 找出所有过期的会话
             activeSessions.forEach((playerId, session) -> {
-                // 使用登录时间判断（因为lastHeartbeat不再更新）
-                if (session.getLoginTime().isBefore(threshold)) {
+                // 🔥 P0-5修复：使用lastHeartbeat（最后活动时间）判断
+                if (session.getLastHeartbeat().isBefore(threshold)) {
                     toRemove.add(playerId);
                 }
             });

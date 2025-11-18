@@ -44,15 +44,22 @@ public class ChatWebSocketController {
                 // 私聊消息：点对点发送
                 message.setIsPrivate(true);
 
+                // 🔥 P0-3修复：使用user queue确保隐私，而非topic
                 // 发送给所有收件人
                 for (String recipientId : message.getRecipientIds()) {
-                    String destination = "/topic/player/" + recipientId + "/private";
-                    messagingTemplate.convertAndSend(destination, message);
+                    messagingTemplate.convertAndSendToUser(
+                        recipientId,
+                        "/queue/private",
+                        message
+                    );
                 }
 
                 // 也发送给发送者自己（让发送者看到自己发的私聊）
-                String senderDestination = "/topic/player/" + message.getSenderId() + "/private";
-                messagingTemplate.convertAndSend(senderDestination, message);
+                messagingTemplate.convertAndSendToUser(
+                    message.getSenderId(),
+                    "/queue/private",
+                    message
+                );
             } else {
                 // 公共消息：广播到房间的所有订阅者
                 message.setIsPrivate(false);
@@ -62,9 +69,13 @@ public class ChatWebSocketController {
             log.error("🔥 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
             // 发送错误通知给发送者
             try {
-                String errorDest = "/topic/player/" + message.getSenderId() + "/private";
+                // 🔥 P0-3修复：错误通知也使用user queue
                 ChatMessage errorMsg = ChatMessage.system(roomCode, "消息发送失败，请重试");
-                messagingTemplate.convertAndSend(errorDest, errorMsg);
+                messagingTemplate.convertAndSendToUser(
+                    message.getSenderId(),
+                    "/queue/private",
+                    errorMsg
+                );
             } catch (Exception ex) {
                 log.error("发送错误通知失败", ex);
             }

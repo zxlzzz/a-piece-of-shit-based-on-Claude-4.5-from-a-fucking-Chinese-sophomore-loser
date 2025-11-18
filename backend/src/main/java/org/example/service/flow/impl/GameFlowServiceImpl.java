@@ -65,7 +65,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     private final long defaultQuestionTimeoutSeconds = 30L;
 
     @Override
-    @Transactional
+    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void startGame(String roomCode) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
@@ -265,7 +265,7 @@ public class GameFlowServiceImpl implements GameFlowService {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void finishGame(String roomCode) {
         log.info("🏁 finishGame 被调用: {}", roomCode);
 

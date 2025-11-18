@@ -181,9 +181,12 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         if (accessor.getSessionAttributes() != null) {
                             accessor.getSessionAttributes().put("playerId", playerId);
 
-                            // 🔥 优化：使用线程池异步查询玩家信息并注册会话（避免阻塞连接建立，防止线程泄漏）
-                            // 🔥 修复P0-2：确保异步注册失败时能清理状态，避免不一致
+                            // 🔥 P0-2修复：立即注册sessionToPlayer映射，确保后续消息能找到playerId
                             String sessionId = accessor.getSessionId();
+                            sessionManager.registerSessionIdMapping(sessionId, playerId);
+
+                            // 🔥 优化：使用线程池异步查询玩家信息并注册完整会话（避免阻塞连接建立，防止线程泄漏）
+                            // 🔥 修复P0-2：确保异步注册失败时能清理状态，避免不一致
                             Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
                             executor.execute(() -> {
                                 try {
@@ -207,19 +210,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                             playerId, playerName, sessionId, isRegisteredUser, roomCode);
                                     } else {
                                         log.warn("⚠️ WebSocket连接但未找到玩家（可能已删除）: playerId={}", playerId);
-                                        // 🔥 修复：玩家不存在时清理sessionAttributes，避免状态不一致
+                                        // 🔥 P0-2修复：玩家不存在时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
                                         if (sessionAttrs != null) {
                                             sessionAttrs.remove("playerId");
-                                            log.info("已清理不存在玩家的sessionAttributes: playerId={}", playerId);
                                         }
+                                        sessionManager.removeSession(sessionId);
+                                        log.info("已清理不存在玩家的会话映射: playerId={}, sessionId={}", playerId, sessionId);
                                     }
                                 } catch (Exception e) {
                                     log.error("⚠️ 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
-                                    // 🔥 修复：异步处理失败时清理sessionAttributes，避免状态不一致
+                                    // 🔥 P0-2修复：异步处理失败时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
                                     if (sessionAttrs != null) {
                                         sessionAttrs.remove("playerId");
-                                        log.info("已清理失败会话的sessionAttributes: playerId={}", playerId);
                                     }
+                                    sessionManager.removeSession(sessionId);
+                                    log.info("已清理失败会话的映射: playerId={}, sessionId={}", playerId, sessionId);
                                 }
                             });
                         } else {
@@ -250,6 +255,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
                 default:
                     break;
+            }
+
+            // 🔥 P0-5修复：更新活动时间，防止活跃用户被误清理
+            // 对于非CONNECT和DISCONNECT的命令，更新lastHeartbeat
+            if (command != null && command != StompCommand.CONNECT && command != StompCommand.DISCONNECT) {
+                String sessionId = accessor.getSessionId();
+                if (sessionId != null) {
+                    sessionManager.updateHeartbeat(sessionId);
+                }
             }
 
             return message;

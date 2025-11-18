@@ -41,7 +41,7 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
     private final BidQuestionConfigRepository bidConfigRepository;
 
     @Override
-    @Transactional
+    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void saveGameResult(String roomCode) {
         GameRoom gameRoom = roomCache.get(roomCode);
         if (gameRoom == null || !gameRoom.isFinished()) {

@@ -13,9 +13,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 房间缓存管理器 - 双层缓存架构
- * L1: 本地 ConcurrentHashMap（极快）
- * L2: Redis（持久化，支持重启恢复）
+ * 🔥 P1-5修复：房间缓存管理器 - 使用Redis作为单一数据源
+ *
+ * 移除双层缓存架构，解决本地缓存和Redis不同步的问题
+ * 使用Redis作为唯一缓存，确保数据一致性和重启后的恢复能力
+ *
+ * 性能考量：Redis本身非常快（亚毫秒级），对于房间管理场景足够
  */
 @Component
 @Slf4j
@@ -24,14 +27,6 @@ public class RoomCache {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    /**
-     * L1 缓存：本地内存缓存
-     * Key: roomCode
-     * Value: GameRoom
-     */
-    private final Map<String, GameRoom> localCache = new ConcurrentHashMap<>();
-    private final Map<String, Long> roomCreationTime = new ConcurrentHashMap<>();
-
     // 房间过期时间（毫秒）：30分钟
     private static final long ROOM_EXPIRY_MS = 30 * 60 * 1000;
 
@@ -39,14 +34,9 @@ public class RoomCache {
     private static final String REDIS_KEY_PREFIX = "game:room:";
 
     /**
-     * 存入房间（双写：本地缓存 + Redis）
+     * 🔥 P1-5修复：存入房间（仅写入Redis）
      */
     public void put(String roomCode, GameRoom room) {
-        // 1. 写入本地缓存
-        localCache.put(roomCode, room);
-        roomCreationTime.put(roomCode, System.currentTimeMillis());
-
-        // 2. 写入 Redis（异步，30分钟过期）
         try {
             redisTemplate.opsForValue().set(
                 getRedisKey(roomCode),
@@ -54,44 +44,25 @@ public class RoomCache {
                 ROOM_EXPIRY_MS,
                 TimeUnit.MILLISECONDS
             );
-            log.debug("✅ 房间 {} 已加入双层缓存（L1+Redis）", roomCode);
+            log.debug("✅ 房间 {} 已保存到Redis", roomCode);
         } catch (Exception e) {
-            log.error("❌ Redis 写入失败（roomCode={}），降级为本地缓存", roomCode, e);
-            // 不抛异常，降级为本地缓存
+            log.error("❌ Redis 写入失败（roomCode={}）", roomCode, e);
+            throw new BusinessException("房间保存失败");
         }
     }
 
     /**
-     * 获取房间（双层缓存读取）
-     * 优先从本地缓存读取，miss 时从 Redis 加载
+     * 🔥 P1-5修复：获取房间（仅从Redis读取）
      */
     public GameRoom get(String roomCode) {
-        // 1. 先查本地缓存（L1）
-        GameRoom room = localCache.get(roomCode);
-        if (room != null) {
-            // 检查是否过期
-            if (isExpired(roomCode)) {
-                remove(roomCode);
-                return null;
-            }
-            return room;
-        }
-
-        // 2. 本地缓存 miss，查 Redis（L2）
         try {
             Object redisValue = redisTemplate.opsForValue().get(getRedisKey(roomCode));
             if (redisValue instanceof GameRoom) {
-                room = (GameRoom) redisValue;
-                // 加载到本地缓存
-                localCache.put(roomCode, room);
-                roomCreationTime.put(roomCode, System.currentTimeMillis());
-                log.info("🔄 从 Redis 恢复房间: {}", roomCode);
-                return room;
+                return (GameRoom) redisValue;
             }
         } catch (Exception e) {
             log.error("❌ Redis 读取失败（roomCode={}）", roomCode, e);
         }
-
         return null;
     }
 
@@ -99,7 +70,7 @@ public class RoomCache {
      * 获取房间（不存在则抛异常）
      */
     public GameRoom getOrThrow(String roomCode) {
-        GameRoom room = get(roomCode);  // 使用双层缓存的 get 方法
+        GameRoom room = get(roomCode);
         if (room == null) {
             throw new BusinessException("房间不存在或已过期");
         }
@@ -107,14 +78,9 @@ public class RoomCache {
     }
 
     /**
-     * 检查房间是否存在（双层检查）
+     * 🔥 P1-5修复：检查房间是否存在（仅检查Redis）
      */
     public boolean exists(String roomCode) {
-        // 先查本地缓存
-        if (localCache.containsKey(roomCode)) {
-            return true;
-        }
-        // 再查 Redis
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(getRedisKey(roomCode)));
         } catch (Exception e) {
@@ -124,61 +90,80 @@ public class RoomCache {
     }
 
     /**
-     * 获取所有活跃房间（仅返回本地缓存中的房间）
+     * 🔥 P1-5修复：获取所有活跃房间（从Redis扫描）
+     * 注意：这个操作比较昂贵，谨慎使用
      */
     public Collection<GameRoom> getAll() {
-        return localCache.values();
+        try {
+            java.util.Set<String> keys = redisTemplate.keys(REDIS_KEY_PREFIX + "*");
+            if (keys == null || keys.isEmpty()) {
+                return java.util.Collections.emptyList();
+            }
+
+            java.util.List<GameRoom> rooms = new java.util.ArrayList<>();
+            for (String key : keys) {
+                Object value = redisTemplate.opsForValue().get(key);
+                if (value instanceof GameRoom) {
+                    rooms.add((GameRoom) value);
+                }
+            }
+            return rooms;
+        } catch (Exception e) {
+            log.error("❌ Redis扫描失败", e);
+            return java.util.Collections.emptyList();
+        }
     }
 
     /**
-     * 获取房间数量（仅统计本地缓存）
+     * 🔥 P1-5修复：获取房间数量（从Redis统计）
      */
     public int size() {
-        return localCache.size();
+        try {
+            java.util.Set<String> keys = redisTemplate.keys(REDIS_KEY_PREFIX + "*");
+            return keys != null ? keys.size() : 0;
+        } catch (Exception e) {
+            log.error("❌ Redis统计失败", e);
+            return 0;
+        }
     }
 
     /**
-     * 清空所有房间（慎用，仅用于测试或系统重置）
+     * 🔥 P1-5修复：清空所有房间（删除Redis中所有房间）
      */
     public void clear() {
-        log.warn("⚠️ 清空所有房间缓存，当前房间数: {}", localCache.size());
-        localCache.clear();
-        roomCreationTime.clear();
-        // 注意：不清空 Redis，保留持久化数据
+        try {
+            java.util.Set<String> keys = redisTemplate.keys(REDIS_KEY_PREFIX + "*");
+            if (keys != null && !keys.isEmpty()) {
+                log.warn("⚠️ 清空所有房间缓存，当前房间数: {}", keys.size());
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            log.error("❌ Redis清空失败", e);
+        }
     }
 
     /**
-     * 移除房间（双删：本地缓存 + Redis）
+     * 🔥 P1-5修复：移除房间（仅删除Redis）
      */
     public void remove(String roomCode) {
-        // 1. 删除本地缓存
-        localCache.remove(roomCode);
-        roomCreationTime.remove(roomCode);
-
-        // 2. 删除 Redis
         try {
             redisTemplate.delete(getRedisKey(roomCode));
-            log.info("🗑️ 房间 {} 已从双层缓存移除", roomCode);
+            log.info("🗑️ 房间 {} 已从Redis移除", roomCode);
         } catch (Exception e) {
             log.error("❌ Redis 删除失败（roomCode={}）", roomCode, e);
         }
     }
 
     /**
-     * 🔥 修复问题5：移除房间，Redis删除失败时重试
+     * 🔥 P1-5修复：移除房间（带重试机制）
      */
     public void removeWithRetry(String roomCode) {
-        // 1. 删除本地缓存
-        localCache.remove(roomCode);
-        roomCreationTime.remove(roomCode);
-
-        // 2. 删除 Redis（带重试）
         String redisKey = getRedisKey(roomCode);
         int maxRetries = 3;
         for (int i = 0; i < maxRetries; i++) {
             try {
                 redisTemplate.delete(redisKey);
-                log.info("🗑️ 房间 {} 已从双层缓存移除", roomCode);
+                log.info("🗑️ 房间 {} 已从Redis移除", roomCode);
                 return; // 成功，直接返回
             } catch (Exception e) {
                 if (i == maxRetries - 1) {
@@ -197,12 +182,17 @@ public class RoomCache {
     }
 
     /**
-     * 检查房间是否过期
+     * 🔥 P1-5修复：同步房间到Redis（用于修改GameRoom后持久化）
+     * 从Redis读取最新对象，修改后调用此方法保存
      */
-    private boolean isExpired(String roomCode) {
-        Long createdAt = roomCreationTime.get(roomCode);
-        if (createdAt == null) return false;
-        return System.currentTimeMillis() - createdAt > ROOM_EXPIRY_MS;
+    public void syncToRedis(String roomCode) {
+        GameRoom room = get(roomCode);
+        if (room != null) {
+            put(roomCode, room);
+            log.debug("🔄 房间 {} 已同步到 Redis", roomCode);
+        } else {
+            log.warn("⚠️ 尝试同步不存在的房间: {}", roomCode);
+        }
     }
 
     /**
@@ -210,25 +200,5 @@ public class RoomCache {
      */
     private String getRedisKey(String roomCode) {
         return REDIS_KEY_PREFIX + roomCode;
-    }
-
-    /**
-     * 手动刷新房间到 Redis（用于定期持久化）
-     */
-    public void syncToRedis(String roomCode) {
-        GameRoom room = localCache.get(roomCode);
-        if (room != null) {
-            try {
-                redisTemplate.opsForValue().set(
-                    getRedisKey(roomCode),
-                    room,
-                    ROOM_EXPIRY_MS,
-                    TimeUnit.MILLISECONDS
-                );
-                log.debug("🔄 房间 {} 已同步到 Redis", roomCode);
-            } catch (Exception e) {
-                log.error("❌ Redis 同步失败（roomCode={}）", roomCode, e);
-            }
-        }
     }
 }

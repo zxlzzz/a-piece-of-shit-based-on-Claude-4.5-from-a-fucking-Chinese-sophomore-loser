@@ -43,9 +43,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             new UsernamePasswordAuthenticationToken(username, null, new ArrayList<>());
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                } else {
+                    // 🔥 P1-4修复：token验证失败，返回401而不是继续处理
+                    log.warn("❌ JWT验证失败（token无效或过期）");
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Token无效或已过期\"}");
+                    return; // 阻止继续处理
                 }
             } catch (Exception e) {
-                log.error("JWT 认证失败: {}", e.getMessage());
+                // 🔥 P1-4修复：token验证异常，返回401而不是继续处理
+                log.error("❌ JWT认证失败: {}", e.getMessage());
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"error\":\"Token验证失败\"}");
+                return; // 阻止继续处理
             }
         }
 

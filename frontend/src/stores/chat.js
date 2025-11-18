@@ -112,12 +112,8 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       // 🔥 订阅私聊频道 - 使用常量确保与后端路径一致
-      // 验证playerId不包含特殊字符（防止路径注入）
-      if (playerStore.playerId && /[^a-zA-Z0-9\-_]/.test(playerStore.playerId)) {
-        logger.warn('⚠️ playerId包含特殊字符，可能影响路径匹配:', playerStore.playerId)
-      }
-
-      privateSubscription = client.subscribe(WS_TOPIC_PRIVATE_MESSAGE(playerStore.playerId), (message) => {
+      // 🔥 P0-3修复：订阅user queue，Spring WebSocket自动根据会话路由
+      privateSubscription = client.subscribe(WS_TOPIC_PRIVATE_MESSAGE, (message) => {
         try {
           const chatMessage = JSON.parse(message.body)
           addMessage(chatMessage)

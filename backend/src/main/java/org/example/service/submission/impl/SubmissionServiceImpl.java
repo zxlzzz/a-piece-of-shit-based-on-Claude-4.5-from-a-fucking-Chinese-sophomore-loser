@@ -35,7 +35,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final QuestionRepository questionRepository;
 
     @Override
-    @Transactional
+    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void submitAnswer(String roomCode, String playerId, String choice) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();  // ✅ DTO
@@ -99,7 +99,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
-    @Transactional
+    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void fillDefaultAnswers(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {

@@ -47,7 +47,10 @@ public class ChatMessage {
      * 🔥 私聊相关字段
      */
     private List<String> recipientIds;  // 收件人ID列表（null或空表示公共消息）
-    private Boolean isPrivate;          // 是否私聊消息
+
+    // 🔥 P1-3修复：使用primitive boolean并添加默认值，避免NPE
+    @Builder.Default
+    private Boolean isPrivate = false;  // 是否私聊消息（默认false，避免NPE）
 
     /**
      * 消息类型枚举

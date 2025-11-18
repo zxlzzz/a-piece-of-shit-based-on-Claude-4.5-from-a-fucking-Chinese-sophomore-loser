@@ -12,7 +12,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     return `submission_${roomCode.value}_${room.value.currentIndex}`
   }
 
-  const handleChoose = (choice) => {
+  const handleChoose = async (choice) => {
     // 🔥 观战者不能提交答案
     if (playerStore.isSpectator) {
       toast.add({

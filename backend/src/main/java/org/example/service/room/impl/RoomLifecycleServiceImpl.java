@@ -260,6 +260,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     // 🔥 改：游戏进行中时不立即删除，给重连时间
                     if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                         log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
+                        // 🔥 修复问题4.4：同步状态到Redis，以便返回最新状态并广播
+                        roomCache.syncToRedis(roomCode);
                         // 不删除房间，保留5分钟
                         return true; // 房间仍存在
                     } else {

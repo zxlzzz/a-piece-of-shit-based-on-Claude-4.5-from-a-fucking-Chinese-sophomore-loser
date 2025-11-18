@@ -35,6 +35,13 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+// 🔥 修复问题7.1: 返回大厅时清理playerStore
+const handleBackToLobby = () => {
+  playerStore.clearRoom()
+  chatStore.clearChat()  // 同时清理聊天记录
+  router.push('/find')
+}
 </script>
 
 <template>
@@ -78,7 +85,7 @@ onMounted(async () => {
           <i class="pi pi-exclamation-circle text-3xl sm:text-4xl text-red-500 mb-3"></i>
           <p class="text-sm sm:text-base text-gray-600 dark:text-gray-400 mb-4">无法加载游戏结果</p>
           <button
-            @click="$router.push('/find')"
+            @click="handleBackToLobby"
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
           >
             <i class="pi pi-home mr-2"></i>

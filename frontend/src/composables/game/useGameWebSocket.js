@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
+import { isConnected, subscribeRoom, unsubscribeAll, unsubscribeRoom, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
@@ -274,9 +274,9 @@ export function useGameWebSocket(
   })
 
   onUnmounted(() => {
-    if (subscriptions.value.length > 0) {
-      unsubscribeAll(subscriptions.value)
-    }
+    // 🔥 修复问题2.1：使用unsubscribeRoom清理订阅，确保从全局Map中移除
+    unsubscribeRoom(roomCode.value)
+
     window.removeEventListener('websocket-reconnecting', handleReconnecting)
     window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)

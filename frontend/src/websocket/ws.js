@@ -22,6 +22,7 @@ let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不
 let isResettingConnection = false; // 🔥 修复P1-1：防止并发重置连接导致的竞态条件
 let subscriptionCallbacks = new Set(); // 🔥 修复：使用Set避免重复，提升线程安全
 let personalSubscriptions = []; // 🔥 修复：存储个人消息订阅，避免内存泄漏
+let activeRoomSubscriptions = new Map(); // 🔥 修复问题2.1：全局跟踪活动的房间订阅，防止重复订阅
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -369,6 +370,9 @@ export function disconnect(force = false) {
   // 🔥 修复：总是清理订阅回调，避免内存泄漏
   // 不再使用 force 参数判断，因为任何断开都应该清理回调
   subscriptionCallbacks = new Set();
+
+  // 🔥 修复问题2.1：清理活动房间订阅记录
+  activeRoomSubscriptions.clear();
 }
 
 /**
@@ -441,12 +445,21 @@ export function safeSubscribe(destination, onMessage) {
 
 /**
  * 房间统一订阅
+ * 🔥 修复问题2.1：添加重复订阅检测，防止快速刷新时订阅竞态条件
  * @param {string} roomCode - 房间码
  * @param {function} onRoomUpdate - 房间更新回调
  * @param {function} onRoomError - 房间错误回调
  * @param {string} playerId - 玩家ID（可选，用于订阅被踢事件）
  */
 export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
+  // 🔥 修复问题2.1：检查是否已有该房间的活动订阅
+  if (activeRoomSubscriptions.has(roomCode)) {
+    logger.warn(`⚠️ 房间 ${roomCode} 已存在订阅，先取消旧订阅`);
+    const oldSubs = activeRoomSubscriptions.get(roomCode);
+    unsubscribeAll(oldSubs);
+    activeRoomSubscriptions.delete(roomCode);
+  }
+
   const subscriptions = [];
 
   const roomUpdateSub = safeSubscribe(`/topic/room/${roomCode}`, (data) => {
@@ -480,6 +493,10 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
   if (kickedSub) subscriptions.push(kickedSub);
 
+  // 🔥 修复问题2.1：记录活动订阅
+  activeRoomSubscriptions.set(roomCode, subscriptions);
+  logger.debug(`✅ 房间 ${roomCode} 订阅成功，订阅数: ${subscriptions.length}`);
+
   return subscriptions;
 }
 
@@ -502,6 +519,19 @@ export function unsubscribe(subscription) {
 export function unsubscribeAll(subscriptions) {
   if (Array.isArray(subscriptions)) {
     subscriptions.forEach(unsubscribe);
+  }
+}
+
+/**
+ * 🔥 修复问题2.1：取消房间订阅并从活动订阅Map中移除
+ * @param {string} roomCode - 房间码
+ */
+export function unsubscribeRoom(roomCode) {
+  if (activeRoomSubscriptions.has(roomCode)) {
+    const subs = activeRoomSubscriptions.get(roomCode);
+    unsubscribeAll(subs);
+    activeRoomSubscriptions.delete(roomCode);
+    logger.debug(`✅ 已取消房间 ${roomCode} 的订阅`);
   }
 }
 
@@ -664,6 +694,7 @@ export default {
   subscribeRoom,
   unsubscribe,
   unsubscribeAll,
+  unsubscribeRoom,
   sendJoin,
   sendStart,
   sendSubmit,

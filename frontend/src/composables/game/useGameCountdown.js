@@ -12,6 +12,12 @@ export function useGameCountdown(handleAutoSubmit) {
   }
 
   const startCountdown = () => {
+    // 🔥 修复问题4.3：防御性检查，确保不会在已有timer时创建新timer
+    if (countdownTimer.value) {
+      clearInterval(countdownTimer.value)
+      countdownTimer.value = null
+    }
+
     updateCountdown()
     countdownTimer.value = setInterval(() => {
       updateCountdown()

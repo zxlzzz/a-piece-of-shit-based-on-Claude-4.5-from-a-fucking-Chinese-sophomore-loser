@@ -7,7 +7,7 @@ export const TOAST_DEFAULT_LIFE = 3000 // Toast默认显示时长（毫秒）
 export const API_TIMEOUT = 10000 // API请求超时时间（毫秒）
 
 // ============ 本地存储相关 ============
-export const ROOM_DATA_EXPIRY_TIME = 60 * 60 * 1000 // 房间数据过期时间（1小时）
+export const ROOM_DATA_EXPIRY_TIME = 30 * 60 * 1000 // 房间数据过期时间（30分钟，避免后端重启后数据不同步）
 
 // ============ 草稿画板相关 ============
 export const CANVAS_LINE_WIDTHS = [1, 2, 4] // 可选的画笔粗细

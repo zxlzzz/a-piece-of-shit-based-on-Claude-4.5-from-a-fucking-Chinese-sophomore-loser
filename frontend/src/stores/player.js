@@ -1,4 +1,5 @@
 import { logger } from '@/utils/logger'
+import { ROOM_DATA_EXPIRY_TIME } from '@/config/constants'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -75,14 +76,14 @@ export const usePlayerStore = defineStore('player', () => {
     const saved = localStorage.getItem('currentRoom')
     if (saved) {
       const roomData = JSON.parse(saved)
-      
-      // 🔥 检查房间是否过期（例如2小时）
-      const TWO_HOURS = 2 * 60 * 60 * 1000
-      if (roomData._savedAt && (Date.now() - roomData._savedAt > TWO_HOURS)) {
+
+      // 🔥 检查房间是否过期（使用统一配置，避免后端重启后数据不同步）
+      if (roomData._savedAt && (Date.now() - roomData._savedAt > ROOM_DATA_EXPIRY_TIME)) {
+        logger.info('🧹 房间缓存已过期，自动清理')
         clearRoom()
         return null
       }
-      
+
       currentRoomCode.value = roomData.roomCode
       currentRoom.value = roomData
       return roomData

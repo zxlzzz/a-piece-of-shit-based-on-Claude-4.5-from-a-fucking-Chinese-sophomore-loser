@@ -165,6 +165,38 @@ public class RoomCache {
     }
 
     /**
+     * 🔥 修复问题5：移除房间，Redis删除失败时重试
+     */
+    public void removeWithRetry(String roomCode) {
+        // 1. 删除本地缓存
+        localCache.remove(roomCode);
+        roomCreationTime.remove(roomCode);
+
+        // 2. 删除 Redis（带重试）
+        String redisKey = getRedisKey(roomCode);
+        int maxRetries = 3;
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                redisTemplate.delete(redisKey);
+                log.info("🗑️ 房间 {} 已从双层缓存移除", roomCode);
+                return; // 成功，直接返回
+            } catch (Exception e) {
+                if (i == maxRetries - 1) {
+                    log.error("❌ Redis 删除失败（roomCode={}），已重试 {} 次", roomCode, maxRetries, e);
+                } else {
+                    log.warn("⚠️ Redis 删除失败（roomCode={}），第 {}/{} 次重试...", roomCode, i + 1, maxRetries);
+                    try {
+                        Thread.sleep(100 * (i + 1)); // 递增延迟：100ms, 200ms, 300ms
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 检查房间是否过期
      */
     private boolean isExpired(String roomCode) {

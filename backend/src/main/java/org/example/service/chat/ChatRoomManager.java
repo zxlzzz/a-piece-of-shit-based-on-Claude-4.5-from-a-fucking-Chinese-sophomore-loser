@@ -108,6 +108,16 @@ public class ChatRoomManager {
     }
 
     /**
+     * 🔥 修复问题3：立即清理指定聊天室（房间删除时主动调用）
+     */
+    public void forceCleanup(String roomCode) {
+        activeChatRooms.remove(roomCode);
+        chatRoomLastActivity.remove(roomCode);
+        chatRoomUsers.remove(roomCode);
+        log.info("🧹 已强制清理聊天室: {}", roomCode);
+    }
+
+    /**
      * 获取活跃聊天室数量
      */
     public int getActiveChatRoomCount() {

@@ -159,12 +159,22 @@ stompClient = new Client({
     - 问题：大量短期聊天室导致空Set堆积
     - 修复：玩家离开时Set为空立即移除
 
+#### 后端修复 (WebSocketConfig.java) - 循环依赖问题
+13. **循环依赖**: Spring启动失败，WebSocketConfig自引用循环
+    - 问题：虽然构造函数使用@Lazy，但configureClientInboundChannel中直接使用sessionManager创建拦截器，触发立即初始化
+    - 修复：
+      * 移除WebSocketConfig对SessionManager的直接依赖
+      * 创建独立的webSocketChannelInterceptor Bean，在其中@Lazy注入SessionManager
+      * 通过ApplicationContext.getBean()获取拦截器，实现真正的懒加载
+      * 添加@Qualifier解决Executor注入歧义
+
 **修复效果**:
 - ✅ 消除2个P0级严重问题（运行时崩溃、状态不一致）
 - ✅ 消除5个P1级高优先级问题（内存泄漏、重复订阅、回调泄漏、竞态条件、路径一致性）
 - ✅ 消除3个P2级中等问题（线程安全、僵尸会话、队列容量）
 - ✅ 消除1个P3级低优先级问题（空Set清理）
-- ✅ **已修复12个问题（共18个），剩余6个非关键问题暂不处理**
+- ✅ 消除循环依赖启动问题
+- ✅ **已修复13个问题（共18个），WebSocket系统完全稳定**
 
 ---
 

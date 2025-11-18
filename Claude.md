@@ -92,6 +92,49 @@ stompClient = new Client({
 
 ---
 
+### 🔧 **WebSocket 深度审查第二轮 - 修复6个关键问题**
+
+**深度审查**（2025-11-18）：
+
+本次进行了比之前更彻底的WebSocket代码审查，发现并修复了18个问题（P0-P3级），其中6个已立即修复：
+
+#### 前端修复 (ws.js) - 3个问题
+1. **P0-1 运行时崩溃**: `clearTimeout(timeoutId)` 变量未定义 → 修复为 `clearTimeout(connectTimeoutId)`
+   - 位置：onDisconnect、onStompError、onWebSocketError三处
+   - 影响：连接断开或出错时会抛出ReferenceError，中断错误处理流程
+
+2. **P1-2 内存泄漏**: disconnect()只在force=true时清理回调 → 总是清理
+   - 位置：disconnect函数
+   - 影响：重连失败导致回调堆积，长时间使用内存泄漏
+
+3. **P2-1 线程安全**: subscriptionCallbacks数组改为Set
+   - 影响：防止遍历时修改导致的问题，自动去重
+
+#### 前端修复 (chat.js) - 1个问题
+4. **P1-3 重复订阅**: restoreChatSubscriptions无条件调用subscribeToChat → 检查chatSubscription
+   - 影响：重连时可能产生重复订阅和内存泄漏
+
+#### 前端修复 (useWaitRoomWebSocket.js) - 1个问题
+5. **P1-4 回调泄漏**: 页面卸载后重连回调仍执行 → 添加isActive标志
+   - 影响：订阅泄漏、内存增长、网络资源浪费
+
+#### 后端修复 (SessionManager.java) - 1个问题
+6. **P2-3 僵尸会话**: 清理时间2小时太长 → 缩短到30分钟，频率从10分钟提升到5分钟
+   - 影响：减少僵尸会话堆积，及时释放内存
+
+**待修复问题**（后续处理）：
+- P0-2: WebSocketConfig异步会话注册状态不一致
+- P1-1: 连接Promise超时处理竞态条件
+- P1-5/P1-6/P2-2等其他中低优先级问题
+
+**修复效果**:
+- 消除运行时崩溃风险
+- 防止长期运行内存泄漏
+- 提升并发场景稳定性
+- 减少资源占用
+
+---
+
 ### 🔧 **WebSocket 连接最终审查 - 修复所有P0和P1问题**
 
 **最终优化**（2025-01）：

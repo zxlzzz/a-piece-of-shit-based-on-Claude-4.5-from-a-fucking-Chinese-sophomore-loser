@@ -19,6 +19,7 @@ let reconnectAttempts = 0;
 let reconnectTimer = null;
 let isReconnecting = false; // 🔥 标记是否正在重连
 let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
+let isResettingConnection = false; // 🔥 修复P1-1：防止并发重置连接导致的竞态条件
 let subscriptionCallbacks = new Set(); // 🔥 修复：使用Set避免重复，提升线程安全
 let personalSubscriptions = []; // 🔥 修复：存储个人消息订阅，避免内存泄漏
 
@@ -37,29 +38,42 @@ export function connect(playerId, onConnect, onError) {
   }
 
   // 🔥 修改：如果正在连接中，检查是否超时
+  // 🔥 修复P1-1：使用flag防止并发重置导致的竞态条件
   if (connectPromise) {
     const now = Date.now();
     // 如果连接 Promise 存在超过设定时间，强制重置
     if (!connectPromise._startTime) {
       connectPromise._startTime = now;
     } else if (now - connectPromise._startTime > WS_CONNECT_PROMISE_TIMEOUT) {
-      logger.error('连接超时，强制重置');
+      // 使用flag确保只重置一次，避免并发重置
+      if (!isResettingConnection) {
+        isResettingConnection = true;
+        logger.error('连接超时，强制重置');
 
-      // 🔥 修复：清除超时处理器，避免资源泄漏
-      if (connectTimeoutId) {
-        clearTimeout(connectTimeoutId);
-        connectTimeoutId = null;
-      }
-
-      connectPromise = null;
-      if (stompClient) {
-        try {
-          stompClient.deactivate();
-        } catch (e) {
-          logger.error('强制断开失败:', e);
+        // 🔥 修复：清除超时处理器，避免资源泄漏
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+          connectTimeoutId = null;
         }
-        stompClient = null;
-        connected = false;
+
+        connectPromise = null;
+        if (stompClient) {
+          try {
+            stompClient.deactivate();
+          } catch (e) {
+            logger.error('强制断开失败:', e);
+          }
+          stompClient = null;
+          connected = false;
+        }
+
+        isResettingConnection = false;
+      } else {
+        // 正在重置中，等待完成
+        logger.debug('连接正在重置中，等待完成...');
+        return new Promise((resolve, reject) => {
+          setTimeout(() => reject(new Error('连接重置中')), 100);
+        });
       }
     } else {
       return connectPromise;

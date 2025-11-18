@@ -158,7 +158,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                             accessor.getSessionAttributes().put("playerId", playerId);
 
                             // 🔥 优化：使用线程池异步查询玩家信息并注册会话（避免阻塞连接建立，防止线程泄漏）
+                            // 🔥 修复P0-2：确保异步注册失败时能清理状态，避免不一致
                             String sessionId = accessor.getSessionId();
+                            Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
                             executor.execute(() -> {
                                 try {
                                     Optional<PlayerEntity> playerOpt = playerRepository.findByPlayerId(playerId);
@@ -168,24 +170,32 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                         boolean isRegisteredUser = player.getUsername() != null;
                                         String roomCode = player.getRoom() != null ? player.getRoom().getRoomCode() : null;
 
-                                        // 🔥 注册会话，检测重复登录（仅注册用户）
-                                        if (isRegisteredUser) {
-                                            sessionManager.registerSession(
-                                                sessionId,
-                                                playerId,
-                                                playerName,
-                                                true,
-                                                roomCode
-                                            );
-                                        }
+                                        // 🔥 注册会话（注册用户和游客都注册，确保sessionToPlayer映射完整）
+                                        sessionManager.registerSession(
+                                            sessionId,
+                                            playerId,
+                                            playerName,
+                                            isRegisteredUser,
+                                            roomCode
+                                        );
 
                                         log.info("🔌 WebSocket连接建立: playerId={}, name={}, sessionId={}, isRegistered={}, roomCode={}",
                                             playerId, playerName, sessionId, isRegisteredUser, roomCode);
                                     } else {
                                         log.warn("⚠️ WebSocket连接但未找到玩家（可能已删除）: playerId={}", playerId);
+                                        // 🔥 修复：玩家不存在时清理sessionAttributes，避免状态不一致
+                                        if (sessionAttrs != null) {
+                                            sessionAttrs.remove("playerId");
+                                            log.info("已清理不存在玩家的sessionAttributes: playerId={}", playerId);
+                                        }
                                     }
                                 } catch (Exception e) {
                                     log.error("⚠️ 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
+                                    // 🔥 修复：异步处理失败时清理sessionAttributes，避免状态不一致
+                                    if (sessionAttrs != null) {
+                                        sessionAttrs.remove("playerId");
+                                        log.info("已清理失败会话的sessionAttributes: playerId={}", playerId);
+                                    }
                                 }
                             });
                         } else {

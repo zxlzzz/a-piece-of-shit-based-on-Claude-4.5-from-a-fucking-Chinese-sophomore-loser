@@ -74,7 +74,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     }
   }
 
-  const handleAutoSubmit = () => {
+  const handleAutoSubmit = async () => {
     // 🔥 观战者不需要自动提交
     if (playerStore.isSpectator) {
       return

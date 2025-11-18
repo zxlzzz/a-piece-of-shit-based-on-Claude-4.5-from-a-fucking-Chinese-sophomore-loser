@@ -87,7 +87,7 @@ const handleKeyPress = (event) => {
 const selectPlayer = (player) => {
   chatStore.addRecipient({
     id: player.playerId,
-    name: player.playerName
+    name: player.name
   })
   showPlayerList.value = false  // 选择后关闭玩家列表
 }
@@ -136,7 +136,7 @@ const getRecipientNames = (message) => {
   const names = message.recipientIds
     .map(id => {
       const player = room.players.find(p => p.playerId === id)
-      return player?.playerName || id
+      return player?.name || id
     })
     .join(', ')
 
@@ -183,10 +183,10 @@ const getRecipientNames = (message) => {
                   >
                     <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500
                                 flex items-center justify-center text-white text-xs font-bold">
-                      {{ player.playerName?.charAt(0)?.toUpperCase() || '?' }}
+                      {{ player.name?.charAt(0)?.toUpperCase() || '?' }}
                     </div>
                     <span class="text-sm text-gray-900 dark:text-white truncate">
-                      {{ player.playerName }}
+                      {{ player.name }}
                     </span>
                   </button>
                 </div>

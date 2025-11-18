@@ -74,6 +74,11 @@ export function useGameWebSocket(
       question.value = updatedRoom.currentQuestion
       playerStore.setRoom(updatedRoom)
 
+      // 🔥 修复问题4.6：重连时恢复提交状态
+      if (restoreSubmitState) {
+        restoreSubmitState()
+      }
+
       // 🔥 P1-1: 刷新时也验证提交状态
       if (verifySubmissionState && updatedRoom.submittedPlayerIds) {
         verifySubmissionState(updatedRoom.submittedPlayerIds)

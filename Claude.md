@@ -106,8 +106,9 @@ stompClient = new Client({
 
 **代码位置**：
 - `frontend/src/websocket/ws.js:312-340` - `waitForConnection()` 工具函数
-- `frontend/src/stores/chat.js:84-88` - 使用统一函数
-- `frontend/src/composables/game/useGameWebSocket.js:240-254` - 使用统一函数
+- `frontend/src/stores/chat.js:84-88` - 聊天订阅中使用
+- `frontend/src/composables/game/useGameWebSocket.js:240-254` - 游戏视图中使用
+- `frontend/src/composables/room/useWaitRoomWebSocket.js:170-184` - 等待房间中使用
 
 **函数签名**：
 ```javascript

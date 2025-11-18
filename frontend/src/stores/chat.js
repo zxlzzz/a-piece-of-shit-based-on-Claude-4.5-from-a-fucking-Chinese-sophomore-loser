@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { logger } from '@/utils/logger'
 import { getStompClient, isConnected, sendMessage, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { usePlayerStore } from './player'
+import { WS_TOPIC_PRIVATE_MESSAGE, WS_TOPIC_ROOM_CHAT } from '@/config/constants'
 
 export const useChatStore = defineStore('chat', () => {
   const roomCode = ref(null)
@@ -97,9 +98,11 @@ export const useChatStore = defineStore('chat', () => {
 
     try {
       const client = getStompClient()
+      const playerStore = usePlayerStore()
 
+      // 🔥 修复P1-5：使用常量确保路径一致性
       // 订阅房间聊天频道
-      chatSubscription = client.subscribe(`/topic/room/${code}/chat`, (message) => {
+      chatSubscription = client.subscribe(WS_TOPIC_ROOM_CHAT(code), (message) => {
         try {
           const chatMessage = JSON.parse(message.body)
           addMessage(chatMessage)
@@ -108,11 +111,13 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
-      // 🔥 订阅私聊频道 - 使用基于playerId的topic路径
-      const playerStore = usePlayerStore()
-      const privateChannelPath = `/topic/player/${playerStore.playerId}/private`
+      // 🔥 订阅私聊频道 - 使用常量确保与后端路径一致
+      // 验证playerId不包含特殊字符（防止路径注入）
+      if (playerStore.playerId && /[^a-zA-Z0-9\-_]/.test(playerStore.playerId)) {
+        logger.warn('⚠️ playerId包含特殊字符，可能影响路径匹配:', playerStore.playerId)
+      }
 
-      privateSubscription = client.subscribe(privateChannelPath, (message) => {
+      privateSubscription = client.subscribe(WS_TOPIC_PRIVATE_MESSAGE(playerStore.playerId), (message) => {
         try {
           const chatMessage = JSON.parse(message.body)
           addMessage(chatMessage)

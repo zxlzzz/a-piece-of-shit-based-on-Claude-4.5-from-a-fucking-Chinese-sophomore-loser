@@ -95,21 +95,25 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(new WebSocketChannelInterceptor(sessionManager, playerRepository, wsConnectionExecutor));
 
-        // 🔥 大幅增加队列容量和线程池，防止消息队列满导致断连
-        // 这是防止 "Failed to send message to ExecutorSubscribableChannel" 错误的关键
+        // 🔥 配置消息处理线程池和队列
+        // 🔥 修复P2-2：队列容量从50000降到5000，避免OOM风险
+        // 如果队列接近满载，说明服务器处理能力不足，应该拒绝而不是无限堆积
         registration.taskExecutor()
-                .corePoolSize(32)       // 🔥 从 8 增加到 32
-                .maxPoolSize(64)        // 🔥 从 16 增加到 64
-                .queueCapacity(50000);  // 🔥 从 1000 增加到 50000 - 最关键！
+                .corePoolSize(32)       // 核心线程数：32
+                .maxPoolSize(64)        // 最大线程数：64
+                .queueCapacity(5000)    // 队列容量：5000（从50000降低，避免内存溢出）
+                .keepAliveSeconds(300); // 非核心线程空闲300秒后回收
     }
 
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
-        // 🔥 出站通道也需要大容量，防止广播消息时队列满
+        // 🔥 出站通道配置
+        // 🔥 修复P2-2：队列容量从50000降到5000
         registration.taskExecutor()
-                .corePoolSize(32)       // 🔥 从 8 增加到 32
-                .maxPoolSize(64)        // 🔥 从 16 增加到 64
-                .queueCapacity(50000);  // 🔥 从 1000 增加到 50000
+                .corePoolSize(32)       // 核心线程数：32
+                .maxPoolSize(64)        // 最大线程数：64
+                .queueCapacity(5000)    // 队列容量：5000
+                .keepAliveSeconds(300); // 非核心线程空闲300秒后回收
     }
 
     // WebSocket通道拦截器，用于处理连接和断开事件
@@ -132,15 +136,23 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         @Override
         public Message<?> preSend(Message<?> message, MessageChannel channel) {
             StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
+            StompCommand command = accessor.getCommand();
 
-            // 🔥 核心修复：对所有消息类型，如果user为null，从session恢复
-            // 这确保了Spring的SimpUserRegistry能正确维护用户和session的映射
-            // 性能说明：此检查很轻量（只检查null），且仅在user为null时才恢复（懒加载）
-            if (accessor.getUser() == null && accessor.getSessionAttributes() != null) {
-                String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
-                if (sessionPlayerId != null) {
-                    StompPrincipal restoredPrincipal = new StompPrincipal(sessionPlayerId);
-                    accessor.setUser(restoredPrincipal);
+            // 🔥 修复P1-6：优化Principal恢复逻辑
+            // 只在特定命令类型需要时才恢复，而不是对所有消息都检查
+            // CONNECT时已设置Principal，后续的SEND、SUBSCRIBE等命令应该已有Principal
+            // 只有在确实需要Principal的命令上才检查和恢复
+            if (command != null && command != StompCommand.CONNECT) {
+                // 对于非CONNECT命令，如果Principal为null，可能是框架内部丢失
+                if (accessor.getUser() == null && accessor.getSessionAttributes() != null) {
+                    String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
+                    if (sessionPlayerId != null) {
+                        StompPrincipal restoredPrincipal = new StompPrincipal(sessionPlayerId);
+                        accessor.setUser(restoredPrincipal);
+                        // 添加监控：记录需要恢复的情况（调试模式）
+                        log.debug("恢复Principal: command={}, playerId={}, sessionId={}",
+                                command, sessionPlayerId, accessor.getSessionId());
+                    }
                 }
             }
 

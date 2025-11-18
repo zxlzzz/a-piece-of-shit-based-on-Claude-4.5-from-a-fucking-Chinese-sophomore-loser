@@ -135,34 +135,37 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         if (accessor.getSessionAttributes() != null) {
                             accessor.getSessionAttributes().put("playerId", playerId);
 
-                            // 🔥 查询玩家信息，检查是否在房间中
-                            Optional<PlayerEntity> playerOpt = playerRepository.findByPlayerId(playerId);
-                            if (playerOpt.isPresent()) {
-                                PlayerEntity player = playerOpt.get();
-                                String playerName = player.getName();
-                                boolean isRegisteredUser = player.getUsername() != null;
-                                String roomCode = player.getRoom() != null ? player.getRoom().getRoomCode() : null;
+                            // 🔥 异步查询玩家信息并注册会话（避免阻塞连接建立）
+                            String sessionId = accessor.getSessionId();
+                            new Thread(() -> {
+                                try {
+                                    Optional<PlayerEntity> playerOpt = playerRepository.findByPlayerId(playerId);
+                                    if (playerOpt.isPresent()) {
+                                        PlayerEntity player = playerOpt.get();
+                                        String playerName = player.getName();
+                                        boolean isRegisteredUser = player.getUsername() != null;
+                                        String roomCode = player.getRoom() != null ? player.getRoom().getRoomCode() : null;
 
-                                // 保存玩家名称到session
-                                accessor.getSessionAttributes().put("playerName", playerName);
-                                if (roomCode != null) {
-                                    accessor.getSessionAttributes().put("roomCode", roomCode);
+                                        // 🔥 注册会话，检测重复登录（仅注册用户）
+                                        if (isRegisteredUser) {
+                                            sessionManager.registerSession(
+                                                sessionId,
+                                                playerId,
+                                                playerName,
+                                                true,
+                                                roomCode
+                                            );
+                                        }
+
+                                        log.info("🔌 WebSocket连接建立: playerId={}, name={}, sessionId={}, isRegistered={}, roomCode={}",
+                                            playerId, playerName, sessionId, isRegisteredUser, roomCode);
+                                    } else {
+                                        log.warn("⚠️ WebSocket连接但未找到玩家（可能已删除）: playerId={}", playerId);
+                                    }
+                                } catch (Exception e) {
+                                    log.error("⚠️ 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
                                 }
-
-                                // 🔥 注册会话，检测重复登录
-                                sessionManager.registerSession(
-                                    accessor.getSessionId(),
-                                    playerId,
-                                    playerName,
-                                    isRegisteredUser,
-                                    roomCode
-                                );
-
-                                log.info("🔌 WebSocket连接建立: playerId={}, name={}, sessionId={}, isRegistered={}, roomCode={}",
-                                    playerId, playerName, accessor.getSessionId(), isRegisteredUser, roomCode);
-                            } else {
-                                log.warn("⚠️ WebSocket连接但未找到玩家: playerId={}", playerId);
-                            }
+                            }).start();
                         } else {
                             log.warn("⚠️ Session attributes为null，无法保存playerId");
                         }

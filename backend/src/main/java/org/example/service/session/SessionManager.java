@@ -186,14 +186,14 @@ public class SessionManager {
 
     /**
      * 🔥 定时清理过期会话（防止内存泄漏）
-     * 每10分钟执行一次，清理超过2小时未活动的会话
+     * 🔥 修复：每5分钟执行一次，清理超过30分钟未活动的会话
      * 注意：由于心跳已禁用，这里使用登录时间作为判断依据
-     * 只清理非常老的会话，避免误杀正常的长时间答题用户
+     * 30分钟阈值既能及时清理僵尸会话，又不会误杀正常答题用户
      */
-    @Scheduled(fixedDelay = 600000) // 10分钟
+    @Scheduled(fixedDelay = 300000) // 5分钟
     public void cleanupStaleSessions() {
         try {
-            LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+            LocalDateTime threshold = LocalDateTime.now().minusMinutes(30);
             List<String> toRemove = new ArrayList<>();
 
             // 找出所有过期的会话

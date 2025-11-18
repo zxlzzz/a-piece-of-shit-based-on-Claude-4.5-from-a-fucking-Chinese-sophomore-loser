@@ -19,7 +19,7 @@ let reconnectAttempts = 0;
 let reconnectTimer = null;
 let isReconnecting = false; // 🔥 标记是否正在重连
 let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
-let subscriptionCallbacks = []; // 🔥 保存订阅回调用于重连后恢复
+let subscriptionCallbacks = new Set(); // 🔥 修复：使用Set避免重复，提升线程安全
 let personalSubscriptions = []; // 🔥 修复：存储个人消息订阅，避免内存泄漏
 
 /**
@@ -130,7 +130,10 @@ export function connect(playerId, onConnect, onError) {
       },
 
       onDisconnect: () => {
-        clearTimeout(timeoutId);
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+          connectTimeoutId = null;
+        }
         connected = false;
         connectPromise = null;
 
@@ -190,7 +193,10 @@ export function connect(playerId, onConnect, onError) {
       },
 
       onStompError: (frame) => {
-        clearTimeout(timeoutId);
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+          connectTimeoutId = null;
+        }
         connectPromise = null;
         logger.error("STOMP error:", frame);
 
@@ -203,7 +209,10 @@ export function connect(playerId, onConnect, onError) {
       },
 
       onWebSocketError: (error) => {
-        clearTimeout(timeoutId);
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+          connectTimeoutId = null;
+        }
         connectPromise = null;
         logger.error("WebSocket error:", error);
 
@@ -273,9 +282,12 @@ function cleanupPersonalSubscriptions() {
 
 /**
  * 恢复重连后的订阅
+ * 🔥 修复：使用快照避免遍历时修改导致的问题
  */
 function restoreSubscriptions() {
-  subscriptionCallbacks.forEach(callback => {
+  // 创建快照副本，避免遍历时修改导致的问题
+  const callbacks = Array.from(subscriptionCallbacks);
+  callbacks.forEach(callback => {
     try {
       callback();
     } catch (err) {
@@ -286,21 +298,20 @@ function restoreSubscriptions() {
 
 /**
  * 注册订阅回调（用于重连后恢复）
+ * 🔥 修复：使用Set自动去重
  */
 export function registerSubscriptionCallback(callback) {
-  if (typeof callback === 'function' && !subscriptionCallbacks.includes(callback)) {
-    subscriptionCallbacks.push(callback);
+  if (typeof callback === 'function') {
+    subscriptionCallbacks.add(callback);
   }
 }
 
 /**
  * 移除订阅回调
+ * 🔥 修复：使用Set的delete方法
  */
 export function unregisterSubscriptionCallback(callback) {
-  const index = subscriptionCallbacks.indexOf(callback);
-  if (index > -1) {
-    subscriptionCallbacks.splice(index, 1);
-  }
+  subscriptionCallbacks.delete(callback);
 }
 
 /**
@@ -341,10 +352,9 @@ export function disconnect(force = false) {
   currentPlayerId = null;
   connectPromise = null;
 
-  // 清理订阅回调
-  if (force) {
-    subscriptionCallbacks = [];
-  }
+  // 🔥 修复：总是清理订阅回调，避免内存泄漏
+  // 不再使用 force 参数判断，因为任何断开都应该清理回调
+  subscriptionCallbacks = new Set();
 }
 
 /**

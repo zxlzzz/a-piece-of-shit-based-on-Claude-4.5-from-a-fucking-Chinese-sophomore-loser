@@ -19,10 +19,15 @@ export const useChatStore = defineStore('chat', () => {
   const unreadPrivateCount = ref(0)   // 未读私聊消息数
 
   // 🔥 重连恢复回调（用于 WebSocket 断线重连后自动恢复订阅）
+  // 🔥 修复：只在没有活跃订阅时才恢复，避免重复订阅
   const restoreChatSubscriptions = () => {
-    if (roomCode.value) {
+    if (roomCode.value && !chatSubscription) {
       logger.info('🔄 ChatStore: WebSocket重连，恢复聊天订阅', roomCode.value)
-      subscribeToChat(roomCode.value)
+      subscribeToChat(roomCode.value).catch(err => {
+        logger.error('ChatStore: 恢复聊天订阅失败:', err)
+      })
+    } else if (chatSubscription) {
+      logger.debug('ChatStore: 订阅已存在，跳过重连恢复')
     }
   }
 

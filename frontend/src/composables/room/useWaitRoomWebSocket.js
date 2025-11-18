@@ -9,6 +9,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   const loading = ref(false)
   let roomUpdateCallback = null // 🔥 保存room更新回调
   let isSubscribed = false // 🔥 标记是否已订阅
+  let isActive = false // 🔥 修复：标记页面是否活跃，防止卸载后执行回调
 
   const handleRoomDeleted = () => {
     toast.add({
@@ -203,7 +204,14 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   // 🔥 订阅恢复回调（重连后自动调用）
+  // 🔥 修复：只在页面活跃时恢复订阅，避免页面卸载后仍执行回调
   const subscriptionRestoreCallback = () => {
+    // 只在页面活跃时恢复订阅
+    if (!isActive) {
+      logger.debug('WaitRoom: 页面已卸载，跳过重连恢复');
+      return;
+    }
+
     logger.debug('WaitRoom: 重连后恢复订阅');
     if (roomUpdateCallback) {
       try {
@@ -220,6 +228,9 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
 
   const cleanup = () => {
     logger.debug('WaitRoom: 清理资源');
+
+    // 🔥 修复：标记页面不再活跃，防止回调执行
+    isActive = false;
 
     window.removeEventListener('room-deleted', handleRoomDeleted)
     window.removeEventListener('websocket-error', handleWebSocketError)
@@ -240,6 +251,9 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const init = () => {
+    // 🔥 修复：标记页面活跃
+    isActive = true;
+
     window.addEventListener('room-deleted', handleRoomDeleted)
     window.addEventListener('websocket-error', handleWebSocketError)
     window.addEventListener('websocket-reconnecting', handleReconnecting)

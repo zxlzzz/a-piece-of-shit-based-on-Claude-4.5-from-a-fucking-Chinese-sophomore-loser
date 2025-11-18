@@ -87,12 +87,27 @@ public class GameController {
             @RequestParam(defaultValue = "false") Boolean spectator,
             @RequestParam(required = false) String password) {
         try {
-            RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
+            // 🔥 修复：添加重连检测逻辑
+            GameRoom gameRoom = roomCache.get(roomCode);
+            boolean isReconnect = gameRoom != null &&
+                    gameRoom.getDisconnectedPlayers().containsKey(playerId);
+
+            RoomDTO room;
+            if (isReconnect) {
+                // 重连场景
+                roomLifecycleService.handleReconnect(roomCode, playerId);
+                room = roomLifecycleService.toRoomDTO(roomCode);
+                log.info("✅ 玩家 {} 重连房间 {}", playerName, roomCode);
+            } else {
+                // 新加入场景
+                room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
+                log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
+            }
+
             broadcaster.sendRoomUpdate(roomCode, room);
-            log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
             return ResponseEntity.ok(room);
         } catch (BusinessException e) {
-            log.error("❌ 加入房间失败: {}", e.getMessage());
+            log.error("❌ 加入/重连房间失败: {}", e.getMessage());
             return ResponseEntity.badRequest().body(null);
         }
     }

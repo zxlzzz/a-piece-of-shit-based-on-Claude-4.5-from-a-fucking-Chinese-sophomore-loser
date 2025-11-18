@@ -116,9 +116,26 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 }
             }
 
-            // 检查房间状态
+            // 🔥 修复问题2：检查房间状态（允许已在房间的玩家刷新/重连）
             if (room.getStatus() != RoomStatus.WAITING) {
-                throw new BusinessException("房间已开始游戏或已结束");
+                // 检查玩家是否已在房间内（允许重连）
+                boolean playerInRoom = gameRoom.getPlayers().stream()
+                        .anyMatch(p -> p.getPlayerId().equals(playerId));
+
+                if (!playerInRoom) {
+                    // 新玩家不允许加入进行中的游戏
+                    throw new BusinessException("房间已开始游戏或已结束");
+                }
+
+                // 🔥 已在房间的玩家允许刷新/重连，检查是否在断线列表中
+                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
+                    log.info("🔄 玩家 {} 在游戏进行中刷新页面，从断线列表移除", playerName);
+                    gameRoom.getDisconnectedPlayers().remove(playerId);
+                    roomCache.syncToRedis(roomCode);
+                }
+
+                log.info("✅ 玩家 {} 已在房间中，游戏进行中刷新页面成功", playerName);
+                return; // 跳过后续加入逻辑
             }
 
             // 🔥 检查房间是否已满（观战者不计入人数）
@@ -172,6 +189,15 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);
+            } else {
+                // 🔥 修复问题3：玩家已存在，检查是否在断线列表中
+                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
+                    log.info("🔄 玩家 {} 刷新页面（等待中），从断线列表移除", playerName);
+                    gameRoom.getDisconnectedPlayers().remove(playerId);
+                    roomCache.syncToRedis(roomCode);
+                }
+
+                log.info("✅ 玩家 {} 已在房间中，刷新页面成功", playerName);
             }
         }
     }

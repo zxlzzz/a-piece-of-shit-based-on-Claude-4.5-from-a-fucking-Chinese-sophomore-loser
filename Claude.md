@@ -92,6 +92,27 @@ stompClient = new Client({
 
 ---
 
+### 🔧 **WebSocket 连接最终审查 - 修复所有P0和P1问题**
+
+**最终优化**（2025-01）：
+
+本次审查修复了WebSocket连接中所有关键的内存泄漏、资源泄漏和错误处理问题：
+
+#### 前端修复 (ws.js, useWaitRoomWebSocket.js)
+- **内存泄漏**: 个人消息订阅未清理 → 添加 `cleanupPersonalSubscriptions()`
+- **资源泄漏**: 连接超时handler未清理 → 添加 `connectTimeoutId` 跟踪和清理
+- **参数错误**: 重连回调传递无效参数 → 修复 `subscriptionRestoreCallback`
+
+#### 后端修复 (ChatWebSocketController, WebSocketEventListener, SessionManager)
+- **错误处理**: @MessageMapping 方法缺少异常处理 → 添加 try-catch，失败时通知用户
+- **错误传播**: 断连事件异常会中断清理流程 → 捕获异常，确保清理继续
+- **会话泄漏**: 断连失败时会话永久残留内存 → 添加定时清理（每10分钟，清理2小时以上会话）
+- **监控能力**: 添加 `SessionManager.getStats()` 获取会话统计
+
+**影响**: 生产环境稳定性显著提升，消除内存泄漏风险，增强异常恢复能力。
+
+---
+
 ### 🔧 **WebSocket 连接优化规范 - 第二次优化**
 
 **补充优化**（2025-01）：

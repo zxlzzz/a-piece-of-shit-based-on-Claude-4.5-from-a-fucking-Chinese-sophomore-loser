@@ -84,10 +84,11 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
-      // 🔥 禁用STOMP心跳 - 本地开发环境不需要心跳检测
-      // 设置为0表示完全禁用心跳，避免在答题时因无操作被判定为超时断连
-      heartbeatIncoming: 0,
-      heartbeatOutgoing: 0,
+      // 🔥 启用STOMP心跳，保持WebSocket连接稳定
+      // 客户端每25秒发送心跳，期望服务器每25秒也发送心跳
+      // 防止长时间无消息时连接被关闭
+      heartbeatIncoming: 25000, // 期望从服务器收到心跳的间隔（毫秒）
+      heartbeatOutgoing: 25000, // 客户端发送心跳的间隔（毫秒）
 
       onConnect: (frame) => {
         clearTimeout(timeoutId);
@@ -403,9 +404,31 @@ export function unsubscribeAll(subscriptions) {
   }
 }
 
-// ============ 发送消息的方法 ============
+// ============ 发送消息的方法（已废弃） ============
 
+/**
+ * 🔥 以下WebSocket命令发送方法已废弃
+ *
+ * 优化策略：采用混合模式
+ * - 所有操作命令改用HTTP API（见 api.js）
+ * - WebSocket仅用于接收服务器推送的状态更新
+ *
+ * 优势：
+ * 1. HTTP操作更可靠，掉线后可重试
+ * 2. 减少WebSocket负担，连接更稳定
+ * 3. 更容易调试和监控
+ *
+ * HTTP API替代方案：
+ * - sendJoin → api.joinRoom()
+ * - sendStart → api.startGame()
+ * - sendSubmit → api.submitAnswer()
+ * - sendReady → api.setPlayerReady()
+ * - sendLeave → 关闭页面自动处理或使用 api.deleteRoom()
+ */
+
+// @deprecated 请使用 api.joinRoom()
 export function sendJoin(req) {
+  console.warn('⚠️ sendJoin已废弃，请使用 api.joinRoom()');
   if (!ensureConnected("sendJoin")) return;
 
   const payload = {
@@ -420,7 +443,9 @@ export function sendJoin(req) {
   });
 }
 
+// @deprecated 请使用 api.startGame()
 export function sendStart(req) {
+  console.warn('⚠️ sendStart已废弃，请使用 api.startGame()');
   if (!ensureConnected("sendStart")) return;
 
   const payload = {
@@ -433,7 +458,9 @@ export function sendStart(req) {
   });
 }
 
+// @deprecated 请使用 api.submitAnswer()
 export function sendSubmit(req) {
+  console.warn('⚠️ sendSubmit已废弃，请使用 api.submitAnswer()');
   if (!ensureConnected("sendSubmit")) return;
 
   const payload = {
@@ -449,7 +476,9 @@ export function sendSubmit(req) {
   });
 }
 
+// @deprecated 请使用 api.setPlayerReady()
 export function sendReady(req) {
+  console.warn('⚠️ sendReady已废弃，请使用 api.setPlayerReady()');
   if (!ensureConnected("sendReady")) return;
 
   const payload = {
@@ -464,7 +493,9 @@ export function sendReady(req) {
   });
 }
 
+// @deprecated 离开房间通过关闭页面自动处理
 export function sendLeave(req) {
+  console.warn('⚠️ sendLeave已废弃，离开房间通过关闭页面自动处理');
   if (!ensureConnected("sendLeave")) return;
 
   const payload = {

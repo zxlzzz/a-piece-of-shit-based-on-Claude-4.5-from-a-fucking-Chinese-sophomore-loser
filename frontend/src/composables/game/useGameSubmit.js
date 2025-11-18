@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref } from 'vue'
-import { sendSubmit } from '@/websocket/ws'
+import { submitAnswer } from '@/api'
 
 export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   const hasSubmitted = ref(false)
@@ -49,11 +49,10 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     localStorage.setItem(submissionKey, 'true')
 
     try {
-      sendSubmit({
-        roomCode: roomCode.value,
-        playerId: playerStore.playerId,
-        choice: choice.toString()
-      })
+      // 🔥 改用HTTP API，更可靠
+      await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
+
+      // 🔥 房间状态更新会通过WebSocket自动推送
 
       toast.add({
         severity: 'success',
@@ -69,7 +68,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       toast.add({
         severity: 'error',
         summary: '提交失败',
-        detail: '网络错误，请重试',
+        detail: error.response?.data?.message || '网络错误，请重试',
         life: 3000
       })
     }
@@ -103,12 +102,10 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     localStorage.setItem(submissionKey, 'true')
 
     try {
-      sendSubmit({
-        roomCode: roomCode.value,
-        playerId: playerStore.playerId,
-        choice: defaultChoice.toString(),
-        force: true
-      })
+      // 🔥 改用HTTP API，更可靠
+      await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
+
+      // 🔥 房间状态更新会通过WebSocket自动推送
 
       toast.add({
         severity: 'info',

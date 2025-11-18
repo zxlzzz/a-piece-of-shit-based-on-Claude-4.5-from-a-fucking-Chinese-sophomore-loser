@@ -3,9 +3,12 @@ package org.example.service.session;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -179,5 +182,54 @@ public class SessionManager {
         activeSessions.clear();
         sessionToPlayer.clear();
         log.info("已清理所有会话");
+    }
+
+    /**
+     * 🔥 定时清理过期会话（防止内存泄漏）
+     * 每10分钟执行一次，清理超过2小时未活动的会话
+     * 注意：由于心跳已禁用，这里使用登录时间作为判断依据
+     * 只清理非常老的会话，避免误杀正常的长时间答题用户
+     */
+    @Scheduled(fixedDelay = 600000) // 10分钟
+    public void cleanupStaleSessions() {
+        try {
+            LocalDateTime threshold = LocalDateTime.now().minusHours(2);
+            List<String> toRemove = new ArrayList<>();
+
+            // 找出所有过期的会话
+            activeSessions.forEach((playerId, session) -> {
+                // 使用登录时间判断（因为lastHeartbeat不再更新）
+                if (session.getLoginTime().isBefore(threshold)) {
+                    toRemove.add(playerId);
+                }
+            });
+
+            // 清理过期会话
+            if (!toRemove.isEmpty()) {
+                toRemove.forEach(playerId -> {
+                    SessionInfo session = activeSessions.remove(playerId);
+                    if (session != null) {
+                        sessionToPlayer.remove(session.getSessionId());
+                        log.info("🧹 清理过期会话: playerId={}, sessionId={}, loginTime={}",
+                                playerId, session.getSessionId(), session.getLoginTime());
+                    }
+                });
+
+                log.info("🧹 定时清理完成: 移除{}个过期会话，剩余{}个在线会话",
+                        toRemove.size(), activeSessions.size());
+            }
+        } catch (Exception e) {
+            log.error("🔥 定时清理过期会话失败", e);
+        }
+    }
+
+    /**
+     * 获取会话统计信息（用于监控）
+     */
+    public Map<String, Object> getStats() {
+        return Map.of(
+                "activeSessionsCount", activeSessions.size(),
+                "sessionMappingsCount", sessionToPlayer.size()
+        );
     }
 }

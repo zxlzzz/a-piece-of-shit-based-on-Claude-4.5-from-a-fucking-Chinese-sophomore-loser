@@ -207,10 +207,9 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     logger.debug('WaitRoom: 重连后恢复订阅');
     if (roomUpdateCallback) {
       try {
-        // 🔥 修复：不需要传递room参数，只传递回调
+        // setupRoomSubscription不使用room参数，可以安全传递null
         setupRoomSubscription(null, roomUpdateCallback);
-        // 🔥 重连后刷新房间状态
-        refreshRoomState({ value: null });
+        logger.info('✅ WaitRoom: 重连后订阅恢复成功');
       } catch (err) {
         logger.error('WaitRoom: 恢复订阅失败:', err);
       }

@@ -14,11 +14,13 @@ let stompClient = null;
 let connected = false;
 let currentPlayerId = null;
 let connectPromise = null;
+let connectTimeoutId = null; // 🔥 修复：存储连接超时ID，避免泄漏
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 let isReconnecting = false; // 🔥 标记是否正在重连
 let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
 let subscriptionCallbacks = []; // 🔥 保存订阅回调用于重连后恢复
+let personalSubscriptions = []; // 🔥 修复：存储个人消息订阅，避免内存泄漏
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -42,6 +44,13 @@ export function connect(playerId, onConnect, onError) {
       connectPromise._startTime = now;
     } else if (now - connectPromise._startTime > WS_CONNECT_PROMISE_TIMEOUT) {
       logger.error('连接超时，强制重置');
+
+      // 🔥 修复：清除超时处理器，避免资源泄漏
+      if (connectTimeoutId) {
+        clearTimeout(connectTimeoutId);
+        connectTimeoutId = null;
+      }
+
       connectPromise = null;
       if (stompClient) {
         try {
@@ -66,9 +75,10 @@ export function connect(playerId, onConnect, onError) {
 
   // 创建新的连接 Promise
   connectPromise = new Promise((resolve, reject) => {
-    // 添加超时保护
-    const timeoutId = setTimeout(() => {
+    // 🔥 修复：使用全局变量存储超时ID，避免泄漏
+    connectTimeoutId = setTimeout(() => {
       logger.error(`连接超时（${WS_CONNECT_TIMEOUT / 1000}秒）`);
+      connectTimeoutId = null;
       connectPromise = null;
       reject(new Error('连接超时'));
     }, WS_CONNECT_TIMEOUT);
@@ -89,7 +99,12 @@ export function connect(playerId, onConnect, onError) {
       heartbeatOutgoing: 0,
 
       onConnect: (frame) => {
-        clearTimeout(timeoutId);
+        // 🔥 修复：清除超时处理器
+        if (connectTimeoutId) {
+          clearTimeout(connectTimeoutId);
+          connectTimeoutId = null;
+        }
+
         connected = true;
         connectPromise = null;
         manualDisconnect = false;
@@ -213,12 +228,16 @@ export function connect(playerId, onConnect, onError) {
 
 /**
  * 订阅个人消息（错误通知、欢迎消息等）
+ * 🔥 修复：存储订阅对象，避免内存泄漏
  */
 function subscribeToPersonalMessages(playerId) {
   if (!ensureConnected("subscribeToPersonalMessages")) return;
 
+  // 🔥 先清理旧的个人订阅，避免重复订阅
+  cleanupPersonalSubscriptions();
+
   // 订阅个人错误消息
-  safeSubscribe(`/user/queue/error`, (data) => {
+  const errorSub = safeSubscribe(`/user/queue/error`, (data) => {
     logger.error("收到个人错误消息:", data);
     window.dispatchEvent(new CustomEvent('websocket-error', {
       detail: { type: 'personal', data }
@@ -226,9 +245,30 @@ function subscribeToPersonalMessages(playerId) {
   });
 
   // 订阅欢迎消息
-  safeSubscribe(`/user/queue/welcome`, (data) => {
+  const welcomeSub = safeSubscribe(`/user/queue/welcome`, (data) => {
     window.dispatchEvent(new CustomEvent('websocket-welcome', { detail: data }));
   });
+
+  // 🔥 修复：存储订阅以便后续清理
+  if (errorSub) personalSubscriptions.push(errorSub);
+  if (welcomeSub) personalSubscriptions.push(welcomeSub);
+
+  logger.debug(`✅ 已订阅个人消息，当前订阅数: ${personalSubscriptions.length}`);
+}
+
+/**
+ * 清理个人消息订阅
+ * 🔥 修复：防止内存泄漏
+ */
+function cleanupPersonalSubscriptions() {
+  personalSubscriptions.forEach(sub => {
+    try {
+      sub.unsubscribe();
+    } catch (e) {
+      logger.error('取消个人订阅失败:', e);
+    }
+  });
+  personalSubscriptions = [];
 }
 
 /**
@@ -277,6 +317,15 @@ export function disconnect(force = false) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
+
+  // 🔥 修复：清理连接超时处理器
+  if (connectTimeoutId) {
+    clearTimeout(connectTimeoutId);
+    connectTimeoutId = null;
+  }
+
+  // 🔥 修复：清理个人消息订阅，避免内存泄漏
+  cleanupPersonalSubscriptions();
 
   if (stompClient) {
     try {

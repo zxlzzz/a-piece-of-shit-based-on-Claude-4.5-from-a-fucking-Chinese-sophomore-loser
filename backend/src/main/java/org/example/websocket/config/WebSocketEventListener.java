@@ -28,8 +28,14 @@ public class WebSocketEventListener {
         if (playerName != null && roomCode != null && playerId != null) {
             log.info("玩家 {} 从房间 {} 断开连接", playerName, roomCode);
 
-            // 🔥 只标记断线，不自动移除（未来会有房主踢人功能）
-            gameService.handlePlayerDisconnect(roomCode, playerId);
+            // 🔥 添加错误处理：确保断开连接处理的异常不会影响清理流程
+            try {
+                // 只标记断线，不自动移除（未来会有房主踢人功能）
+                gameService.handlePlayerDisconnect(roomCode, playerId);
+            } catch (Exception e) {
+                log.error("🔥 处理玩家断开连接失败: playerId={}, roomCode={}", playerId, roomCode, e);
+                // 即使处理失败也不抛出异常，避免影响WebSocket的清理流程
+            }
         }
     }
 }

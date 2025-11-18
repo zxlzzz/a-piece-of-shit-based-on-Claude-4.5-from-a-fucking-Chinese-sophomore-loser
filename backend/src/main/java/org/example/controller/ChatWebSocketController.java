@@ -29,33 +29,45 @@ public class ChatWebSocketController {
     @MessageMapping("/chat/{roomCode}")
     public void sendMessage(@DestinationVariable String roomCode,
                             @Payload ChatMessage message) {
-        // 设置时间戳
-        message.setTimestamp(LocalDateTime.now());
-        message.setRoomCode(roomCode);
+        try {
+            // 设置时间戳
+            message.setTimestamp(LocalDateTime.now());
+            message.setRoomCode(roomCode);
 
-        log.debug("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
+            log.debug("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
 
-        // 🔥 记录聊天室活动
-        chatRoomManager.recordActivity(roomCode);
+            // 🔥 记录聊天室活动
+            chatRoomManager.recordActivity(roomCode);
 
-        // 🔥 判断是否私聊消息
-        if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {
-            // 私聊消息：点对点发送
-            message.setIsPrivate(true);
+            // 🔥 判断是否私聊消息
+            if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {
+                // 私聊消息：点对点发送
+                message.setIsPrivate(true);
 
-            // 发送给所有收件人
-            for (String recipientId : message.getRecipientIds()) {
-                String destination = "/topic/player/" + recipientId + "/private";
-                messagingTemplate.convertAndSend(destination, message);
+                // 发送给所有收件人
+                for (String recipientId : message.getRecipientIds()) {
+                    String destination = "/topic/player/" + recipientId + "/private";
+                    messagingTemplate.convertAndSend(destination, message);
+                }
+
+                // 也发送给发送者自己（让发送者看到自己发的私聊）
+                String senderDestination = "/topic/player/" + message.getSenderId() + "/private";
+                messagingTemplate.convertAndSend(senderDestination, message);
+            } else {
+                // 公共消息：广播到房间的所有订阅者
+                message.setIsPrivate(false);
+                messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
             }
-
-            // 也发送给发送者自己（让发送者看到自己发的私聊）
-            String senderDestination = "/topic/player/" + message.getSenderId() + "/private";
-            messagingTemplate.convertAndSend(senderDestination, message);
-        } else {
-            // 公共消息：广播到房间的所有订阅者
-            message.setIsPrivate(false);
-            messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
+        } catch (Exception e) {
+            log.error("🔥 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
+            // 发送错误通知给发送者
+            try {
+                String errorDest = "/topic/player/" + message.getSenderId() + "/private";
+                ChatMessage errorMsg = ChatMessage.system(roomCode, "消息发送失败，请重试");
+                messagingTemplate.convertAndSend(errorDest, errorMsg);
+            } catch (Exception ex) {
+                log.error("发送错误通知失败", ex);
+            }
         }
     }
 
@@ -66,22 +78,25 @@ public class ChatWebSocketController {
     public void playerJoin(@DestinationVariable String roomCode,
                            @Payload ChatMessage message,
                            SimpMessageHeaderAccessor headerAccessor) {
+        try {
+            // 保存玩家信息到 WebSocket session
+            headerAccessor.getSessionAttributes().put("playerId", message.getSenderId());
+            headerAccessor.getSessionAttributes().put("playerName", message.getSenderName());
+            headerAccessor.getSessionAttributes().put("roomCode", roomCode);
 
-        // 保存玩家信息到 WebSocket session
-        headerAccessor.getSessionAttributes().put("playerId", message.getSenderId());
-        headerAccessor.getSessionAttributes().put("playerName", message.getSenderName());
-        headerAccessor.getSessionAttributes().put("roomCode", roomCode);
+            // 🔥 记录玩家加入聊天室
+            chatRoomManager.playerJoin(roomCode, message.getSenderId());
 
-        // 🔥 记录玩家加入聊天室
-        chatRoomManager.playerJoin(roomCode, message.getSenderId());
+            // 创建加入消息
+            ChatMessage joinMessage = ChatMessage.join(roomCode, message.getSenderName());
 
-        // 创建加入消息
-        ChatMessage joinMessage = ChatMessage.join(roomCode, message.getSenderName());
+            log.debug("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
 
-        log.debug("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
-
-        // 广播加入消息
-        messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);
+            // 广播加入消息
+            messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);
+        } catch (Exception e) {
+            log.error("🔥 玩家加入房间失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
+        }
     }
 
     /**
@@ -90,17 +105,20 @@ public class ChatWebSocketController {
     @MessageMapping("/room/{roomCode}/ready")
     public void playerReady(@DestinationVariable String roomCode,
                             @Payload ChatMessage message) {
+        try {
+            // 从消息内容中判断是准备还是取消准备
+            boolean isReady = message.getType() == ChatMessage.MessageType.READY;
 
-        // 从消息内容中判断是准备还是取消准备
-        boolean isReady = message.getType() == ChatMessage.MessageType.READY;
+            ChatMessage readyMessage = ChatMessage.ready(roomCode, message.getSenderName(), isReady);
 
-        ChatMessage readyMessage = ChatMessage.ready(roomCode, message.getSenderName(), isReady);
+            log.info("玩家 {} 在房间 {} 中{}", message.getSenderName(), roomCode,
+                    isReady ? "已准备" : "取消准备");
 
-        log.info("玩家 {} 在房间 {} 中{}", message.getSenderName(), roomCode,
-                isReady ? "已准备" : "取消准备");
-
-        // 广播准备消息
-        messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", readyMessage);
+            // 广播准备消息
+            messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", readyMessage);
+        } catch (Exception e) {
+            log.error("🔥 玩家准备状态变更失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
+        }
     }
 
     /**

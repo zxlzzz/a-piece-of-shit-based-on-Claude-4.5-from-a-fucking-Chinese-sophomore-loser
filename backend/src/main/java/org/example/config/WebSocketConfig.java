@@ -135,6 +135,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
             // 🔥 核心修复：对所有消息类型，如果user为null，从session恢复
             // 这确保了Spring的SimpUserRegistry能正确维护用户和session的映射
+            // 性能说明：此检查很轻量（只检查null），且仅在user为null时才恢复（懒加载）
             if (accessor.getUser() == null && accessor.getSessionAttributes() != null) {
                 String sessionPlayerId = (String) accessor.getSessionAttributes().get("playerId");
                 if (sessionPlayerId != null) {

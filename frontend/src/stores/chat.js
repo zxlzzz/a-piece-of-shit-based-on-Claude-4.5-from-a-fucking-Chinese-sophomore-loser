@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { logger } from '@/utils/logger'
-import { getStompClient, isConnected, sendMessage, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
+import { getStompClient, isConnected, sendMessage, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { usePlayerStore } from './player'
 
 export const useChatStore = defineStore('chat', () => {
@@ -61,32 +61,6 @@ export const useChatStore = defineStore('chat', () => {
     messages.value = []
     selectedRecipients.value = []
     unreadPrivateCount.value = 0
-  }
-
-  // 🔥 优化：等待 WebSocket 连接的 Promise（事件驱动，避免轮询）
-  const waitForConnection = (maxWait = 10000) => {
-    return new Promise((resolve, reject) => {
-      if (isConnected()) {
-        resolve()
-        return
-      }
-
-      logger.warn('⚠️ ChatStore: WebSocket未连接，等待连接...')
-
-      const timeout = setTimeout(() => {
-        window.removeEventListener('websocket-connected', onConnected)
-        reject(new Error('WebSocket连接超时（10秒）'))
-      }, maxWait)
-
-      const onConnected = () => {
-        clearTimeout(timeout)
-        window.removeEventListener('websocket-connected', onConnected)
-        logger.info('✅ ChatStore: WebSocket连接成功')
-        resolve()
-      }
-
-      window.addEventListener('websocket-connected', onConnected)
-    })
   }
 
   // 🔥 订阅聊天频道

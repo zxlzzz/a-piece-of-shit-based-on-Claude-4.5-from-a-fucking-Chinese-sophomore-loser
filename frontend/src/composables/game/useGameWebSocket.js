@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
+import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
@@ -237,16 +237,13 @@ export function useGameWebSocket(
         life: 3000
       })
 
-      // 等待连接建立（最多3秒）
-      let waited = 0
-      while (!isConnected() && waited < 3000) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        waited += 200
-      }
-
-      wsConnected.value = isConnected()
-
-      if (!wsConnected.value) {
+      // 🔥 优化：使用事件驱动等待连接，避免轮询（最多3秒）
+      try {
+        await waitForConnection(3000)
+        wsConnected.value = true
+      } catch (error) {
+        wsConnected.value = false
+        logger.error('GameView: 等待连接超时', error)
         toast.add({
           severity: 'error',
           summary: '连接失败',

@@ -310,6 +310,36 @@ function ensureConnected(action) {
 }
 
 /**
+ * 等待 WebSocket 连接建立（事件驱动，避免轮询）
+ * @param {number} maxWait - 最大等待时间（毫秒）
+ * @returns {Promise<void>}
+ */
+export function waitForConnection(maxWait = 10000) {
+  return new Promise((resolve, reject) => {
+    if (isConnected()) {
+      resolve();
+      return;
+    }
+
+    logger.warn('⚠️ WebSocket 未连接，等待连接...');
+
+    const timeout = setTimeout(() => {
+      window.removeEventListener('websocket-connected', onConnected);
+      reject(new Error(`WebSocket 连接超时（${maxWait / 1000}秒）`));
+    }, maxWait);
+
+    const onConnected = () => {
+      clearTimeout(timeout);
+      window.removeEventListener('websocket-connected', onConnected);
+      logger.info('✅ WebSocket 连接成功');
+      resolve();
+    };
+
+    window.addEventListener('websocket-connected', onConnected);
+  });
+}
+
+/**
  * 通用订阅（修改：增加错误处理）
  */
 export function safeSubscribe(destination, onMessage) {

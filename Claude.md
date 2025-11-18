@@ -92,6 +92,45 @@ stompClient = new Client({
 
 ---
 
+### 🔧 **WebSocket 连接优化规范 - 第二次优化**
+
+**补充优化**（2025-01）：
+
+#### 4️⃣ 统一等待连接工具函数
+**问题**：多处代码重复实现等待连接逻辑（chat.js、useGameWebSocket.js）
+
+**解决方案**：
+- 在 `ws.js` 中添加通用的 `waitForConnection()` 函数
+- 所有需要等待连接的地方统一使用此函数
+- 避免代码重复，统一维护
+
+**代码位置**：
+- `frontend/src/websocket/ws.js:312-340` - `waitForConnection()` 工具函数
+- `frontend/src/stores/chat.js:84-88` - 使用统一函数
+- `frontend/src/composables/game/useGameWebSocket.js:240-254` - 使用统一函数
+
+**函数签名**：
+```javascript
+export function waitForConnection(maxWait = 10000): Promise<void>
+```
+
+**使用示例**：
+```javascript
+// 等待连接（默认10秒超时）
+await waitForConnection()
+
+// 自定义超时时间（3秒）
+await waitForConnection(3000)
+```
+
+**优势**：
+- ✅ 事件驱动，无轮询开销
+- ✅ 统一超时控制
+- ✅ 自动清理事件监听器
+- ✅ 减少代码重复，便于维护
+
+---
+
 ## 📋 目录
 
 1. [分支概览](#分支概览)

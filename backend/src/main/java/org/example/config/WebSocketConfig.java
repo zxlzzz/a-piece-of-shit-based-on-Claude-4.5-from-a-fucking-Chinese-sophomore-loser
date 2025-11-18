@@ -17,10 +17,12 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.config.annotation.*;
 
 import java.security.Principal;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 
 
 @Configuration
@@ -32,15 +34,19 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private final SessionManager sessionManager;
     private final PlayerRepository playerRepository;
+    private final Executor wsConnectionExecutor;
 
     // 🔥 手动构造器，使用 @Lazy 打破循环依赖
     // SessionManager 需要 SimpMessagingTemplate，而 SimpMessagingTemplate 由 WebSocket 配置创建
-    public WebSocketConfig(@Lazy SessionManager sessionManager, PlayerRepository playerRepository) {
+    public WebSocketConfig(@Lazy SessionManager sessionManager,
+                          PlayerRepository playerRepository,
+                          Executor wsConnectionExecutor) {
         this.sessionManager = sessionManager;
         this.playerRepository = playerRepository;
+        this.wsConnectionExecutor = wsConnectionExecutor;
     }
 
-    // 🔥 先定义 TaskScheduler bean
+    // 🔥 先定义 TaskScheduler bean（用于心跳检测，虽然已禁用但仍需配置）
     @Bean
     public TaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
@@ -48,6 +54,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         scheduler.setThreadNamePrefix("websocket-heartbeat-");
         scheduler.initialize();
         return scheduler;
+    }
+
+    // 🔥 WebSocket 连接处理专用线程池
+    // 避免每次连接都创建新线程，提高并发能力，防止线程泄漏
+    @Bean(name = "wsConnectionExecutor")
+    public Executor wsConnectionExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(10);           // 核心线程数
+        executor.setMaxPoolSize(50);            // 最大线程数
+        executor.setQueueCapacity(500);         // 队列容量
+        executor.setThreadNamePrefix("ws-conn-");
+        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
     }
 
     @Override
@@ -73,7 +93,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        registration.interceptors(new WebSocketChannelInterceptor(sessionManager, playerRepository));
+        registration.interceptors(new WebSocketChannelInterceptor(sessionManager, playerRepository, wsConnectionExecutor));
 
         // 🔥 大幅增加队列容量和线程池，防止消息队列满导致断连
         // 这是防止 "Failed to send message to ExecutorSubscribableChannel" 错误的关键
@@ -99,10 +119,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
         private final SessionManager sessionManager;
         private final PlayerRepository playerRepository;
+        private final Executor executor;
 
-        public WebSocketChannelInterceptor(SessionManager sessionManager, PlayerRepository playerRepository) {
+        public WebSocketChannelInterceptor(SessionManager sessionManager,
+                                          PlayerRepository playerRepository,
+                                          Executor executor) {
             this.sessionManager = sessionManager;
             this.playerRepository = playerRepository;
+            this.executor = executor;
         }
 
         @Override
@@ -132,9 +156,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                         if (accessor.getSessionAttributes() != null) {
                             accessor.getSessionAttributes().put("playerId", playerId);
 
-                            // 🔥 异步查询玩家信息并注册会话（避免阻塞连接建立）
+                            // 🔥 优化：使用线程池异步查询玩家信息并注册会话（避免阻塞连接建立，防止线程泄漏）
                             String sessionId = accessor.getSessionId();
-                            new Thread(() -> {
+                            executor.execute(() -> {
                                 try {
                                     Optional<PlayerEntity> playerOpt = playerRepository.findByPlayerId(playerId);
                                     if (playerOpt.isPresent()) {
@@ -162,7 +186,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                 } catch (Exception e) {
                                     log.error("⚠️ 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
                                 }
-                            }).start();
+                            });
                         } else {
                             log.warn("⚠️ Session attributes为null，无法保存playerId");
                         }

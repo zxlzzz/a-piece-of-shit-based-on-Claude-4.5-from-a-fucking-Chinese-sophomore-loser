@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { logger } from '@/utils/logger'
-import { getStompClient, isConnected, sendMessage } from '@/websocket/ws'
+import { getStompClient, isConnected, sendMessage, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
 import { usePlayerStore } from './player'
 
 export const useChatStore = defineStore('chat', () => {
@@ -17,6 +17,14 @@ export const useChatStore = defineStore('chat', () => {
   // 🔥 私聊相关状态
   const selectedRecipients = ref([])  // 选中的收件人 [{id, name}, ...]
   const unreadPrivateCount = ref(0)   // 未读私聊消息数
+
+  // 🔥 重连恢复回调（用于 WebSocket 断线重连后自动恢复订阅）
+  const restoreChatSubscriptions = () => {
+    if (roomCode.value) {
+      logger.info('🔄 ChatStore: WebSocket重连，恢复聊天订阅', roomCode.value)
+      subscribeToChat(roomCode.value)
+    }
+  }
 
   // 设置当前聊天室
   const setChatRoom = (code) => {
@@ -55,6 +63,32 @@ export const useChatStore = defineStore('chat', () => {
     unreadPrivateCount.value = 0
   }
 
+  // 🔥 优化：等待 WebSocket 连接的 Promise（事件驱动，避免轮询）
+  const waitForConnection = (maxWait = 10000) => {
+    return new Promise((resolve, reject) => {
+      if (isConnected()) {
+        resolve()
+        return
+      }
+
+      logger.warn('⚠️ ChatStore: WebSocket未连接，等待连接...')
+
+      const timeout = setTimeout(() => {
+        window.removeEventListener('websocket-connected', onConnected)
+        reject(new Error('WebSocket连接超时（10秒）'))
+      }, maxWait)
+
+      const onConnected = () => {
+        clearTimeout(timeout)
+        window.removeEventListener('websocket-connected', onConnected)
+        logger.info('✅ ChatStore: WebSocket连接成功')
+        resolve()
+      }
+
+      window.addEventListener('websocket-connected', onConnected)
+    })
+  }
+
   // 🔥 订阅聊天频道
   const subscribeToChat = async (code) => {
     // 如果已经订阅了相同的房间，不重复订阅
@@ -72,23 +106,14 @@ export const useChatStore = defineStore('chat', () => {
     // 设置房间码
     roomCode.value = code
 
-    // 🔥 增加等待时间至10秒，每200ms检查一次
+    // 🔥 优化：使用事件驱动等待连接，避免轮询
     if (!isConnected()) {
-      logger.warn('⚠️ ChatStore: WebSocket未连接，等待连接...')
-      let waited = 0
-      const maxWait = 10000 // 10秒
-      while (!isConnected() && waited < maxWait) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        waited += 200
-      }
-
-      if (!isConnected()) {
-        const error = new Error('WebSocket连接超时（10秒）')
-        logger.error('❌ ChatStore: 等待超时（10秒），WebSocket仍未连接')
+      try {
+        await waitForConnection()
+      } catch (error) {
+        logger.error('❌ ChatStore: 等待连接超时', error)
         throw error
       }
-
-      logger.info(`✅ ChatStore: WebSocket连接成功（等待${waited}ms）`)
     }
 
     try {
@@ -122,6 +147,10 @@ export const useChatStore = defineStore('chat', () => {
         }
       })
 
+      // 🔥 注册重连回调，确保断线重连后能恢复聊天订阅
+      registerSubscriptionCallback(restoreChatSubscriptions)
+      logger.info('✅ ChatStore: 已注册重连回调')
+
       // 发送加入消息
       sendJoinMessage()
     } catch (error) {
@@ -142,6 +171,10 @@ export const useChatStore = defineStore('chat', () => {
       privateSubscription = null
       logger.info('✅ ChatStore: 取消订阅私聊频道')
     }
+
+    // 🔥 注销重连回调，避免内存泄漏
+    unregisterSubscriptionCallback(restoreChatSubscriptions)
+    logger.info('✅ ChatStore: 已注销重连回调')
   }
 
   // 🔥 发送加入消息

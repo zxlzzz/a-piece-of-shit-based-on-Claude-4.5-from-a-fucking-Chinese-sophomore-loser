@@ -45,6 +45,53 @@ stompClient = new Client({
 
 ---
 
+### 🔧 **WebSocket 连接优化规范**
+
+**已实施的关键优化**（2025-01）：
+
+#### 1️⃣ 聊天重连机制
+**问题**：WebSocket 断线重连后，聊天功能失效（收不到消息）
+
+**解决方案**：
+- 在 `chat.js` 中添加重连回调注册机制
+- 使用 `registerSubscriptionCallback()` 和 `unregisterSubscriptionCallback()`
+- 重连后自动恢复聊天订阅
+
+**代码位置**：
+- `frontend/src/stores/chat.js:22-27` - 重连回调函数
+- `frontend/src/stores/chat.js:151-152` - 注册回调
+- `frontend/src/stores/chat.js:175-177` - 注销回调
+
+#### 2️⃣ 后端线程池管理
+**问题**：每个 WebSocket 连接都创建新线程，可能导致线程泄漏和资源耗尽
+
+**解决方案**：
+- 创建专用线程池 `wsConnectionExecutor` (10-50线程，队列500)
+- 将 `new Thread().start()` 替换为 `executor.execute()`
+- 线程池配置：核心10线程，最大50线程，使用 CallerRunsPolicy 拒绝策略
+
+**代码位置**：
+- `backend/src/main/java/org/example/config/WebSocketConfig.java:59-71` - 线程池Bean
+- `backend/src/main/java/org/example/config/WebSocketConfig.java:161` - 使用线程池
+
+#### 3️⃣ 连接等待机制优化
+**问题**：轮询检查连接状态（每200ms检查一次，持续10秒），CPU占用高
+
+**解决方案**：
+- 使用事件驱动 Promise 替代轮询
+- 监听 `websocket-connected` 事件
+- 超时后自动清理事件监听器
+
+**代码位置**：
+- `frontend/src/stores/chat.js:66-90` - `waitForConnection()` 函数
+
+**⚠️ 开发注意事项**：
+1. **禁止回退**：不要将线程池改回 `new Thread()`
+2. **聊天订阅**：必须注册重连回调，否则断线后聊天失效
+3. **事件清理**：所有事件监听器必须在超时/成功后清理，避免内存泄漏
+
+---
+
 ## 📋 目录
 
 1. [分支概览](#分支概览)

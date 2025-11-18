@@ -459,23 +459,231 @@ if (restoreSubmitState) {
 
 ---
 
+## 五、中优先级问题修复（第二轮）
+
+### Commit: `9ae432b` - 修复6个中优先级的房间生命周期问题
+
+#### 修复1: 房间创建成功但加入失败（问题1.1 - "幽灵房间"）
+**文件**: `frontend/src/views/room/RoomView.vue:145-210`
+
+**问题**:
+- 创建房间成功但加入失败时，房间会遗留在数据库中
+- 导致"幽灵房间"显示在大厅但无法进入
+
+**修复**:
+```javascript
+const handleCreate = async ({ questionCount, maxPlayers, password, questionTagIds }) => {
+  loading.value = true
+  let createdRoomCode = null  // 🔥 记录创建的房间代码
+
+  try {
+    const createResponse = await createRoom(...)
+    createdRoomCode = roomData.roomCode
+
+    // 🔥 嵌套try-catch，加入失败时清理房间
+    try {
+      const joinResponse = await joinRoom(...)
+      // 成功逻辑...
+    } catch (joinError) {
+      // 🔥 加入失败，清理已创建的"幽灵房间"
+      logger.error("加入房间失败，尝试清理幽灵房间:", joinError)
+      try {
+        await deleteRoom(createdRoomCode)
+        logger.info(`✅ 已清理幽灵房间: ${createdRoomCode}`)
+      } catch (deleteError) {
+        logger.error("清理幽灵房间失败:", deleteError)
+      }
+
+      toast.add({
+        severity: 'error',
+        summary: '加入房间失败',
+        detail: '无法加入刚创建的房间，房间已清理'
+      })
+      throw joinError
+    }
+  } catch (error) {
+    // 外层错误处理...
+  }
+}
+```
+
+#### 修复2: WebSocket订阅竞态条件（问题2.1）
+**文件**: `frontend/src/websocket/ws.js`, `frontend/src/composables/game/useGameWebSocket.js`
+
+**问题**:
+- 玩家快速刷新页面时，旧订阅未取消就创建了新订阅
+- 导致收到重复的房间更新消息
+
+**修复**:
+
+##### ws.js - 全局订阅管理
+```javascript
+// 新增全局订阅Map
+let activeRoomSubscriptions = new Map(); // 🔥 全局跟踪活动的房间订阅
+
+export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
+  // 🔥 检查是否已有该房间的活动订阅
+  if (activeRoomSubscriptions.has(roomCode)) {
+    logger.warn(`⚠️ 房间 ${roomCode} 已存在订阅，先取消旧订阅`);
+    const oldSubs = activeRoomSubscriptions.get(roomCode);
+    unsubscribeAll(oldSubs);
+    activeRoomSubscriptions.delete(roomCode);
+  }
+
+  // 创建新订阅...
+  const subscriptions = [...];
+
+  // 🔥 记录活动订阅
+  activeRoomSubscriptions.set(roomCode, subscriptions);
+  return subscriptions;
+}
+
+// 新增专用清理函数
+export function unsubscribeRoom(roomCode) {
+  if (activeRoomSubscriptions.has(roomCode)) {
+    const subs = activeRoomSubscriptions.get(roomCode);
+    unsubscribeAll(subs);
+    activeRoomSubscriptions.delete(roomCode);
+    logger.debug(`✅ 已取消房间 ${roomCode} 的订阅`);
+  }
+}
+```
+
+##### useGameWebSocket.js - 使用新API
+```javascript
+onUnmounted(() => {
+  // 🔥 使用unsubscribeRoom清理订阅，确保从全局Map中移除
+  unsubscribeRoom(roomCode.value)
+  // ...
+})
+```
+
+#### 修复3: 倒计时定时器泄漏风险（问题4.3）
+**文件**: `frontend/src/composables/game/useGameCountdown.js:14-25`
+
+**问题**:
+- 虽然resetCountdown会先clearCountdown，但缺少双重保护
+- 极端情况下可能有timer泄漏风险
+
+**修复**:
+```javascript
+const startCountdown = () => {
+  // 🔥 修复问题4.3：防御性检查，确保不会在已有timer时创建新timer
+  if (countdownTimer.value) {
+    clearInterval(countdownTimer.value)
+    countdownTimer.value = null
+  }
+
+  updateCountdown()
+  countdownTimer.value = setInterval(() => {
+    updateCountdown()
+  }, 100)
+}
+```
+
+#### 修复4: 所有玩家断线时无广播（问题4.4）
+**文件**: `backend/src/main/java/org/example/service/room/impl/RoomLifecycleServiceImpl.java:259-273`
+
+**问题**:
+- 所有玩家断线时，直接return true，没有同步状态到Redis
+- 导致GameServiceImpl.leaveRoom返回的状态可能不是最新的
+
+**修复**:
+```java
+if (connectedCount == 0) {
+    // 🔥 改：游戏进行中时不立即删除，给重连时间
+    if (gameRoom.isStarted() && !gameRoom.isFinished()) {
+        log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
+        // 🔥 修复问题4.4：同步状态到Redis，以便返回最新状态并广播
+        roomCache.syncToRedis(roomCode);
+        // 不删除房间，保留5分钟
+        return true; // 房间仍存在
+    } else {
+        // 游戏未开始或已结束，删除房间...
+    }
+}
+```
+
+#### 修复5: 结果页刷新时房间已删除（问题6.1）
+**文件**: `frontend/src/views/room/ResultView.vue`
+
+**问题分析**:
+- 游戏结束时会立即保存历史记录，10秒后删除房间
+- 理论上，只要历史记录保存成功，房间删除后仍能查看结果
+- 前端已有错误处理（显示"无法加载游戏结果"）
+
+**改进**:
+- 添加playerStore和chatStore清理逻辑
+- 避免返回大厅时携带旧状态
+
+```javascript
+// 🔥 修复问题7.1: 返回大厅时清理playerStore
+const handleBackToLobby = () => {
+  playerStore.clearRoom()
+  chatStore.clearChat()
+  router.push('/find')
+}
+```
+
+#### 修复6: 返回大厅未清理playerStore（问题7.1）
+**文件**: `frontend/src/views/room/ResultView.vue`, `frontend/src/components/result/ResultContent.vue`
+
+**问题**:
+- 从结果页返回大厅时，playerStore仍然携带旧房间数据
+- 可能导致状态不一致或UI显示错误
+
+**修复**:
+
+##### ResultView.vue
+```javascript
+const handleBackToLobby = () => {
+  playerStore.clearRoom()
+  chatStore.clearChat()
+  router.push('/find')
+}
+```
+
+##### ResultContent.vue
+```javascript
+import { useChatStore } from '@/stores/chat'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const chatStore = useChatStore()
+
+const handleBackToLobby = () => {
+  playerStore.clearRoom()
+  chatStore.clearChat()
+  router.push('/find')
+}
+
+// 模板中使用
+<button @click="handleBackToLobby">
+  返回大厅
+</button>
+```
+
+---
+
 ## 总结
 
-### 修复统计
+### 修复统计（更新）
 - 语法错误: 2个
 - 重连问题: 3个
 - 房间删除: 10个
-- 生命周期: 4个
-- **总计**: 19个问题已修复
+- 游戏生命周期: 4个
+- **中优先级问题**: 6个
+- **总计**: 25个问题已修复
 
 ### 关键改进
 1. **重连机制完善**: 玩家可以在游戏中刷新页面而不断线
-2. **资源管理优化**: 消除了多个内存泄漏点（RoomLock、advancing、聊天室）
+2. **资源管理优化**: 消除了多个内存泄漏点（RoomLock、advancing、聊天室、WebSocket订阅、定时器）
 3. **错误恢复能力**: 游戏启动和结束流程增加了容错和回滚机制
 4. **原子操作**: 房间删除使用原子操作防止竞态条件
+5. **状态一致性**: 玩家状态、房间状态、订阅状态的完整清理和同步
+6. **用户体验**: 幽灵房间清理、重复订阅防护、状态清理
 
-### 后续建议
-建议按以下优先级处理待修复问题：
-1. 先修复中优先级的用户体验问题（问题1.1、6.1）
-2. 再优化技术细节（问题2.1、4.3、4.4）
-3. 最后进行低优先级的UX改进
+### 待优化问题（低优先级）
+- 前端错误提示的用户体验优化
+- 加载状态的视觉反馈改进
+- 房间列表刷新频率优化（已从10秒优化到5秒）

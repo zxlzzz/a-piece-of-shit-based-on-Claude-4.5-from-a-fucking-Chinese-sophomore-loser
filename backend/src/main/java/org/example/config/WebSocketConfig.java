@@ -5,6 +5,7 @@ import org.example.repository.PlayerRepository;
 import org.example.service.session.SessionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +14,7 @@ import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.scheduling.TaskScheduler;
@@ -21,6 +23,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.web.socket.config.annotation.*;
 
 import java.security.Principal;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 
@@ -38,9 +41,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     // 🔥 手动构造器，使用 @Lazy 打破循环依赖
     // SessionManager 需要 SimpMessagingTemplate，而 SimpMessagingTemplate 由 WebSocket 配置创建
+    // 🔥 修复：添加@Qualifier指定使用wsConnectionExecutor这个bean，避免依赖注入歧义
     public WebSocketConfig(@Lazy SessionManager sessionManager,
                           PlayerRepository playerRepository,
-                          Executor wsConnectionExecutor) {
+                          @Qualifier("wsConnectionExecutor") Executor wsConnectionExecutor) {
         this.sessionManager = sessionManager;
         this.playerRepository = playerRepository;
         this.wsConnectionExecutor = wsConnectionExecutor;

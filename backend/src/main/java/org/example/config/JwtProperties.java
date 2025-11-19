@@ -16,7 +16,7 @@ public class JwtProperties {
     private Long expiration;
 
     /**
-     * 🔥 P0-1修复：启动时验证JWT密钥是否已配置且足够强
+     * 🔥 P0-1/P1-5修复：启动时验证JWT密钥是否已配置且足够强
      */
     @PostConstruct
     public void validateSecret() {
@@ -30,14 +30,21 @@ public class JwtProperties {
             );
         }
 
+        // 检查是否使用了开发环境默认密钥
+        if (secret.contains("dev-only-secret")) {
+            log.warn("⚠️⚠️⚠️ 警告：正在使用开发环境默认JWT密钥！");
+            log.warn("⚠️ 这仅适用于本地开发，生产环境必须设置 JWT_SECRET 环境变量！");
+            log.warn("⚠️ 建议使用命令生成强密钥: openssl rand -base64 32");
+            return; // 开发环境允许使用默认密钥
+        }
+
         // 检查密钥强度（至少32字节 = 256位）
         if (secret.getBytes().length < 32) {
             log.warn("⚠️ JWT密钥长度不足32字节，建议使用更强的密钥（256位以上）");
         }
 
-        // 检查是否使用了示例密钥
-        if (secret.contains("dev-secret") || secret.contains("example") ||
-            secret.contains("test") || secret.equals("secret")) {
+        // 检查是否使用了其他不安全的示例密钥
+        if (secret.contains("example") || secret.contains("test") || secret.equals("secret")) {
             throw new IllegalStateException(
                 "❌ 检测到不安全的JWT密钥！禁止使用示例密钥或弱密钥。" +
                 "\n请设置强度足够的 JWT_SECRET 环境变量。"

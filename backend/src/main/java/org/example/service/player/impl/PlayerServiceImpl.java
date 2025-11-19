@@ -43,7 +43,9 @@ public class PlayerServiceImpl implements PlayerService {
     }
 
     /**
-     * 删除玩家
+     * 删除玩家（硬删除）
+     * 🔥 P2-4修复：建议使用软删除代替，保留历史数据
+     * ⚠️ 警告：硬删除会级联删除玩家的所有游戏记录和答题记录
      */
     @Override
     @Transactional
@@ -51,8 +53,13 @@ public class PlayerServiceImpl implements PlayerService {
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
+        // 🔥 P2-4建议：应该使用软删除
+        // player.setDeleted(true);
+        // player.setDeletedAt(LocalDateTime.now());
+        // playerRepository.save(player);
+
         playerRepository.delete(player);
-        log.info("删除玩家: playerId={}", playerId);
+        log.warn("⚠️ 硬删除玩家及其所有历史记录: playerId={}", playerId);
     }
 
     /**

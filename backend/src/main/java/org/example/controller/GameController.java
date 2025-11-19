@@ -74,6 +74,9 @@ public class GameController {
         }
     }
 
+    /**
+     * 🔥 P1-3修复：移除try-catch，让全局异常处理器统一处理错误响应
+     */
     @PostMapping("/rooms/{roomCode}/join")
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
@@ -81,30 +84,25 @@ public class GameController {
             @RequestParam String playerName,
             @RequestParam(defaultValue = "false") Boolean spectator,
             @RequestParam(required = false) String password) {
-        try {
-            // 🔥 修复：添加重连检测逻辑
-            GameRoom gameRoom = roomCache.get(roomCode);
-            boolean isReconnect = gameRoom != null &&
-                    gameRoom.getDisconnectedPlayers().containsKey(playerId);
+        // 🔥 修复：添加重连检测逻辑
+        GameRoom gameRoom = roomCache.get(roomCode);
+        boolean isReconnect = gameRoom != null &&
+                gameRoom.getDisconnectedPlayers().containsKey(playerId);
 
-            RoomDTO room;
-            if (isReconnect) {
-                // 重连场景
-                roomLifecycleService.handleReconnect(roomCode, playerId);
-                room = roomLifecycleService.toRoomDTO(roomCode);
-                log.info("✅ 玩家 {} 重连房间 {}", playerName, roomCode);
-            } else {
-                // 新加入场景
-                room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
-                log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
-            }
-
-            broadcaster.sendRoomUpdate(roomCode, room);
-            return ResponseEntity.ok(room);
-        } catch (BusinessException e) {
-            log.error("❌ 加入/重连房间失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
+        RoomDTO room;
+        if (isReconnect) {
+            // 重连场景
+            roomLifecycleService.handleReconnect(roomCode, playerId);
+            room = roomLifecycleService.toRoomDTO(roomCode);
+            log.info("✅ 玩家 {} 重连房间 {}", playerName, roomCode);
+        } else {
+            // 新加入场景
+            room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
+            log.info("✅ 玩家 {} 加入房间 {} 成功 (观战模式: {})", playerName, roomCode, spectator);
         }
+
+        broadcaster.sendRoomUpdate(roomCode, room);
+        return ResponseEntity.ok(room);
     }
 
     @PostMapping("/rooms/{roomCode}/start")

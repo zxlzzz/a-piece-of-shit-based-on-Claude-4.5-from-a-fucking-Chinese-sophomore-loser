@@ -1309,6 +1309,243 @@ public void validateSecret() {
 
 ---
 
+## 🔧 **数据库实体与级联关系深度审查 - 修复数据一致性问题**
+
+**深度审查**（2025-11-19）：
+
+本次审查专注于数据库实体层的配置，特别是JPA级联关系和删除逻辑，发现并修复了2个严重的数据一致性和安全问题。
+
+### 审查范围
+
+1. ✅ JPA实体类和关联关系配置
+2. ✅ 级联删除(CascadeType)配置合理性
+3. ✅ orphanRemoval配置安全性
+4. ✅ Repository层查询逻辑
+5. ✅ Redis配置和序列化
+
+### 发现的问题（2个P0/P1级严重问题）
+
+#### P0-7: RoomEntity级联删除会误删玩家 ❗❗
+**问题**: RoomEntity的players关联配置了`CascadeType.ALL`和`orphanRemoval = true`
+- **文件**: `backend/src/main/java/org/example/entity/RoomEntity.java:84-89`
+- **影响**:
+  - 如果有人直接使用`roomRepository.delete(room)`，会级联删除所有关联的玩家实体
+  - `orphanRemoval = true`意味着从`room.players`列表中移除玩家时，玩家实体会被删除
+  - 这与业务逻辑冲突：玩家是独立账号，不应因离开房间而被删除
+  - 虽然`deleteRoomAtomically`方法正确地手动解绑了玩家，但配置仍存在风险
+
+**修复前**:
+```java
+@OneToMany(mappedBy = "room",
+        cascade = CascadeType.ALL,        // ❌ 会级联删除玩家
+        orphanRemoval = true,             // ❌ 移除时删除玩家
+        fetch = FetchType.LAZY)
+private List<PlayerEntity> players = new ArrayList<>();
+```
+
+**修复后**:
+```java
+/**
+ * 房间内的玩家列表
+ * 🔥 P0-7修复：移除级联删除和orphanRemoval，防止删除房间时误删玩家
+ * 玩家是独立实体，应通过业务逻辑解绑（setRoom(null)），而非级联删除
+ */
+@OneToMany(mappedBy = "room",
+        cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH},
+        fetch = FetchType.LAZY)
+private List<PlayerEntity> players = new ArrayList<>();
+```
+
+**为什么这样改？**
+- 移除`CascadeType.REMOVE` - 防止删除房间时级联删除玩家
+- 移除`orphanRemoval = true` - 防止从列表移除玩家时删除玩家实体
+- 保留`PERSIST/MERGE/REFRESH` - 允许保存房间时级联保存玩家状态更新
+- 删除逻辑由`RoomLifecycleServiceImpl.deleteRoomAtomically()`手动处理
+
+---
+
+#### P1-7: PlayerEntity级联配置不一致 ❗
+**问题**: PlayerEntity的两个oneToMany关联配置不一致
+- **文件**: `backend/src/main/java/org/example/entity/PlayerEntity.java:54-61`
+- **影响**:
+  - `playerGames`配置了`CascadeType.ALL, orphanRemoval = true` - 删除玩家时会删除游戏记录
+  - `submissions`没有配置cascade - 删除玩家时不会删除答题记录
+  - 导致数据不一致：玩家的submissions仍然引用已删除的player，造成外键约束问题
+  - 硬删除玩家会导致孤立的submissions记录
+
+**修复前**:
+```java
+@OneToMany(mappedBy = "player",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true,
+        fetch = FetchType.LAZY)
+private List<PlayerGameEntity> playerGames = new ArrayList<>();
+
+@OneToMany(mappedBy = "player", fetch = FetchType.LAZY)  // ❌ 没有cascade
+private List<SubmissionEntity> submissions = new ArrayList<>();
+```
+
+**修复后**:
+```java
+/**
+ * 🔥 P1-7修复：统一级联配置，删除玩家时同时删除历史记录
+ * 如果需要保留历史，应该使用软删除而不是硬删除
+ */
+@OneToMany(mappedBy = "player",
+        cascade = CascadeType.ALL,
+        orphanRemoval = true,
+        fetch = FetchType.LAZY)
+private List<PlayerGameEntity> playerGames = new ArrayList<>();
+
+/**
+ * 🔥 P1-7修复：添加级联删除，保持数据一致性
+ * submissions属于玩家的答题记录，删除玩家时应一并删除
+ */
+@OneToMany(mappedBy = "player",
+        cascade = CascadeType.ALL,        // ✅ 添加级联
+        orphanRemoval = true,             // ✅ 添加orphanRemoval
+        fetch = FetchType.LAZY)
+private List<SubmissionEntity> submissions = new ArrayList<>();
+```
+
+---
+
+#### P2-4: 应该使用软删除而不是硬删除玩家 ⚠️
+**问题**: PlayerController暴露了硬删除API，但PlayerEntity已有软删除字段
+- **文件**:
+  - `backend/src/main/java/org/example/controller/PlayerController.java:63-72`
+  - `backend/src/main/java/org/example/service/player/impl/PlayerServiceImpl.java:45-56`
+- **影响**:
+  - 硬删除会永久删除玩家及所有历史记录（游戏记录、答题记录）
+  - PlayerEntity已有`deleted`和`deletedAt`字段，说明设计上支持软删除
+  - 但API实现的是硬删除，浪费了软删除设计
+  - 无法恢复误删的玩家数据
+
+**修复**: 添加警告日志和注释，建议后续实现软删除API
+
+**PlayerServiceImpl.java**:
+```java
+/**
+ * 删除玩家（硬删除）
+ * 🔥 P2-4修复：建议使用软删除代替，保留历史数据
+ * ⚠️ 警告：硬删除会级联删除玩家的所有游戏记录和答题记录
+ */
+@Override
+@Transactional
+public void deletePlayer(String playerId) {
+    PlayerEntity player = playerRepository.findByPlayerId(playerId)
+            .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+
+    // 🔥 P2-4建议：应该使用软删除
+    // player.setDeleted(true);
+    // player.setDeletedAt(LocalDateTime.now());
+    // playerRepository.save(player);
+
+    playerRepository.delete(player);
+    log.warn("⚠️ 硬删除玩家及其所有历史记录: playerId={}", playerId);
+}
+```
+
+**PlayerController.java**:
+```java
+/**
+ * 删除玩家（硬删除）
+ * DELETE /api/players/{playerId}
+ * 🔥 P2-4修复：添加警告日志，建议使用软删除
+ * ⚠️ 警告：此操作会永久删除玩家及其所有游戏历史记录
+ */
+@DeleteMapping("/{playerId}")
+public ResponseEntity<Void> deletePlayer(@PathVariable String playerId) {
+    log.warn("⚠️ 收到玩家硬删除请求: playerId={}", playerId);
+    playerService.deletePlayer(playerId);
+    return ResponseEntity.ok().build();
+}
+```
+
+---
+
+### 审查发现（良好实践）✅
+
+在审查过程中，发现以下代码实现良好：
+
+#### 1. GameEntity的级联配置合理 ✅
+- **文件**: `backend/src/main/java/org/example/entity/GameEntity.java:37-56`
+- **优点**:
+  - `playerGames`、`submissions`、`result`都配置了`CascadeType.ALL, orphanRemoval = true`
+  - 这是合理的：删除游戏时应该删除该游戏的所有专属数据
+  - 游戏记录和提交记录是专属于该游戏的，不应独立存在
+
+#### 2. RoomLifecycleServiceImpl的删除逻辑完善 ✅
+- **文件**: `backend/src/main/java/org/example/service/room/impl/RoomLifecycleServiceImpl.java:664-725`
+- **优点**:
+  - `deleteRoomAtomically()`方法手动解绑所有玩家（setRoom(null)）
+  - 使用`RoomLock`保证原子性
+  - 清理所有相关资源（定时器、缓存、聊天室）
+  - 即使实体配置有问题，业务逻辑也是正确的
+
+#### 3. PlayerRepository使用了软删除过滤 ✅
+- **文件**: `backend/src/main/java/org/example/repository/PlayerRepository.java:16-24`
+- **优点**:
+  - 所有查询都过滤了`deleted = false`
+  - 保证软删除的玩家不会被查询到
+  - 符合软删除设计
+
+#### 4. Redis配置完善 ✅
+- **文件**: `backend/src/main/java/org/example/config/RedisConfig.java`
+- **优点**:
+  - 使用Jackson2JsonRedisSerializer支持复杂对象
+  - 配置了JavaTimeModule支持LocalDateTime
+  - 配置了类型信息（DefaultTyping.NON_FINAL）
+  - GameRoom实现了Serializable接口
+
+---
+
+### 待优化事项（非紧急）
+
+以下是发现的可优化点，但不影响当前功能：
+
+#### 1. 实现软删除API
+- **问题**: PlayerController只有硬删除API
+- **建议**: 添加软删除端点`PATCH /api/players/{playerId}/archive`
+- **优先级**: P2（中等）
+
+#### 2. GameRoom反序列化后Map类型丢失
+- **问题**: GameRoom使用ConcurrentHashMap，但从Redis反序列化后可能变成HashMap
+- **影响**: 理论上的并发安全问题，但实际上所有操作都用了RoomLock保护
+- **建议**: 添加自定义反序列化器或在get后重建ConcurrentHashMap
+- **优先级**: P3（低）- 有RoomLock保护，实际影响小
+
+#### 3. 添加索引优化查询
+- **问题**: PlayerEntity.room_id可能需要索引
+- **建议**: 在PlayerEntity上添加`@Index(columnList = "room_id")`
+- **优先级**: P3（低）- 数据量小时影响不大
+
+---
+
+### 修复总结
+
+**修复数量**: 3个问题（2个P0/P1严重，1个P2建议）
+**修复级别**: P0-7（严重）, P1-7（高优先级）, P2-4（建议）
+**涉及文件**: 4个
+- `backend/src/main/java/org/example/entity/RoomEntity.java`
+- `backend/src/main/java/org/example/entity/PlayerEntity.java`
+- `backend/src/main/java/org/example/service/player/impl/PlayerServiceImpl.java`
+- `backend/src/main/java/org/example/controller/PlayerController.java`
+
+**整体评估**:
+- ✅ 消除了级联删除导致的数据误删风险
+- ✅ 修复了PlayerEntity的级联配置不一致问题
+- ✅ 添加了警告日志，提醒硬删除的危险性
+- ✅ 数据一致性显著提升
+- ✅ 保留了现有业务逻辑的正确性
+
+**影响分析**:
+- **P0-7**: 如果之前有人直接调用`roomRepository.delete()`，玩家会被误删。修复后杜绝此风险。
+- **P1-7**: 如果之前有玩家被硬删除，会导致孤立的submissions记录。修复后数据一致。
+- **P2-4**: 提醒开发者使用软删除，避免数据永久丢失。
+
+---
+
 **文档维护**: 本文档随代码更新而更新
 **最后更新**: 2025年11月19日
-**文档版本**: 1.1
+**文档版本**: 1.2

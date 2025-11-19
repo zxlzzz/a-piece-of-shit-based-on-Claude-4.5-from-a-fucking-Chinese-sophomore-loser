@@ -57,17 +57,15 @@ public class PlayerController {
     }
 
     /**
-     * 删除玩家
+     * 删除玩家（硬删除）
      * DELETE /api/players/{playerId}
+     * 🔥 P2-4修复：添加警告日志，建议使用软删除
+     * ⚠️ 警告：此操作会永久删除玩家及其所有游戏历史记录
      */
     @DeleteMapping("/{playerId}")
     public ResponseEntity<Void> deletePlayer(@PathVariable String playerId) {
-        try {
-            playerService.deletePlayer(playerId);
-            return ResponseEntity.ok().build();
-        } catch (BusinessException e) {
-            log.error("删除玩家失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().build();
-        }
+        log.warn("⚠️ 收到玩家硬删除请求: playerId={}", playerId);
+        playerService.deletePlayer(playerId);
+        return ResponseEntity.ok().build();
     }
 }

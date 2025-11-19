@@ -93,8 +93,6 @@ public class AuthServiceImpl implements AuthService {
         String roomCode = null;
         if (player.getRoom() != null) {
             roomCode = player.getRoom().getRoomCode();
-                     username, player.getPlayerId(), roomCode);
-        } else {
         }
 
         return AuthResponseDTO.builder()

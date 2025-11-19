@@ -178,9 +178,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
                 gameRoom.getScores().put(playerId, 0);
 
-                    gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList(),
-                    gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
-
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);
             } else {
@@ -279,13 +276,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
             if (disconnectTime != null) {
                 long offlineSeconds = java.time.Duration.between(disconnectTime, LocalDateTime.now()).getSeconds();
-
-                gameRoom.getPlayers().stream()
-                        .filter(p -> p.getPlayerId().equals(playerId))
-                        .findFirst()
-                        .ifPresent(player ->
-                                        player.getName(), roomCode, offlineSeconds)
-                        );
 
                 // 🔥 P1-2: 游戏进行中重连
                 // 注意：不在这里重启后端定时器，而是依赖前端 countdown
@@ -416,8 +406,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
         // 🔥 同步到 Redis
         roomCache.syncToRedis(roomCode);
-
-            gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
 
         // 🔥 检查是否所有玩家都准备好了
         long totalPlayers = gameRoom.getPlayers().stream()
@@ -630,7 +618,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
      * @return 被删除的房间实体（用于发送删除通知）
      */
     @Transactional
-    private RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
+    protected RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
         RoomEntity room;
 
         // 🔥 使用RoomLock确保原子性（问题7）

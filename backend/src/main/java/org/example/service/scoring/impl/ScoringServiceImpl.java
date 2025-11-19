@@ -106,14 +106,11 @@ public class ScoringServiceImpl implements ScoringService {
             currentRound = getCurrentRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
             totalRounds = repeatStrategy.getTotalRounds();
 
-                    gameRoom.getRoomCode(), currentQuestion.getStrategyId(), currentRound, totalRounds);
 
             detailDTO = repeatStrategy.calculateRoundResult(context, currentRound);
             incrementRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
 
         } else {
-                    gameRoom.getRoomCode(), currentQuestion.getStrategyId());
-
             detailDTO = strategy.calculateResult(context);
         }
 

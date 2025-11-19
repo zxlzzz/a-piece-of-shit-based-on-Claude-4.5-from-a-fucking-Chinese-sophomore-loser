@@ -85,10 +85,6 @@ public class GameServiceImpl implements GameService {
 
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
 
-            savedRoom.getRoomCode(),
-            maxPlayers - 1,
-            gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList());
-
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
 

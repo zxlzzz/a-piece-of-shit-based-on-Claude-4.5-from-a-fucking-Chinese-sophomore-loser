@@ -120,7 +120,6 @@ public class ChatWebSocketController {
 
             ChatMessage readyMessage = ChatMessage.ready(roomCode, message.getSenderName(), isReady);
 
-                    isReady ? "已准备" : "取消准备");
 
             // 广播准备消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", readyMessage);

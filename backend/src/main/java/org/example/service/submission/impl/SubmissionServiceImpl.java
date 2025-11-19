@@ -156,18 +156,9 @@ public class SubmissionServiceImpl implements SubmissionService {
                         .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
                         .put(playerId, defaultChoice);
 
-                // 🔥 添加：标记玩家状态
-                boolean isDisconnected = gameRoom.getDisconnectedPlayers().containsKey(playerId);
-                        player.getName(),
-                        defaultChoice,
-                        isDisconnected ? "(断线)" : "(超时)");
             }
         }
 
-        // 🔥 添加：日志统计
-        int filledCount = gameRoom.getPlayers().size() - (currentRoundSubmissions != null ? currentRoundSubmissions.size() : 0);
-        if (filledCount > 0) {
-        }
     }
 
     @Override

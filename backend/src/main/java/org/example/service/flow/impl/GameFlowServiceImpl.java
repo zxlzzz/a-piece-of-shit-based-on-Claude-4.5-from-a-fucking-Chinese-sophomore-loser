@@ -164,8 +164,6 @@ public class GameFlowServiceImpl implements GameFlowService {
             timerService.scheduleTimeout(roomCode, timeLimit,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
-                    roomCode, questions.size(), nonSpectatorCount,
-                    gameRoom.getPlayers().size() - nonSpectatorCount);
 
             // 🔥 同步到 Redis
             roomCache.syncToRedis(roomCode);
@@ -215,9 +213,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                         timerService.scheduleTimeout(roomCode, questionTimeout,
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
-                                roomCode, gameRoom.getCurrentIndex(),
-                                result.getCurrentRound(), result.getTotalRounds());
-
                         // 🔥 同步到 Redis
                         roomCache.syncToRedis(roomCode);
 
@@ -232,7 +227,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                     // 🔥 普通题 或 重复题已完成所有轮次：推进到下一题
                     if (result.isRepeatableQuestion()) {
                         scoringService.clearRounds(roomCode);
-                                roomCode, result.getTotalRounds());
                     }
 
                     if (gameRoom.nextQuestion()) {

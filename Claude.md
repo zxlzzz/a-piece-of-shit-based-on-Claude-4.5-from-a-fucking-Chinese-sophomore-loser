@@ -20,6 +20,8 @@
 
 RoomEntity → Players: 只用 `PERSIST, MERGE, REFRESH`，**禁止** `CascadeType.ALL` 和 `orphanRemoval`
 
+
+### 4. 不修改application内容，不新增多余的打印日志内容（除非有必要，且测试完后需删除所有打印内容）
 ---
 
 ## 最近修复

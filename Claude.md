@@ -1048,6 +1048,267 @@ if (lastActivity.plusMinutes(30).isBefore(now)) {
 
 ---
 
+## 🔧 **非游戏功能深度审查 - 配置与架构优化**
+
+**深度审查**（2025-11-19）：
+
+本次审查专注于非游戏功能相关的代码，包括配置管理、错误处理、安全性等方面，发现并修复了4个关键问题。
+
+### 审查范围
+
+1. ✅ 配置文件（前端+后端）
+2. ✅ 安全相关代码（JWT、Security、CORS）
+3. ✅ API层错误处理和参数验证
+4. ✅ 前端路由和状态管理
+5. ✅ Controller架构优化
+
+### 发现的问题（4个）
+
+#### P1-1: 开发环境数据库自动删除问题 ❗
+**问题**: `application-dev.yml` 中 `ddl-auto: create-drop` 导致每次重启删除所有数据
+- **文件**: `backend/src/main/resources/application-dev.yml:16`
+- **影响**: 开发体验极差，每次重启应用都丢失测试数据
+- **修复**: 改为 `ddl-auto: update`，保留数据同时允许表结构更新
+
+**修复代码**:
+```yaml
+# 修复前
+ddl-auto: create-drop  # 开发环境允许自动更新表结构
+
+# 修复后
+ddl-auto: update  # 🔥 P1-1修复：改为update，避免每次重启删除数据
+```
+
+---
+
+#### P1-2: AuthController 错误响应不规范 ❗
+**问题**: Controller 返回 `ResponseEntity.badRequest().body(null)` 导致前端无法获取错误信息
+- **文件**: `backend/src/main/java/org/example/controller/AuthController.java`
+- **影响**:
+  - 前端收到null响应体，无法显示具体错误原因
+  - 用户体验差，只能看到"请求失败"
+  - 调试困难
+- **修复**: 移除try-catch，让全局异常处理器 `GlobalExceptionHandler` 统一处理错误响应
+
+**修复前**:
+```java
+@PostMapping("/register")
+public ResponseEntity<AuthResponseDTO> register(@RequestBody RegisterRequestDTO request) {
+    try {
+        AuthResponseDTO response = authService.register(request);
+        return ResponseEntity.ok(response);
+    } catch (BusinessException e) {
+        log.error("注册失败: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(null);  // ❌ 返回null
+    }
+}
+```
+
+**修复后**:
+```java
+/**
+ * 🔥 P1-2修复：移除try-catch，让全局异常处理器统一处理错误响应
+ */
+@PostMapping("/register")
+public ResponseEntity<AuthResponseDTO> register(@RequestBody RegisterRequestDTO request) {
+    AuthResponseDTO response = authService.register(request);
+    return ResponseEntity.ok(response);
+}
+```
+
+**优势**:
+- ✅ 错误响应格式统一：`{ "error": true, "message": "...", "timestamp": ... }`
+- ✅ 前端可以正常获取错误信息并显示给用户
+- ✅ 代码更简洁，减少重复
+- ✅ 全局异常处理器已存在，只需移除Controller层冗余代码
+
+---
+
+#### P1-3: GameController 错误处理模式统一 ❗
+**问题**: GameController 中多个方法存在相同的问题（返回null响应体）
+- **文件**: `backend/src/main/java/org/example/controller/GameController.java`
+- **影响**: 同P1-2，多个API端点都有此问题
+- **修复**: 已优化以下方法：
+  - `createRoom()` - 创建房间
+  - `getRoomStatus()` - 获取房间状态（同时优化逻辑：404改为抛出异常）
+  - 其他方法使用相同模式（待批量优化）
+
+**修复示例**:
+```java
+// 修复前
+@GetMapping("/rooms/{roomCode}")
+public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
+    try {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            return ResponseEntity.notFound().build();  // ❌ 前端无法区分404原因
+        }
+        RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
+        return ResponseEntity.ok(roomDTO);
+    } catch (BusinessException e) {
+        return ResponseEntity.badRequest().body(null);  // ❌ 返回null
+    }
+}
+
+// 修复后
+/**
+ * 🔥 P1-3修复：移除try-catch并简化逻辑
+ */
+@GetMapping("/rooms/{roomCode}")
+public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
+    log.info("🔍 获取房间状态: {}", roomCode);
+
+    GameRoom gameRoom = roomCache.get(roomCode);
+    if (gameRoom == null) {
+        log.warn("⚠️ 房间不存在: {}", roomCode);
+        throw new BusinessException("房间不存在: " + roomCode);  // ✅ 抛出异常，统一处理
+    }
+
+    RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
+    return ResponseEntity.ok(roomDTO);
+}
+```
+
+---
+
+#### P1-5: JWT 开发环境配置太严格 ❗
+**问题**: 开发环境强制要求配置 `JWT_SECRET` 环境变量，对新手开发者不友好
+- **文件**:
+  - `backend/src/main/resources/application-dev.yml:39`
+  - `backend/src/main/java/org/example/config/JwtProperties.java`
+- **影响**:
+  - 新手克隆项目后无法直接启动，必须先配置环境变量
+  - 增加开发门槛
+  - README中未明确说明（可能导致启动失败）
+- **修复**:
+  - 开发环境提供默认密钥
+  - JwtProperties启动时检测到默认密钥会输出警告日志
+  - 生产环境仍然强制要求配置
+
+**修复后**:
+
+`application-dev.yml`:
+```yaml
+# JWT 配置（开发环境 - 🔥 P1-5修复：提供默认值便于开发，但有安全警告）
+jwt:
+  secret: ${JWT_SECRET:dev-only-secret-key-change-in-production-32chars-minimum}  # 开发环境提供默认值，生产环境必须配置
+```
+
+`JwtProperties.java`:
+```java
+@PostConstruct
+public void validateSecret() {
+    if (secret == null || secret.isEmpty()) {
+        throw new IllegalStateException("❌ JWT密钥未配置！...");
+    }
+
+    // 🔥 P1-5修复：检查是否使用了开发环境默认密钥
+    if (secret.contains("dev-only-secret")) {
+        log.warn("⚠️⚠️⚠️ 警告：正在使用开发环境默认JWT密钥！");
+        log.warn("⚠️ 这仅适用于本地开发，生产环境必须设置 JWT_SECRET 环境变量！");
+        log.warn("⚠️ 建议使用命令生成强密钥: openssl rand -base64 32");
+        return; // 开发环境允许使用默认密钥
+    }
+
+    // ... 其他验证逻辑
+}
+```
+
+**优势**:
+- ✅ 开发环境可直接启动，无需额外配置
+- ✅ 启动时有明显警告，提醒开发者不要在生产环境使用
+- ✅ 生产环境仍然强制要求配置，安全性不降低
+- ✅ 降低新手开发门槛
+
+---
+
+### 审查发现（良好实践）✅
+
+在审查过程中，发现以下代码实现良好：
+
+#### 1. 全局异常处理器已实现 ✅
+- **文件**: `backend/src/main/java/org/example/exception/GlobalExceptionHandler.java`
+- **功能**:
+  - 统一处理 `BusinessException`
+  - 统一处理参数验证异常 `MethodArgumentNotValidException`
+  - 通用异常兜底处理
+- **状态**: 已存在且实现完善，只需要Controller层配合使用
+
+#### 2. 前端API客户端设计优秀 ✅
+- **文件**: `frontend/src/api.js`
+- **优点**:
+  - 完善的请求/响应拦截器
+  - 自动添加JWT Token
+  - 智能错误处理（区分可忽略错误和需要提示的错误）
+  - 友好的错误提示信息
+  - 支持静默错误（`silentError: true`）
+  - 超时配置
+
+#### 3. 前端路由守卫逻辑完善 ✅
+- **文件**: `frontend/src/router/index.js`
+- **优点**:
+  - 自动管理聊天订阅和WebSocket连接
+  - 房间权限检查
+  - 房间状态恢复（从localStorage或服务器）
+  - 静默错误处理
+
+#### 4. CORS配置安全 ✅
+- **文件**: `backend/src/main/java/org/example/config/CorsConfig.java`
+- **优点**:
+  - 开发环境明确指定允许的域名（不使用`*`）
+  - 支持凭证 `allowCredentials: true`
+  - 生产环境强制要求配置 `CORS_ALLOWED_ORIGINS`
+
+#### 5. Security配置合理 ✅
+- **文件**: `backend/src/main/java/org/example/config/SecurityConfig.java`
+- **优点**:
+  - 无状态会话（JWT）
+  - 正确的过滤器顺序
+  - Swagger端点允许匿名访问
+
+---
+
+### 待优化事项（非紧急）
+
+以下是发现的可优化点，但不影响当前功能：
+
+#### 1. Controller其他方法的错误处理优化
+- **范围**: GameController、PlayerController等其他Controller
+- **优化**: 使用P1-2/P1-3相同的模式，移除try-catch
+- **优先级**: P2（中等）- 模式已建立，可批量处理
+
+#### 2. 请求参数验证
+- **问题**: Controller未使用 `@Valid`/`@Validated` 进行参数验证
+- **影响**: 无效参数可能进入业务逻辑层
+- **建议**: 在DTO类上添加Bean Validation注解
+- **优先级**: P2（中等）
+
+#### 3. API限流保护
+- **问题**: 未实现请求频率限制
+- **影响**: 可能被恶意请求攻击
+- **建议**: 添加限流机制（如Spring Cloud Gateway、Resilience4j）
+- **优先级**: P3（低）- 本地开发环境不需要
+
+---
+
+### 修复总结
+
+**修复数量**: 4个问题
+**修复级别**: 全部P1级（高优先级）
+**涉及文件**: 5个
+- `backend/src/main/resources/application-dev.yml`
+- `backend/src/main/java/org/example/config/JwtProperties.java`
+- `backend/src/main/java/org/example/controller/AuthController.java`
+- `backend/src/main/java/org/example/controller/GameController.java` (部分)
+
+**整体评估**:
+- ✅ 开发体验显著提升（数据不再丢失，可直接启动）
+- ✅ 错误响应格式统一，前端体验更好
+- ✅ 代码更简洁，维护性提高
+- ✅ 安全性未降低（生产环境配置仍然严格）
+
+---
+
 **文档维护**: 本文档随代码更新而更新
-**最后更新**: 2025年1月17日
-**文档版本**: 1.0
+**最后更新**: 2025年11月19日
+**文档版本**: 1.1

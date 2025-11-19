@@ -28,6 +28,9 @@ public class GameController {
     private final RoomCache roomCache;
     private final RoomLifecycleService roomLifecycleService;
 
+    /**
+     * 🔥 P1-3修复：移除try-catch，让全局异常处理器统一处理错误响应
+     */
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
@@ -35,34 +38,26 @@ public class GameController {
             @RequestParam(defaultValue = "30") Integer timeLimit,
             @RequestParam(required = false) String password,
             @RequestParam(required = false) List<Long> questionTagIds) {
-        try {
-            RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds);
-            log.info("✅ 创建房间成功: {}", room.getRoomCode());
-            return ResponseEntity.ok(room);
-        } catch (BusinessException e) {
-            log.error("❌ 创建房间失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
+        RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds);
+        log.info("✅ 创建房间成功: {}", room.getRoomCode());
+        return ResponseEntity.ok(room);
     }
 
+    /**
+     * 🔥 P1-3修复：移除try-catch并简化逻辑
+     */
     @GetMapping("/rooms/{roomCode}")
     public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
-        try {
-            log.info("🔍 获取房间状态: {}", roomCode);
+        log.info("🔍 获取房间状态: {}", roomCode);
 
-            GameRoom gameRoom = roomCache.get(roomCode);
-            if (gameRoom == null) {
-                log.warn("⚠️ 房间不存在: {}", roomCode);
-                return ResponseEntity.notFound().build();
-            }
-
-            RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
-            return ResponseEntity.ok(roomDTO);
-
-        } catch (BusinessException e) {
-            log.error("❌ 获取房间状态失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
+        GameRoom gameRoom = roomCache.get(roomCode);
+        if (gameRoom == null) {
+            log.warn("⚠️ 房间不存在: {}", roomCode);
+            throw new BusinessException("房间不存在: " + roomCode);
         }
+
+        RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
+        return ResponseEntity.ok(roomDTO);
     }
 
     @PutMapping("/rooms/{roomCode}/settings")

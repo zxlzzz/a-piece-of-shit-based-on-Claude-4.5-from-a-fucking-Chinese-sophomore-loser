@@ -22,45 +22,33 @@ public class AuthController {
     /**
      * 用户注册
      * POST /api/auth/register
+     * 🔥 P1-2修复：移除try-catch，让全局异常处理器统一处理错误响应
      */
     @PostMapping("/register")
     public ResponseEntity<AuthResponseDTO> register(@RequestBody RegisterRequestDTO request) {
-        try {
-            AuthResponseDTO response = authService.register(request);
-            return ResponseEntity.ok(response);
-        } catch (BusinessException e) {
-            log.error("注册失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
+        AuthResponseDTO response = authService.register(request);
+        return ResponseEntity.ok(response);
     }
 
     /**
      * 用户登录
      * POST /api/auth/login
+     * 🔥 P1-2修复：移除try-catch，让全局异常处理器统一处理错误响应
      */
     @PostMapping("/login")
     public ResponseEntity<AuthResponseDTO> login(@RequestBody LoginRequestDTO request) {
-        try {
-            AuthResponseDTO response = authService.login(request);
-            return ResponseEntity.ok(response);
-        } catch (BusinessException e) {
-            log.error("登录失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
+        AuthResponseDTO response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     /**
      * 游客快速试玩（无需注册）
      * POST /api/auth/guest
+     * 🔥 P1-2修复：移除try-catch，让全局异常处理器统一处理错误响应
      */
     @PostMapping("/guest")
     public ResponseEntity<AuthResponseDTO> guestLogin(@RequestBody GuestLoginRequestDTO request) {
-        try {
-            AuthResponseDTO response = authService.guestLogin(request);
-            return ResponseEntity.ok(response);
-        } catch (BusinessException e) {
-            log.error("游客登录失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
+        AuthResponseDTO response = authService.guestLogin(request);
+        return ResponseEntity.ok(response);
     }
 }

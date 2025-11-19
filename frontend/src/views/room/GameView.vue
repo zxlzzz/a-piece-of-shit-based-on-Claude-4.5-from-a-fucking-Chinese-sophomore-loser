@@ -162,10 +162,10 @@ onMounted(() => {
         logger.warn('倒计时时间不合理，已跳过恢复:', { elapsed, limit })
       }
     }
-  }
+  },
 
   connectWebSocket()
-})
+)
 
 onUnmounted(() => {
   clearCountdown()

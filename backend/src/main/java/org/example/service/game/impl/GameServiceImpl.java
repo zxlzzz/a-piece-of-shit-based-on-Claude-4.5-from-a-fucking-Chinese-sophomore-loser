@@ -197,7 +197,7 @@ public class GameServiceImpl implements GameService {
                 throw new BusinessException("本轮已经提交过答案");
             }
 
-            // 提交答案
+            // 提交答案（内部会自动同步到Redis）
             submissionService.submitAnswer(roomCode, playerId, choice);
 
             // 如果是测试房间且提交者不是Bot，立即触发Bot提交
@@ -205,8 +205,8 @@ public class GameServiceImpl implements GameService {
                 submissionService.autoSubmitBots(gameRoom);
             }
 
-            // 🔥 修复：提交后立即同步到Redis，确保用户刷新页面时能看到最新状态
-            roomCache.syncToRedis(roomCode, gameRoom);
+            // 🔥 修复：重新从Redis获取最新的gameRoom（因为submitAnswer已经同步了）
+            gameRoom = roomCache.getOrThrow(roomCode);
 
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);

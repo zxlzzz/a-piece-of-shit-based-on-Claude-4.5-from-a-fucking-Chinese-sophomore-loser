@@ -20,6 +20,9 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
     @Query("SELECT p FROM PlayerEntity p WHERE p.username = ?1 AND p.deleted = false")
     Optional<PlayerEntity> findByUsername(String username);
 
+    @Query("SELECT p FROM PlayerEntity p LEFT JOIN FETCH p.room WHERE p.username = ?1 AND p.deleted = false")
+    Optional<PlayerEntity> findByUsernameWithRoom(String username);
+
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM PlayerEntity p WHERE p.username = ?1 AND p.deleted = false")
     boolean existsByUsername(String username);
     // =========================

@@ -75,9 +75,9 @@ public class AuthServiceImpl implements AuthService {
         // 验证输入
         validateLoginRequest(request);
 
-        // 查找用户（不区分大小写）
+        // 查找用户（不区分大小写）- 使用JOIN FETCH避免懒加载问题
         String username = request.getUsername().toLowerCase();
-        PlayerEntity player = playerRepository.findByUsername(username)
+        PlayerEntity player = playerRepository.findByUsernameWithRoom(username)
                 .orElseThrow(() -> new BusinessException("用户名或密码错误"));
 
         // 检查账号是否被删除
@@ -93,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token
         String token = jwtUtil.generateToken(username, player.getPlayerId());
 
-        // 检查玩家是否在房间中
+        // 检查玩家是否在房间中（room已通过JOIN FETCH加载，不会懒加载）
         String roomCode = null;
         if (player.getRoom() != null) {
             roomCode = player.getRoom().getRoomCode();

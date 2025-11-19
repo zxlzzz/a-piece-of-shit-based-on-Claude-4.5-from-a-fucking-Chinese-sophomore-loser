@@ -34,8 +34,8 @@ const router = createRouter({
         {
           path: '/history',
           name: 'history',
-          component: () => import('@/views/HistoryView.vue'),
-          meta: { requiresAuth: true }  // ✅ 保留
+          component: () => import('@/views/HistoryView.vue')
+          // 🔥 P1-8修复：移除登录检查，允许游客查看（显示空即可）
         },
         {
           path: '/result/:roomId',

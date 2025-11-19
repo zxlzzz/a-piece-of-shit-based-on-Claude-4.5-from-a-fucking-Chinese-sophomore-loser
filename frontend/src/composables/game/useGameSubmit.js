@@ -53,15 +53,16 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     try {
       // 🔥 修复：先调用API，成功后再设置localStorage
       // 避免页面刷新时localStorage已设置但API未完成的情况
-      await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
+      const response = await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
 
-      // 🔥 API成功后，检查题目是否已经推进（测试房间中Bot会立即触发推进）
-      // 如果题目已经变化，不设置localStorage（避免设置错误题目的记录）
-      if (room.value?.currentIndex === currentIndex) {
+      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
+      // 如果API返回的index与提交时不同，说明题目已推进（测试房间中Bot立即触发推进）
+      const returnedIndex = response.data?.currentIndex
+      if (returnedIndex === currentIndex) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)')
+        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
@@ -116,15 +117,16 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
 
     try {
       // 🔥 修复：先调用API，成功后再设置localStorage
-      await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
+      const response = await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
 
-      // 🔥 API成功后，检查题目是否已经推进
+      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
       // timeout触发fillDefaultAnswers后可能立即推进题目
-      if (room.value?.currentIndex === currentIndex) {
+      const returnedIndex = response.data?.currentIndex
+      if (returnedIndex === currentIndex) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置')
+        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送

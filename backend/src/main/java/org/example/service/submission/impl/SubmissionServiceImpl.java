@@ -95,6 +95,8 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
+        log.info("✅ 提交答案成功: roomCode={}, playerId={}, choice={}, currentIndex={}, isBot={}",
+                gameRoom.getRoomCode(), playerId, choice, gameRoom.getCurrentIndex(), isBot);
     }
 
     @Override
@@ -167,13 +169,24 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .get(gameRoom.getCurrentIndex());
 
         if (currentRoundSubmissions == null) {
+            log.debug("allSubmitted=false: 当前题目没有任何提交记录");
             return false;
         }
 
         // 🔥 只检查非观战者玩家
-        return gameRoom.getPlayers().stream()
+        long totalPlayers = gameRoom.getPlayers().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                .count();
+        long submittedCount = currentRoundSubmissions.size();
+        boolean result = gameRoom.getPlayers().stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
+
+        log.info("📊 allSubmitted={}: roomCode={}, currentIndex={}, submitted={}/{}, submissions={}",
+                result, gameRoom.getRoomCode(), gameRoom.getCurrentIndex(),
+                submittedCount, totalPlayers, currentRoundSubmissions.keySet());
+
+        return result;
     }
 
     @Override
@@ -183,6 +196,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     public void autoSubmitBots(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
+            log.warn("⚠️ autoSubmitBots: 当前题目为空，跳过Bot自动提交");
             return;
         }
 
@@ -190,6 +204,12 @@ public class SubmissionServiceImpl implements SubmissionService {
         int currentIndex = gameRoom.getCurrentIndex();
         Map<String, String> currentSubmissions = gameRoom.getSubmissions()
                 .computeIfAbsent(currentIndex, k -> new HashMap<>());
+
+        long botCount = gameRoom.getPlayers().stream()
+                .filter(player -> player.getPlayerId().startsWith("BOT_"))
+                .count();
+        log.info("🤖 开始Bot自动提交: roomCode={}, currentIndex={}, botCount={}",
+                gameRoom.getRoomCode(), currentIndex, botCount);
 
         // 为所有Bot提交答案
         gameRoom.getPlayers().stream()

@@ -62,7 +62,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)', { currentIndex, returnedIndex })
+        // 🔥 修复：题目已推进，重置hasSubmitted，因为这已经是新题了
+        hasSubmitted.value = false
+        logger.info('⚠️ 题目已推进，重置提交状态 (测试房间快速推进)', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
@@ -126,7 +128,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置', { currentIndex, returnedIndex })
+        // 🔥 修复：题目已推进，重置hasSubmitted
+        hasSubmitted.value = false
+        logger.info('⚠️ 自动提交时题目已推进，重置提交状态', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送

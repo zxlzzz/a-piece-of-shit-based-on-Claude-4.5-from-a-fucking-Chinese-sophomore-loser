@@ -205,6 +205,9 @@ public class GameServiceImpl implements GameService {
                 submissionService.autoSubmitBots(gameRoom);
             }
 
+            // 🔥 修复：提交后立即同步到Redis，确保用户刷新页面时能看到最新状态
+            roomCache.syncToRedis(roomCode, gameRoom);
+
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);
 

@@ -47,14 +47,22 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     // 🔥 修复：先禁用提交按钮，防止重复点击
     hasSubmitted.value = true
 
+    // 🔥 保存当前题目index，用于API返回后验证（避免测试房间中题目快速推进导致的状态不一致）
+    const currentIndex = room.value?.currentIndex
+
     try {
       // 🔥 修复：先调用API，成功后再设置localStorage
       // 避免页面刷新时localStorage已设置但API未完成的情况
       await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
 
-      // 🔥 API成功后再设置localStorage
-      const submissionKey = getSubmissionKey()
-      localStorage.setItem(submissionKey, 'true')
+      // 🔥 API成功后，检查题目是否已经推进（测试房间中Bot会立即触发推进）
+      // 如果题目已经变化，不设置localStorage（避免设置错误题目的记录）
+      if (room.value?.currentIndex === currentIndex) {
+        const submissionKey = getSubmissionKey()
+        localStorage.setItem(submissionKey, 'true')
+      } else {
+        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)')
+      }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 
@@ -96,6 +104,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     // 🔥 修复：先禁用提交，防止用户在自动提交期间手动提交
     hasSubmitted.value = true
 
+    // 🔥 保存当前题目index，用于API返回后验证
+    const currentIndex = room.value?.currentIndex
+
     let defaultChoice
     if (question.value.type === 'CHOICE') {
       defaultChoice = question.value.options?.[0]?.key || 'A'
@@ -107,9 +118,14 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       // 🔥 修复：先调用API，成功后再设置localStorage
       await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
 
-      // 🔥 API成功后再设置localStorage
-      const submissionKey = getSubmissionKey()
-      localStorage.setItem(submissionKey, 'true')
+      // 🔥 API成功后，检查题目是否已经推进
+      // timeout触发fillDefaultAnswers后可能立即推进题目
+      if (room.value?.currentIndex === currentIndex) {
+        const submissionKey = getSubmissionKey()
+        localStorage.setItem(submissionKey, 'true')
+      } else {
+        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置')
+      }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 

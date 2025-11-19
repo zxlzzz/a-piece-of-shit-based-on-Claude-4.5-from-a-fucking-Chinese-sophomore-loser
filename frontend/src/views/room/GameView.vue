@@ -108,6 +108,21 @@ onMounted(() => {
     return
   }
 
+  // 🔥 修复：清理所有旧的submission记录（游戏开始时）
+  // 遍历localStorage，删除所有submission_${roomCode}_*的记录
+  const submissionPrefix = `submission_${roomCode.value}_`
+  const keysToRemove = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key && key.startsWith(submissionPrefix)) {
+      keysToRemove.push(key)
+    }
+  }
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key)
+    logger.debug('🧹 清理旧的提交记录:', key)
+  })
+
   const savedRoom = playerStore.loadRoom()
   if (savedRoom) {
     room.value = savedRoom
@@ -125,8 +140,11 @@ onMounted(() => {
       return
     }
 
-    if (question.value) {
-      restoreSubmitState()
+    // 🔥 修复：游戏开始时不恢复提交状态（因为已经清理了所有记录）
+    // restoreSubmitState() 会在WebSocket更新时根据实际情况恢复
+    // if (question.value) {
+    //   restoreSubmitState()
+    // }
     }
 
     // 🔥 改进：验证时间合理性后再恢复倒计时

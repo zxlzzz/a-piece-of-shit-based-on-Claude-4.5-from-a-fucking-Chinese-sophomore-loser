@@ -134,47 +134,48 @@ export function useGameWebSocket(
         const oldQuestionStartTime = room.value?.questionStartTime
         const newQuestionStartTime = update.questionStartTime
 
-        room.value = update
-        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
-        playerStore.setRoom(update)
-
-        // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
-        if (verifySubmissionState && update.submittedPlayerIds) {
-          verifySubmissionState(update.submittedPlayerIds)
-        }
-
         // 🔥 修复：不仅检查 currentIndex 变化，还检查 questionStartTime 变化（重复题场景）
         const indexChanged = newIndex !== undefined && oldIndex !== newIndex
         const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
 
+        // 🔥 修复：先处理题目切换逻辑，再验证提交状态（避免使用过时的localStorage）
         if (indexChanged || questionTimeChanged) {
           if (oldIndex !== undefined) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
             localStorage.removeItem(oldSubmissionKey)
           }
-          
+
           clearCountdown()
-          
+
           resetSubmitState()
+
+          // 🔥 先更新room，再检查新题的提交状态
+          room.value = update
           question.value = update.currentQuestion
-          
+
           const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
           const savedSubmission = localStorage.getItem(newSubmissionKey)
           if (savedSubmission === 'true') {
             restoreSubmitState()
-          } else {
           }
-          
+
           if (update.questionStartTime) {
             questionStartTime.value = new Date(update.questionStartTime)
             timeLimit.value = update.timeLimit || 30
             resetCountdown()
           }
         } else {
+          room.value = update
           question.value = update.currentQuestion
         }
-        
+
+        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
         playerStore.setRoom(update)
+
+        // 🔥 P1-1: 验证提交状态（在题目切换处理之后，确保localStorage已清理）
+        if (verifySubmissionState && update.submittedPlayerIds) {
+          verifySubmissionState(update.submittedPlayerIds)
+        }
 
         const isGameFinished = update.finished === true || update.status === 'FINISHED'
 

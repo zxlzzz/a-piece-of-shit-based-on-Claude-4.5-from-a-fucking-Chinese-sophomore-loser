@@ -35,7 +35,7 @@ spring:
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
       # 🔥 P0-4修复：添加查询超时，防止慢查询永久占用连接
-      javax.persistence.query.timeout: 10000  # 查询超时10秒（毫秒）
+      jakarta.persistence.query.timeout: 10000  # 查询超时10秒（毫秒）
       hibernate.query.timeout: 10            # Hibernate查询超时10秒（秒）
 
   # Redis 基础配置

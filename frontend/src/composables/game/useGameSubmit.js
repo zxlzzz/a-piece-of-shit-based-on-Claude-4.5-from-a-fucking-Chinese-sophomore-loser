@@ -44,13 +44,17 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：先禁用提交按钮，防止重复点击
     hasSubmitted.value = true
-    const submissionKey = getSubmissionKey()
-    localStorage.setItem(submissionKey, 'true')
 
     try {
-      // 🔥 改用HTTP API，更可靠
+      // 🔥 修复：先调用API，成功后再设置localStorage
+      // 避免页面刷新时localStorage已设置但API未完成的情况
       await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
+
+      // 🔥 API成功后再设置localStorage
+      const submissionKey = getSubmissionKey()
+      localStorage.setItem(submissionKey, 'true')
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 
@@ -62,8 +66,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
     } catch (error) {
       logger.error('❌ 提交失败:', error)
+      // 🔥 API失败，重置提交状态（不需要清理localStorage，因为还没设置）
       hasSubmitted.value = false
-      localStorage.removeItem(submissionKey)
 
       toast.add({
         severity: 'error',
@@ -89,6 +93,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：先禁用提交，防止用户在自动提交期间手动提交
     hasSubmitted.value = true
 
     let defaultChoice
@@ -98,12 +103,13 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       defaultChoice = question.value.min || 0
     }
 
-    const submissionKey = getSubmissionKey()
-    localStorage.setItem(submissionKey, 'true')
-
     try {
-      // 🔥 改用HTTP API，更可靠
+      // 🔥 修复：先调用API，成功后再设置localStorage
       await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
+
+      // 🔥 API成功后再设置localStorage
+      const submissionKey = getSubmissionKey()
+      localStorage.setItem(submissionKey, 'true')
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 
@@ -115,8 +121,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
     } catch (error) {
       logger.error('❌ 自动提交失败:', error)
+      // 🔥 API失败，重置提交状态
       hasSubmitted.value = false
-      localStorage.removeItem(submissionKey)
     }
   }
 

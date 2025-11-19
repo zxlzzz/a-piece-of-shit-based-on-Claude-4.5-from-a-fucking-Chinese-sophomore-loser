@@ -84,6 +84,12 @@ const handleSubmit = async () => {
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
 
+    // 🔥 如果后端没有返回 roomCode，清理前端可能缓存的过期房间数据
+    if (!authData.roomCode) {
+      playerStore.clearRoom()
+      logger.info('🧹 清理本地房间缓存（后端无房间信息）')
+    }
+
     toast.add({
       severity: 'success',
       summary: isLogin.value ? '登录成功' : '注册成功',
@@ -91,9 +97,14 @@ const handleSubmit = async () => {
       life: 2000
     })
 
-    // 跳转到主页
+    // 🔥 检查是否在房间中，自动进入房间
     setTimeout(() => {
-      router.push('/find')
+      if (authData.roomCode) {
+        logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)
+        router.push(`/room/${authData.roomCode}`)
+      } else {
+        router.push('/find')
+      }
     }, 500)
 
   } catch (err) {
@@ -145,6 +156,12 @@ const handleGuestLogin = async () => {
     // 保存用户信息到 store
     playerStore.setPlayer(authData)
 
+    // 🔥 游客登录时始终清理房间缓存（游客不应该有房间）
+    if (!authData.roomCode) {
+      playerStore.clearRoom()
+      logger.info('🧹 清理本地房间缓存（游客登录）')
+    }
+
     toast.add({
       severity: 'success',
       summary: '欢迎试玩',
@@ -152,9 +169,14 @@ const handleGuestLogin = async () => {
       life: 2000
     })
 
-    // 跳转到主页
+    // 🔥 检查是否在房间中（游客通常不会在房间中）
     setTimeout(() => {
-      router.push('/find')
+      if (authData.roomCode) {
+        logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)
+        router.push(`/room/${authData.roomCode}`)
+      } else {
+        router.push('/find')
+      }
     }, 500)
 
   } catch (err) {

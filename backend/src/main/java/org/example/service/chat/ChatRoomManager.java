@@ -47,16 +47,19 @@ public class ChatRoomManager {
 
     /**
      * 玩家离开聊天室
+     * 🔥 修复P3-2：立即清理空Set，避免内存堆积
      */
     public void playerLeave(String roomCode, String playerId) {
         Set<String> users = chatRoomUsers.get(roomCode);
         if (users != null) {
             users.remove(playerId);
-            log.debug("玩家 {} 离开聊天室 {}，剩余在线: {}", playerId, roomCode, users.size());
 
-            // 如果没有人了，记录最后活跃时间
+            // 🔥 修复：如果Set为空，立即移除
             if (users.isEmpty()) {
-                log.debug("聊天室 {} 已无在线用户", roomCode);
+                chatRoomUsers.remove(roomCode);
+                log.debug("聊天室 {} 已无在线用户，移除空Set", roomCode);
+            } else {
+                log.debug("玩家 {} 离开聊天室 {}，剩余在线: {}", playerId, roomCode, users.size());
             }
         }
     }
@@ -102,6 +105,16 @@ public class ChatRoomManager {
         if (cleaned > 0) {
             log.info("本次清理了 {} 个不活跃聊天室", cleaned);
         }
+    }
+
+    /**
+     * 🔥 修复问题3：立即清理指定聊天室（房间删除时主动调用）
+     */
+    public void forceCleanup(String roomCode) {
+        activeChatRooms.remove(roomCode);
+        chatRoomLastActivity.remove(roomCode);
+        chatRoomUsers.remove(roomCode);
+        log.info("🧹 已强制清理聊天室: {}", roomCode);
     }
 
     /**

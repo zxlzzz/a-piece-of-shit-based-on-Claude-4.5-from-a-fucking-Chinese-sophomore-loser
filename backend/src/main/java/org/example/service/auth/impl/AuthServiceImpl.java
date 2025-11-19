@@ -63,6 +63,7 @@ public class AuthServiceImpl implements AuthService {
                 .playerId(playerId)
                 .username(username)
                 .name(request.getName())
+                .roomCode(null)  // 新注册用户不在房间中
                 .build();
     }
 
@@ -89,13 +90,22 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token
         String token = jwtUtil.generateToken(username, player.getPlayerId());
 
-        log.info("用户登录成功: username={}, playerId={}", username, player.getPlayerId());
+        // 检查玩家是否在房间中
+        String roomCode = null;
+        if (player.getRoom() != null) {
+            roomCode = player.getRoom().getRoomCode();
+            log.info("用户登录成功，自动进入房间: username={}, playerId={}, roomCode={}",
+                     username, player.getPlayerId(), roomCode);
+        } else {
+            log.info("用户登录成功: username={}, playerId={}", username, player.getPlayerId());
+        }
 
         return AuthResponseDTO.builder()
                 .token(token)
                 .playerId(player.getPlayerId())
                 .username(username)
                 .name(player.getName())
+                .roomCode(roomCode)
                 .build();
     }
 
@@ -139,6 +149,7 @@ public class AuthServiceImpl implements AuthService {
                 .playerId(playerId)
                 .username(null)  // 游客没有 username
                 .name(name)
+                .roomCode(null)  // 游客首次登录不在房间中
                 .build();
     }
 

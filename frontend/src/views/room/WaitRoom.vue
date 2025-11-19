@@ -4,7 +4,8 @@ import { usePlayerStore } from '@/stores/player'
 import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
 import { logger } from '@/utils/logger'
-import { connect, disconnect, isConnected, sendLeave, sendReady, sendStart, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
+import { connect, disconnect, isConnected, subscribeRoom, unsubscribeAll } from '@/websocket/ws'
+import { setPlayerReady, startGame } from '@/api'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -141,16 +142,17 @@ const handleRoomDeleted = (event) => {
 }
 
 const handlePlayerKicked = (event) => {
+  const reason = event.detail?.reason || event.detail?.message || '您已被房主踢出房间'
   toast.add({
-    severity: 'error',
-    summary: '您已被踢出',
-    detail: event.detail?.message || '您已被房主踢出房间',
-    life: 3000
+    severity: 'warn',
+    summary: '账号登录提示',
+    detail: reason,
+    life: 4000
   })
   playerStore.clearRoom()
   setTimeout(() => {
     router.push('/find')
-  }, 1000)
+  }, 1500)
 }
 
 // 🔥 新增：监听 WebSocket 错误
@@ -346,13 +348,10 @@ const handleReady = async () => {
 
   loading.value = true
   try {
-    sendReady({
-      roomCode: roomCode.value,
-      playerId: playerStore.playerId,
-      ready: newReadyState
-    })
+    // 🔥 改用HTTP API，更可靠
+    await setPlayerReady(roomCode.value, playerStore.playerId, newReadyState)
 
-    // 🔥 准备消息已通过WebSocket发送，ChatRoom会自动接收并显示
+    // 🔥 房间状态更新会通过WebSocket自动推送
 
     toast.add({
       severity: 'success',
@@ -366,7 +365,7 @@ const handleReady = async () => {
     toast.add({
       severity: 'error',
       summary: '失败',
-      detail: '设置准备状态失败',
+      detail: error.response?.data?.message || '设置准备状态失败',
       life: 3000
     })
   } finally {
@@ -374,28 +373,31 @@ const handleReady = async () => {
   }
 }
 
-const handleStart = () => {
+const handleStart = async () => {
   if (!isAllReady.value) return
-  
-  // 🔥 先检查连接状态
-  if (!wsConnected.value) {
-    logger.error('❌ WebSocket 未连接，无法开始游戏')
+
+  try {
+    // 🔥 改用HTTP API，更可靠
+    await startGame(roomCode.value)
+
+    // 🔥 游戏开始后，房间状态会通过WebSocket推送
+    // 前端会自动跳转到游戏页面
+
+    toast.add({
+      severity: 'info',
+      summary: '开始游戏',
+      detail: '正在启动游戏...',
+      life: 2000
+    })
+  } catch (error) {
+    logger.error('❌ 开始游戏失败:', error)
     toast.add({
       severity: 'error',
-      summary: '连接错误',
-      detail: 'WebSocket 未连接，无法开始游戏',
+      summary: '开始失败',
+      detail: error.response?.data?.message || '开始游戏失败',
       life: 3000
     })
-    return
   }
-  
-  sendStart({ roomCode: roomCode.value })
-  toast.add({
-    severity: 'info',
-    summary: '开始游戏',
-    detail: '正在启动游戏...',
-    life: 2000
-  })
 }
 
 const handleLeave = () => {
@@ -408,13 +410,8 @@ const handleLeave = () => {
     return
   }
 
-  if (wsConnected.value) {
-    sendLeave({
-      roomCode: roomCode.value,
-      playerId: playerStore.playerId
-    })
-  }
-
+  // 🔥 离开房间：清除本地状态并跳转
+  // WebSocket断开连接会被后端监听器捕获，自动处理玩家离开逻辑
   playerStore.clearRoom()
   router.push("/find")
 }

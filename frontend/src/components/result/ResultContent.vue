@@ -1,5 +1,7 @@
 <script setup>
 import { usePlayerStore } from '@/stores/player'
+import { useChatStore } from '@/stores/chat'
+import { useRouter } from 'vue-router'
 import { computed, ref } from 'vue'
 import QuestionFeedback from '@/components/feedback/QuestionFeedback.vue'
 
@@ -9,6 +11,9 @@ const props = defineProps({
     required: true
   }
 })
+
+const router = useRouter()
+const chatStore = useChatStore()
 
 const isPassed = computed(() => {
   return currentPlayerRank.value?.passed ?? true  // 默认通关
@@ -26,6 +31,13 @@ const currentPlayerRank = computed(() => {
 
 const toggleQuestion = (index) => {
   expandedQuestion.value = expandedQuestion.value === index ? null : index
+}
+
+// 🔥 修复问题7.1: 返回大厅时清理playerStore和chatStore
+const handleBackToLobby = () => {
+  playerStore.clearRoom()
+  chatStore.clearChat()
+  router.push('/find')
 }
 
 const getMyScore = (questionDetail) => {
@@ -120,7 +132,7 @@ const getMyChoice = (questionDetail) => {
     <!-- 🔥 新增：操作按钮 -->
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
       <button
-        @click="$router.push('/find')"
+        @click="handleBackToLobby"
         class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg
                font-medium transition-colors flex items-center justify-center gap-2"
       >

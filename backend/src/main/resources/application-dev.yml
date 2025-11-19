@@ -14,9 +14,12 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop  # 开发环境允许自动更新表结构
-    show-sql: true      # 显示 SQL 语句
+    show-sql: false     # 不显示 SQL 语句
     properties:
-      hibernate.format_sql: true  # 格式化 SQL 输出
+      hibernate.format_sql: false        # 不格式化 SQL 输出
+      hibernate.show_sql: false          # 明确禁用 SQL 输出
+      hibernate.use_sql_comments: false  # 禁用 SQL 注释
+      hibernate.highlight_sql: false     # 禁用 SQL 高亮
 
   # Redis 配置（开发环境）
   data:
@@ -25,13 +28,15 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD:}  # 开发环境可以无密码
 
-# CORS 配置（开发环境 - 允许所有来源）
+# CORS 配置（开发环境）
+# 🔥 P1-8修复：不能使用'*'因为allowCredentials=true
+# 开发环境明确指定前端地址
 cors:
-  allowed-origins: '*'
+  allowed-origins: 'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173'
 
-# JWT 配置（开发环境 - 使用简单的密钥）
+# JWT 配置（开发环境 - 🔥 P0-1修复：强制配置环境变量，无默认值）
 jwt:
-  secret: ${JWT_SECRET:dev-secret-key-for-development-only-do-not-use-in-production}
+  secret: ${JWT_SECRET}  # 必须通过环境变量配置，建议使用256位以上随机密钥
 
 # 日志配置（开发环境 - 精简日志）
 logging:
@@ -39,6 +44,10 @@ logging:
     root: WARN                      # 框架只显示警告和错误
     org.example: INFO               # 项目代码显示 INFO 及以上
     org.hibernate: WARN             # Hibernate 只显示警告
+    org.hibernate.SQL: OFF          # 🔥 完全禁用 SQL 日志
+    org.hibernate.type: OFF         # 🔥 禁用 SQL 参数绑定日志
+    org.hibernate.stat: OFF         # 🔥 禁用 Hibernate 统计日志
     org.springframework: WARN       # Spring 只显示警告
+    com.zaxxer.hikari: WARN         # HikariCP 只显示警告
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

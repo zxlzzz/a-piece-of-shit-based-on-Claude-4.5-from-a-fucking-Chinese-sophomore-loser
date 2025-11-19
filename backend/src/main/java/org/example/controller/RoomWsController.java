@@ -17,17 +17,32 @@ import org.springframework.stereotype.Controller;
 
 import java.util.Map;
 
+/**
+ * 🔥 已废弃：WebSocket命令处理器
+ *
+ * 优化策略：采用混合模式
+ * - 所有操作命令改用HTTP API（GameController.java）
+ * - WebSocket仅用于服务器推送状态更新（RoomStateBroadcaster.java）
+ *
+ * 优势：
+ * 1. HTTP操作更可靠，掉线后可重试
+ * 2. 减少WebSocket负担，连接更稳定
+ * 3. 更容易调试和监控
+ *
+ * 本文件保留但所有@MessageMapping已禁用，防止客户端误调用
+ */
 @Slf4j
 @Controller
 @RequiredArgsConstructor
 public class RoomWsController {
 
     private final GameService gameService;
-    private final RoomStateBroadcaster broadcaster; // 🔥 改用 broadcaster
+    private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
 
-    @MessageMapping("/join")
-    public void handleJoin(@Payload JoinRequest request) {
+    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/join
+    // @MessageMapping("/join")
+    public void handleJoin_DEPRECATED(@Payload JoinRequest request) {
         try {
             // 🔥 检查是否是重连
             GameRoom gameRoom = gameService.getGameRoom(request.getRoomCode());
@@ -60,8 +75,9 @@ public class RoomWsController {
         }
     }
 
-    @MessageMapping("/start")
-    public void handleStart(@Payload Map<String, String> request) {
+    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/start
+    // @MessageMapping("/start")
+    public void handleStart_DEPRECATED(@Payload Map<String, String> request) {
         try {
             String roomCode = request.get("roomCode");
             RoomDTO room = gameService.startGame(roomCode);
@@ -81,8 +97,9 @@ public class RoomWsController {
         }
     }
 
-    @MessageMapping("/submit")
-    public void handleSubmit(@Payload SubmitRequest request) {
+    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/submit
+    // @MessageMapping("/submit")
+    public void handleSubmit_DEPRECATED(@Payload SubmitRequest request) {
         try {
             RoomDTO room = gameService.submitAnswer(
                     request.getRoomCode(),
@@ -112,8 +129,9 @@ public class RoomWsController {
         }
     }
 
-    @MessageMapping("/ready")
-    public void handleReady(@Payload Map<String, Object> request) {
+    // 🔥 已废弃：请使用 HTTP PUT /api/rooms/{roomCode}/players/{playerId}/ready
+    // @MessageMapping("/ready")
+    public void handleReady_DEPRECATED(@Payload Map<String, Object> request) {
         try {
             String roomCode = (String) request.get("roomCode");
             String playerId = (String) request.get("playerId");
@@ -136,8 +154,9 @@ public class RoomWsController {
         }
     }
 
-    @MessageMapping("/leave")
-    public void handleLeave(@Payload Map<String, String> payload) {
+    // 🔥 已废弃：离开房间通过关闭页面/浏览器自动处理，或使用HTTP DELETE
+    // @MessageMapping("/leave")
+    public void handleLeave_DEPRECATED(@Payload Map<String, String> payload) {
         String roomCode = payload.get("roomCode");
         String playerId = payload.get("playerId");
 

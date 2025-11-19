@@ -1,6 +1,6 @@
 import { logger } from '@/utils/logger'
 import { ref, onMounted, onUnmounted } from 'vue'
-import { isConnected, subscribeRoom, unsubscribeAll, registerSubscriptionCallback, unregisterSubscriptionCallback } from '@/websocket/ws'
+import { isConnected, subscribeRoom, unsubscribeAll, unsubscribeRoom, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { getRoomStatus } from '@/api'
 
 export function useGameWebSocket(
@@ -74,6 +74,11 @@ export function useGameWebSocket(
       question.value = updatedRoom.currentQuestion
       playerStore.setRoom(updatedRoom)
 
+      // 🔥 修复问题4.6：重连时恢复提交状态
+      if (restoreSubmitState) {
+        restoreSubmitState()
+      }
+
       // 🔥 P1-1: 刷新时也验证提交状态
       if (verifySubmissionState && updatedRoom.submittedPlayerIds) {
         verifySubmissionState(updatedRoom.submittedPlayerIds)
@@ -123,11 +128,13 @@ export function useGameWebSocket(
     const subs = subscribeRoom(
       roomCode.value,
       (update) => {
-        
+
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
 
         room.value = update
+        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
+        playerStore.setRoom(update)
 
         // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
         if (verifySubmissionState && update.submittedPlayerIds) {
@@ -235,16 +242,13 @@ export function useGameWebSocket(
         life: 3000
       })
 
-      // 等待连接建立（最多3秒）
-      let waited = 0
-      while (!isConnected() && waited < 3000) {
-        await new Promise(resolve => setTimeout(resolve, 200))
-        waited += 200
-      }
-
-      wsConnected.value = isConnected()
-
-      if (!wsConnected.value) {
+      // 🔥 优化：使用事件驱动等待连接，避免轮询（最多3秒）
+      try {
+        await waitForConnection(3000)
+        wsConnected.value = true
+      } catch (error) {
+        wsConnected.value = false
+        logger.error('GameView: 等待连接超时', error)
         toast.add({
           severity: 'error',
           summary: '连接失败',
@@ -270,9 +274,9 @@ export function useGameWebSocket(
   })
 
   onUnmounted(() => {
-    if (subscriptions.value.length > 0) {
-      unsubscribeAll(subscriptions.value)
-    }
+    // 🔥 修复问题2.1：使用unsubscribeRoom清理订阅，确保从全局Map中移除
+    unsubscribeRoom(roomCode.value)
+
     window.removeEventListener('websocket-reconnecting', handleReconnecting)
     window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)

@@ -7,7 +7,7 @@ export const TOAST_DEFAULT_LIFE = 3000 // Toast默认显示时长（毫秒）
 export const API_TIMEOUT = 10000 // API请求超时时间（毫秒）
 
 // ============ 本地存储相关 ============
-export const ROOM_DATA_EXPIRY_TIME = 60 * 60 * 1000 // 房间数据过期时间（1小时）
+export const ROOM_DATA_EXPIRY_TIME = 30 * 60 * 1000 // 房间数据过期时间（30分钟，避免后端重启后数据不同步）
 
 // ============ 草稿画板相关 ============
 export const CANVAS_LINE_WIDTHS = [1, 2, 4] // 可选的画笔粗细
@@ -28,3 +28,8 @@ export const WS_BASE_RECONNECT_DELAY = 1000 // WebSocket基础重连延迟（毫
 export const WS_RECONNECT_DELAY = 3000 // WebSocket自动重连延迟（毫秒）
 export const WS_CONNECT_TIMEOUT = 15000 // WebSocket连接超时时间（毫秒）
 export const WS_CONNECT_PROMISE_TIMEOUT = 20000 // WebSocket连接Promise超时（毫秒，必须大于CONNECT_TIMEOUT）
+
+// 🔥 修复P1-5：定义WebSocket主题路径常量，确保前后端路径一致
+// 🔥 P0-3修复：私聊使用user queue确保隐私安全
+export const WS_TOPIC_PRIVATE_MESSAGE = '/user/queue/private' // 私聊消息主题（user queue）
+export const WS_TOPIC_ROOM_CHAT = (roomCode) => `/topic/room/${roomCode}/chat` // 房间聊天主题

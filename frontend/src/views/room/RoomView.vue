@@ -1,6 +1,6 @@
 <script setup>
 import { logger } from '@/utils/logger'
-import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom } from '@/api'
+import { createRoom, getAllActiveRooms, getRoomStatus, joinRoom, deleteRoom } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
@@ -21,8 +21,8 @@ const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 const searchQuery = ref('') // 🔥 房间搜索关键词
 
-// 🔥 自动刷新（性能优化：降低轮询频率）
-const REFRESH_INTERVAL = 10000 // 10秒刷新一次（从5秒调整）
+// 🔥 自动刷新（修复问题6：缩短轮询间隔，减少房间删除延迟）
+const REFRESH_INTERVAL = 5000 // 5秒刷新一次（从10秒优化）
 let refreshTimer = null
 
 // 🔥 过滤后的房间列表（支持前缀匹配）
@@ -144,39 +144,66 @@ const loadActiveRooms = async () => {
 
 const handleCreate = async ({ questionCount, maxPlayers, password, questionTagIds }) => {
   loading.value = true
+  let createdRoomCode = null  // 🔥 修复问题1.1: 记录创建的房间代码，用于清理
+
   try {
     const createResponse = await createRoom(maxPlayers, questionCount, 30, password, questionTagIds)
     const roomData = createResponse.data
+    createdRoomCode = roomData.roomCode  // 🔥 保存房间代码
 
-    const joinResponse = await joinRoom(
-      roomData.roomCode,
-      playerStore.playerId,
-      playerStore.playerName,
-      false,  // 房主不能是观战者
-      password  // 房主加入时传入密码
-    )
+    // 🔥 修复问题1.1: 尝试加入房间，失败时清理
+    try {
+      const joinResponse = await joinRoom(
+        roomData.roomCode,
+        playerStore.playerId,
+        playerStore.playerName,
+        false,  // 房主不能是观战者
+        password  // 房主加入时传入密码
+      )
 
-    currentRoom.value = joinResponse.data
-    playerStore.setRoom(joinResponse.data)
-    playerStore.setSpectator(false)
-    
-    toast.add({
-      severity: 'success',
-      summary: '成功',
-      detail: `房间 ${roomData.roomCode} 创建成功`,
-      life: 2000
-    })
+      currentRoom.value = joinResponse.data
+      playerStore.setRoom(joinResponse.data)
+      playerStore.setSpectator(false)
 
-    router.push(`/wait/${roomData.roomCode}`)
-    
+      toast.add({
+        severity: 'success',
+        summary: '成功',
+        detail: `房间 ${roomData.roomCode} 创建成功`,
+        life: 2000
+      })
+
+      router.push(`/wait/${roomData.roomCode}`)
+    } catch (joinError) {
+      // 🔥 修复问题1.1: 加入失败，清理已创建的"幽灵房间"
+      logger.error("加入房间失败，尝试清理幽灵房间:", joinError)
+      try {
+        await deleteRoom(createdRoomCode)
+        logger.info(`✅ 已清理幽灵房间: ${createdRoomCode}`)
+      } catch (deleteError) {
+        logger.error("清理幽灵房间失败:", deleteError)
+      }
+
+      // 向用户展示加入失败的错误
+      toast.add({
+        severity: 'error',
+        summary: '加入房间失败',
+        detail: joinError.response?.data?.message || '无法加入刚创建的房间，房间已清理',
+        life: 3000
+      })
+      throw joinError  // 重新抛出，让外层catch处理
+    }
+
   } catch (error) {
     logger.error("创建房间失败:", error)
-    toast.add({
-      severity: 'error',
-      summary: '创建失败',
-      detail: error.response?.data?.message || '创建房间失败',
-      life: 3000
-    })
+    // 只有在不是加入失败的情况下才显示创建失败
+    if (!createdRoomCode) {
+      toast.add({
+        severity: 'error',
+        summary: '创建失败',
+        detail: error.response?.data?.message || '创建房间失败',
+        life: 3000
+      })
+    }
   } finally {
     loading.value = false
   }

@@ -15,6 +15,7 @@ import org.example.pojo.RoomStatus;
 import org.example.repository.PlayerRepository;
 import org.example.repository.RoomRepository;
 import org.example.service.cache.RoomCache;
+import org.example.service.chat.ChatRoomManager;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.timer.QuestionTimerService;
 import org.example.utils.RoomLock;
@@ -40,6 +41,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
     private final RoomCache roomCache;
     private final ObjectMapper objectMapper;
     private final QuestionTimerService timerService;  // 🔥 P1-2: 用于取消定时器
+    private final ChatRoomManager chatRoomManager;  // 🔥 用于清理聊天室
 
     @Override
     @Transactional
@@ -114,9 +116,26 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 }
             }
 
-            // 检查房间状态
+            // 🔥 修复问题2：检查房间状态（允许已在房间的玩家刷新/重连）
             if (room.getStatus() != RoomStatus.WAITING) {
-                throw new BusinessException("房间已开始游戏或已结束");
+                // 检查玩家是否已在房间内（允许重连）
+                boolean playerInRoom = gameRoom.getPlayers().stream()
+                        .anyMatch(p -> p.getPlayerId().equals(playerId));
+
+                if (!playerInRoom) {
+                    // 新玩家不允许加入进行中的游戏
+                    throw new BusinessException("房间已开始游戏或已结束");
+                }
+
+                // 🔥 已在房间的玩家允许刷新/重连，检查是否在断线列表中
+                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
+                    log.info("🔄 玩家 {} 在游戏进行中刷新页面，从断线列表移除", playerName);
+                    gameRoom.getDisconnectedPlayers().remove(playerId);
+                    roomCache.syncToRedis(roomCode);
+                }
+
+                log.info("✅ 玩家 {} 已在房间中，游戏进行中刷新页面成功", playerName);
+                return; // 跳过后续加入逻辑
             }
 
             // 🔥 检查房间是否已满（观战者不计入人数）
@@ -170,6 +189,15 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
                 // 🔥 同步到 Redis
                 roomCache.syncToRedis(roomCode);
+            } else {
+                // 🔥 修复问题3：玩家已存在，检查是否在断线列表中
+                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
+                    log.info("🔄 玩家 {} 刷新页面（等待中），从断线列表移除", playerName);
+                    gameRoom.getDisconnectedPlayers().remove(playerId);
+                    roomCache.syncToRedis(roomCode);
+                }
+
+                log.info("✅ 玩家 {} 已在房间中，刷新页面成功", playerName);
             }
         }
     }
@@ -199,11 +227,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         gameRoom.getPlayers().get(0).getPlayerId().equals(playerId);
 
                 if (isRoomOwner) {
-                    // 房主离开，解散房间
-                    roomCache.remove(roomCode);
-                    room.setStatus(RoomStatus.FINISHED);
-                    roomRepository.save(room);
-
+                    // 🔥 房主离开，使用原子删除方法
+                    deleteRoomAtomically(roomCode, gameRoom);
                     log.info("🏠 房主 {} 离开，房间 {} 已解散", playerName, roomCode);
                     return false; // 房间已解散
                 } else {
@@ -235,13 +260,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     // 🔥 改：游戏进行中时不立即删除，给重连时间
                     if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                         log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
+                        // 🔥 修复问题4.4：同步状态到Redis，以便返回最新状态并广播
+                        roomCache.syncToRedis(roomCode);
                         // 不删除房间，保留5分钟
                         return true; // 房间仍存在
                     } else {
-                        // 游戏未开始或已结束，可以删除
-                        roomCache.remove(roomCode);
-                        room.setStatus(RoomStatus.FINISHED);
-                        roomRepository.save(room);
+                        // 🔥 游戏未开始或已结束，使用原子删除方法
+                        deleteRoomAtomically(roomCode, gameRoom);
                         log.info("🏠 所有玩家离开，房间 {} 已解散", roomCode);
                         return false; // 房间已解散
                     }
@@ -533,15 +558,10 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 playerRepository.save(player);
             }
 
-            // 检查是否房间为空
+            // 🔥 检查是否房间为空，使用原子删除方法（问题8）
             if (gameRoom.getPlayers().isEmpty()) {
                 log.warn("🏠 房间 {} 所有玩家都已离开，准备解散", roomCode);
-                RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
-                if (room != null) {
-                    room.setStatus(RoomStatus.FINISHED);
-                    roomRepository.save(room);
-                }
-                roomCache.remove(roomCode);
+                deleteRoomAtomically(roomCode, gameRoom);
             }
         }
     }
@@ -617,7 +637,92 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public void deleteRoom(String roomCode) {
+        GameRoom gameRoom = roomCache.get(roomCode);
+        deleteRoomAtomically(roomCode, gameRoom);
+    }
+
     // ==================== 私有方法 ====================
+
+    /**
+     * 🔥 原子删除房间（修复问题1/2/3/4/5/7 + P0-6）
+     * - 问题1: 真正删除数据库记录，而不是只标记FINISHED
+     * - 问题2: 清理所有关联的玩家记录
+     * - 问题3: 主动清理聊天室，不等待5分钟定时任务
+     * - 问题4: 统一删除方法，确保通知只发送一次
+     * - 问题5: 使用带重试的缓存删除
+     * - 问题7: 原子操作，防止并发竞态条件
+     * - P0-6: 清理RoomLock，防止锁对象泄漏
+     *
+     * @param roomCode 房间代码
+     * @param gameRoom 内存中的房间对象（可选，如果已经获取）
+     * @return 被删除的房间实体（用于发送删除通知）
+     */
+    @Transactional
+    private RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
+        RoomEntity room;
+
+        // 🔥 使用RoomLock确保原子性（问题7）
+        synchronized (RoomLock.getLock(roomCode)) {
+            // 1. 查询房间实体
+            room = roomRepository.findByRoomCode(roomCode).orElse(null);
+            if (room == null) {
+                log.warn("⚠️ 房间 {} 已不存在，跳过删除", roomCode);
+                RoomLock.removeLock(roomCode); // 清理锁
+                return null;
+            }
+
+            // 2. 检查房间状态，防止重复删除（问题7）
+            if (room.getStatus() == RoomStatus.FINISHED && room.getId() == null) {
+                log.warn("⚠️ 房间 {} 已处于删除状态，跳过重复删除", roomCode);
+                RoomLock.removeLock(roomCode); // 清理锁
+                return null;
+            }
+
+            log.info("🗑️ 开始原子删除房间: {}", roomCode);
+
+            // 3. 清理所有关联的玩家记录（问题2）
+            if (gameRoom != null) {
+                for (PlayerDTO player : gameRoom.getPlayers()) {
+                    String playerId = player.getPlayerId();
+                    // Bot玩家不在数据库中，跳过
+                    if (!playerId.startsWith("BOT_")) {
+                        PlayerEntity playerEntity = playerRepository.findByPlayerId(playerId).orElse(null);
+                        if (playerEntity != null) {
+                            playerEntity.setRoom(null);
+                            playerEntity.setReady(false);
+                            playerRepository.save(playerEntity);
+                            log.debug("✅ 已清理玩家 {} 的房间关联", playerId);
+                        }
+                    }
+                }
+            }
+
+            // 4. 取消定时器
+            timerService.cancelTimeout(roomCode);
+            log.debug("⏹️ 已取消房间 {} 的定时器", roomCode);
+
+            // 5. 删除缓存（带重试）（问题5）
+            roomCache.removeWithRetry(roomCode);
+            log.debug("🗑️ 已从缓存移除房间 {}", roomCode);
+
+            // 6. 主动清理聊天室（问题3）
+            chatRoomManager.forceCleanup(roomCode);
+            log.debug("🧹 已清理聊天室 {}", roomCode);
+
+            // 7. 真正删除数据库记录（问题1）
+            roomRepository.delete(room);
+            log.info("✅ 房间 {} 已从数据库删除", roomCode);
+        }
+
+        // 🔥 P0-6: 在synchronized块外清理锁，防止内存泄漏
+        RoomLock.removeLock(roomCode);
+        log.debug("🔧 已清理房间 {} 的锁对象", roomCode);
+
+        return room;
+    }
 
     private String generateRoomCode() {
         return UUID.randomUUID().toString().substring(0, 6).toUpperCase();

@@ -165,9 +165,11 @@ public class GameServiceImpl implements GameService {
                     try {
                         return roomLifecycleService.toRoomDTO(gameRoom.getRoomCode());
                     } catch (BusinessException e) {
-                        // 🔥 房间在缓存中但数据库中不存在，跳过并清理
-                        log.warn("⚠️ 房间 {} 在缓存中但数据库中不存在，已清理", gameRoom.getRoomCode());
-                        roomCache.remove(gameRoom.getRoomCode());
+                        // 🔥 P1-2修复：房间在缓存中但数据库中不存在，清理时需取消定时器
+                        String orphanedRoomCode = gameRoom.getRoomCode();
+                        log.warn("⚠️ 房间 {} 在缓存中但数据库中不存在，已清理", orphanedRoomCode);
+                        timerService.cancelTimeout(orphanedRoomCode);
+                        roomCache.remove(orphanedRoomCode);
                         return null;
                     }
                 })

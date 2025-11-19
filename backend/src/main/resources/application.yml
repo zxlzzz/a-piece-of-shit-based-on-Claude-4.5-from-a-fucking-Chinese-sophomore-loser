@@ -18,15 +18,21 @@ spring:
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: ${DB_POOL_MIN_IDLE:5}
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+      # 🔥 P0-4修复：优化连接池超时配置，防止连接泄漏
+      connection-timeout: 5000         # 获取连接超时5秒（从30秒降低，快速失败）
+      idle-timeout: 60000              # 空闲连接60秒后回收（从600秒降低，及时释放）
+      max-lifetime: 600000             # 连接最长存活10分钟（从30分钟降低，避免长期占用）
+      # 🔥 P0-4修复：添加泄漏检测，帮助发现连接未释放的问题
+      leak-detection-threshold: 30000  # 连接持有超过30秒警告（答题时间内不应持有连接）
 
   # JPA 基础配置
   jpa:
     open-in-view: false
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
+      # 🔥 P0-4修复：添加查询超时，防止慢查询永久占用连接
+      javax.persistence.query.timeout: 10000  # 查询超时10秒（毫秒）
+      hibernate.query.timeout: 10            # Hibernate查询超时10秒（秒）
 
   # Redis 基础配置
   data:

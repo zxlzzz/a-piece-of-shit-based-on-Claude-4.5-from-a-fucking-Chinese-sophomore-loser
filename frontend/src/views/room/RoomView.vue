@@ -54,17 +54,8 @@ const stopAutoRefresh = () => {
 
 // 初始化
 onMounted(async () => {
-  // 检查登录状态
-  if (!playerStore.isLoggedIn) {
-    toast.add({
-      severity: 'warn',
-      summary: '请先登录',
-      detail: '请先登录后再使用房间功能',
-      life: 3000
-    })
-    router.push('/login')
-    return
-  }
+  // 🔥 P1-8修复：移除登录检查，允许游客浏览房间列表
+  // 创建/加入房间时再检查登录状态
 
   // 🔥 新增：检查路由错误参数并显示提示
   const error = route.query.error
@@ -143,6 +134,18 @@ const loadActiveRooms = async () => {
 }
 
 const handleCreate = async ({ questionCount, maxPlayers, password, questionTagIds }) => {
+  // 🔥 P1-8: 创建房间时检查登录状态
+  if (!playerStore.isLoggedIn) {
+    toast.add({
+      severity: 'warn',
+      summary: '请先登录',
+      detail: '请登录后再创建房间',
+      life: 3000
+    })
+    router.push('/login')
+    return
+  }
+
   loading.value = true
   let createdRoomCode = null  // 🔥 修复问题1.1: 记录创建的房间代码，用于清理
 
@@ -216,6 +219,18 @@ const handleEnterRoom = () => {
 }
 
 const handleJoinRoom = async (roomCode, hasPassword, spectator = false) => {
+  // 🔥 P1-8: 加入房间时检查登录状态
+  if (!playerStore.isLoggedIn) {
+    toast.add({
+      severity: 'warn',
+      summary: '请先登录',
+      detail: '请登录后再加入房间',
+      life: 3000
+    })
+    router.push('/login')
+    return
+  }
+
   let password = null
 
   // 如果房间有密码，提示输入

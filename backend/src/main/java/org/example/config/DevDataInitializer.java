@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
@@ -49,6 +50,8 @@ public class DevDataInitializer implements ApplicationRunner {
                         .name("测试玩家-" + username)
                         .spectator(false)
                         .ready(false)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
                         .deleted(false)
                         .build();
 

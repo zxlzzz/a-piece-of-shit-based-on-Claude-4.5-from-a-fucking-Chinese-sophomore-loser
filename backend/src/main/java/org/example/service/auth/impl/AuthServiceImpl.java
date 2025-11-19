@@ -15,6 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -48,6 +49,9 @@ public class AuthServiceImpl implements AuthService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .name(request.getName())
                 .ready(false)
+                .createdAt(LocalDateTime.now())
+                .deleted(false)
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         playerRepository.save(player);

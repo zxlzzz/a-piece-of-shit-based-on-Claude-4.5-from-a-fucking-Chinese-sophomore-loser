@@ -55,7 +55,6 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token
         String token = jwtUtil.generateToken(username, playerId);
 
-        log.info("用户注册成功: username={}, playerId={}", username, playerId);
 
         return AuthResponseDTO.builder()
                 .token(token)
@@ -94,10 +93,8 @@ public class AuthServiceImpl implements AuthService {
         String roomCode = null;
         if (player.getRoom() != null) {
             roomCode = player.getRoom().getRoomCode();
-            log.info("用户登录成功，自动进入房间: username={}, playerId={}, roomCode={}",
                      username, player.getPlayerId(), roomCode);
         } else {
-            log.info("用户登录成功: username={}, playerId={}", username, player.getPlayerId());
         }
 
         return AuthResponseDTO.builder()
@@ -141,7 +138,6 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token（使用 playerId 作为标识）
         String token = jwtUtil.generateToken(playerId, playerId);
 
-        log.info("游客试玩: playerId={}, name={}", playerId, name);
 
         return AuthResponseDTO.builder()
                 .token(token)

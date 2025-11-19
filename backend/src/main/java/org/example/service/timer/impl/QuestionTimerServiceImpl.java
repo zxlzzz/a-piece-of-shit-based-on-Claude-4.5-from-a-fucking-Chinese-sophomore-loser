@@ -26,7 +26,6 @@ public class QuestionTimerServiceImpl implements QuestionTimerService {
         // 启动新定时器
         ScheduledFuture<?> future = scheduler.schedule(() -> {
             try {
-                log.info("⏰ 房间 {} 题目超时，执行回调", roomCode);
                 onTimeout.run();
             } catch (Exception e) {
                 log.error("❌ 房间 {} 超时回调执行失败", roomCode, e);
@@ -36,7 +35,6 @@ public class QuestionTimerServiceImpl implements QuestionTimerService {
         }, seconds, TimeUnit.SECONDS);
 
         activeTimers.put(roomCode, future);
-        log.debug("⏱️ 房间 {} 启动 {} 秒超时定时器", roomCode, seconds);
     }
 
     @Override
@@ -44,14 +42,12 @@ public class QuestionTimerServiceImpl implements QuestionTimerService {
         ScheduledFuture<?> future = activeTimers.remove(roomCode);
         if (future != null && !future.isCancelled()) {
             future.cancel(false);
-            log.debug("⏹️ 取消房间 {} 的超时定时器", roomCode);
         }
     }
 
     @PreDestroy
     @Override
     public void shutdown() {
-        log.info("🛑 关闭题目超时调度器");
         activeTimers.values().forEach(future -> future.cancel(false));
         activeTimers.clear();
         scheduler.shutdown();

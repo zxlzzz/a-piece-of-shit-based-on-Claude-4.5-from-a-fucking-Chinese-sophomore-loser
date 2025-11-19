@@ -95,7 +95,6 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
-        log.info("💾 玩家 {} 提交答案: {} {}", playerId, choice, isBot ? "(Bot)" : "");
     }
 
     @Override
@@ -159,7 +158,6 @@ public class SubmissionServiceImpl implements SubmissionService {
 
                 // 🔥 添加：标记玩家状态
                 boolean isDisconnected = gameRoom.getDisconnectedPlayers().containsKey(playerId);
-                log.info("📝 为玩家 {} 填充默认答案: {} {}",
                         player.getName(),
                         defaultChoice,
                         isDisconnected ? "(断线)" : "(超时)");
@@ -169,7 +167,6 @@ public class SubmissionServiceImpl implements SubmissionService {
         // 🔥 添加：日志统计
         int filledCount = gameRoom.getPlayers().size() - (currentRoundSubmissions != null ? currentRoundSubmissions.size() : 0);
         if (filledCount > 0) {
-            log.info("✅ 已为 {} 个玩家填充默认答案", filledCount);
         }
     }
 
@@ -239,7 +236,6 @@ public class SubmissionServiceImpl implements SubmissionService {
 
                         // 提交Bot答案
                         submitAnswer(gameRoom.getRoomCode(), bot.getPlayerId(), botAnswer);
-                        log.info("Bot {} 自动提交答案: {}", bot.getName(), botAnswer);
                     }
                 });
     }

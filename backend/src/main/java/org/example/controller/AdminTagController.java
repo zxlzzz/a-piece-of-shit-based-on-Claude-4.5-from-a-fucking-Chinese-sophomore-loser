@@ -51,7 +51,6 @@ public class AdminTagController {
                     request.getCategory(),
                     request.getColor()
             );
-            log.info("✅ 创建标签成功: {}", tag.getName());
             return ResponseEntity.ok(tag);
         } catch (Exception e) {
             log.error("创建标签失败", e);
@@ -66,7 +65,6 @@ public class AdminTagController {
     public ResponseEntity<Void> deleteTag(@PathVariable Long tagId) {
         try {
             questionTagService.deleteTag(tagId);
-            log.info("✅ 删除标签成功: id={}", tagId);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             log.error("删除标签失败", e);

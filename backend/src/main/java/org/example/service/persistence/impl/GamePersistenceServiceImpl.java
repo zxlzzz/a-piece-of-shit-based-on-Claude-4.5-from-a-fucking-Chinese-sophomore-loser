@@ -69,7 +69,6 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
                     .build();
 
             gameResultRepository.save(entity);
-            log.info("✅ 游戏结果已保存: roomCode={}, gameId={}", roomCode, gameRoom.getGameId());
 
         } catch (Exception e) {
             log.error("❌ 保存游戏结果失败: roomCode={}", roomCode, e);

@@ -12,6 +12,10 @@ spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:dev}
 
+  devtools:
+    restart:
+      enabled: false
+
   # 数据库配置（基础配置，具体值在各环境配置中）
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver

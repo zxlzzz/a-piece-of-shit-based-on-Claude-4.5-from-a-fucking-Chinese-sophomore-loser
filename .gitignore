@@ -8,6 +8,7 @@ backend/*.iws
 # 编译输出
 backend/target/
 backend/out/
+logs
 
 # 日志
 backend/logs/

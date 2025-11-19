@@ -57,7 +57,6 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount) {
-        log.info("🔧 创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
 
         // 创建普通房间
         GameRoom gameRoom = new GameRoom();
@@ -66,7 +65,6 @@ public class GameServiceImpl implements GameService {
         RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
         gameRoom.setRoomEntity(savedRoom);
 
-        log.info("🔧 RoomEntity 已保存: roomCode={}, id={}", savedRoom.getRoomCode(), savedRoom.getId());
 
         // 添加虚拟玩家 (maxPlayers - 1 个)
         for (int i = 1; i < maxPlayers; i++) {
@@ -83,15 +81,9 @@ public class GameServiceImpl implements GameService {
             gameRoom.getPlayers().add(botPlayer);
             gameRoom.getScores().put(botId, 0);  // 初始化分数
 
-            log.info("🔧 添加虚拟玩家: {}, ready={}", botName, true);
         }
 
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
-
-        log.info("🔧 测试房间创建完成: {}, Bot数量: {}, 玩家列表: {}",
-            savedRoom.getRoomCode(),
-            maxPlayers - 1,
-            gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList());
 
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
@@ -154,7 +146,6 @@ public class GameServiceImpl implements GameService {
     public void removeRoom(String roomCode) {
         timerService.cancelTimeout(roomCode);
         roomCache.remove(roomCode);
-        log.info("🗑️ 移除房间: {}", roomCode);
     }
 
     @Override
@@ -213,6 +204,9 @@ public class GameServiceImpl implements GameService {
             if (gameRoom.isTestRoom() && !playerId.startsWith("BOT_")) {
                 submissionService.autoSubmitBots(gameRoom);
             }
+
+            // 🔥 修复：提交后立即同步到Redis，确保用户刷新页面时能看到最新状态
+            roomCache.syncToRedis(roomCode, gameRoom);
 
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);

@@ -95,7 +95,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
         gameRoom.setRoomEntity(savedRoom); // 🔥 性能优化：缓存 RoomEntity，避免后续频繁查询数据库
 
-        log.info("✅ 创建房间: {}, 最大人数: {}, 题目数: {}, 标签筛选: {}", roomCode, maxPlayers, questionCount, questionTagIds);
         return savedRoom;
     }
 
@@ -129,12 +128,10 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
                 // 🔥 已在房间的玩家允许刷新/重连，检查是否在断线列表中
                 if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
-                    log.info("🔄 玩家 {} 在游戏进行中刷新页面，从断线列表移除", playerName);
                     gameRoom.getDisconnectedPlayers().remove(playerId);
-                    roomCache.syncToRedis(roomCode);
+                    roomCache.syncToRedis(roomCode, gameRoom);
                 }
 
-                log.info("✅ 玩家 {} 已在房间中，游戏进行中刷新页面成功", playerName);
                 return; // 跳过后续加入逻辑
             }
 
@@ -175,29 +172,21 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 // 🔥 测试房间：真实玩家插入到第一位（成为房主）
                 if (gameRoom.isTestRoom()) {
                     gameRoom.getPlayers().add(0, playerDTO);
-                    log.info("🔧 测试房间：真实玩家 {} 插入到第一位（房主）", playerName);
                 } else {
                     gameRoom.getPlayers().add(playerDTO);
                 }
 
                 gameRoom.getScores().put(playerId, 0);
 
-                log.info("✅ 玩家 {} ({}) 加入房间 {} (观战模式: {})", playerName, playerId, roomCode, spectator);
-                log.info("🔧 当前房间玩家列表: {}, ready状态: {}",
-                    gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList(),
-                    gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
-
                 // 🔥 同步到 Redis
-                roomCache.syncToRedis(roomCode);
+                roomCache.syncToRedis(roomCode, gameRoom);
             } else {
                 // 🔥 修复问题3：玩家已存在，检查是否在断线列表中
                 if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
-                    log.info("🔄 玩家 {} 刷新页面（等待中），从断线列表移除", playerName);
                     gameRoom.getDisconnectedPlayers().remove(playerId);
-                    roomCache.syncToRedis(roomCode);
+                    roomCache.syncToRedis(roomCode, gameRoom);
                 }
 
-                log.info("✅ 玩家 {} 已在房间中，刷新页面成功", playerName);
             }
         }
     }
@@ -229,7 +218,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 if (isRoomOwner) {
                     // 🔥 房主离开，使用原子删除方法
                     deleteRoomAtomically(roomCode, gameRoom);
-                    log.info("🏠 房主 {} 离开，房间 {} 已解散", playerName, roomCode);
                     return false; // 房间已解散
                 } else {
                     // 普通玩家离开
@@ -242,15 +230,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         playerRepository.save(player);
                     }
 
-                    log.info("👋 玩家 {} 离开房间 {}（游戏未开始）", playerName, roomCode);
 
                     // 🔥 同步到 Redis
-                    roomCache.syncToRedis(roomCode);
+                    roomCache.syncToRedis(roomCode, gameRoom);
                 }
 
             } else {
                 // 游戏进行中：标记断线
-                log.info("⏸️ 玩家 {} 离开房间 {}（游戏进行中，后续自动提交）", playerName, roomCode);
 
                 long connectedCount = gameRoom.getPlayers().stream()
                         .filter(p -> !gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()))
@@ -261,19 +247,18 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                         log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
                         // 🔥 修复问题4.4：同步状态到Redis，以便返回最新状态并广播
-                        roomCache.syncToRedis(roomCode);
+                        roomCache.syncToRedis(roomCode, gameRoom);
                         // 不删除房间，保留5分钟
                         return true; // 房间仍存在
                     } else {
                         // 🔥 游戏未开始或已结束，使用原子删除方法
                         deleteRoomAtomically(roomCode, gameRoom);
-                        log.info("🏠 所有玩家离开，房间 {} 已解散", roomCode);
                         return false; // 房间已解散
                     }
                 }
 
                 // 🔥 游戏进行中标记断线，同步到 Redis
-                roomCache.syncToRedis(roomCode);
+                roomCache.syncToRedis(roomCode, gameRoom);
             }
 
             return true; // 房间仍存在
@@ -292,25 +277,15 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             if (disconnectTime != null) {
                 long offlineSeconds = java.time.Duration.between(disconnectTime, LocalDateTime.now()).getSeconds();
 
-                gameRoom.getPlayers().stream()
-                        .filter(p -> p.getPlayerId().equals(playerId))
-                        .findFirst()
-                        .ifPresent(player ->
-                                log.info("✅ 玩家 {} 重连房间 {}，离线时长: {}秒",
-                                        player.getName(), roomCode, offlineSeconds)
-                        );
-
                 // 🔥 P1-2: 游戏进行中重连
                 // 注意：不在这里重启后端定时器，而是依赖前端 countdown
                 // 当前端倒计时结束时会调用 handleAutoSubmit，自动提交答案并推进游戏
                 if (gameRoom.isStarted() && !gameRoom.isFinished() && gameRoom.getCurrentQuestion() != null) {
-                    log.info("🎮 玩家重连到进行中的游戏，依赖前端倒计时机制");
                 }
 
                 // 🔥 添加：如果游戏已结束，重连时重置房间过期时间
                 if (gameRoom.isFinished()) {
                     // 给房间续期（重新计时5分钟）
-                    log.info("🔄 玩家重连，房间 {} 延长存活时间", roomCode);
                     // 这里可以通过 RoomCache 添加续期机制
                 }
             } else {
@@ -318,7 +293,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
 
             // 🔥 同步到 Redis
-            roomCache.syncToRedis(roomCode);
+            roomCache.syncToRedis(roomCode, gameRoom);
         }
     }
 
@@ -340,25 +315,21 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             // 更新题目数量（可选）
             if (request.getQuestionCount() != null && request.getQuestionCount() > 0) {
                 room.setQuestionCount(request.getQuestionCount());
-                log.info("📝 房间 {} 题目数量更新为: {}", roomCode, request.getQuestionCount());
             }
 
             // 更新每题时长（可选）
             if (request.getTimeLimit() != null && request.getTimeLimit() >= 20 && request.getTimeLimit() <= 120) {
                 room.setTimeLimit(request.getTimeLimit());
-                log.info("⏱️ 房间 {} 每题时长更新为: {}秒", roomCode, request.getTimeLimit());
             }
 
             // 更新聊天室开关
             if (request.getChatEnabled() != null) {
                 room.setChatEnabled(request.getChatEnabled());
-                log.info("💬 房间 {} 聊天室状态更新为: {}", roomCode, request.getChatEnabled() ? "启用" : "禁用");
             }
 
             // 更新排名模式
             if (request.getRankingMode() != null) {
                 room.setRankingMode(request.getRankingMode());
-                log.info("📊 房间 {} 排名模式更新为: {}", roomCode, request.getRankingMode());
             }
 
             // 更新目标分数
@@ -369,7 +340,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             if (request.getWinConditions() != null) {
                 try {
                     winConditionsJson = objectMapper.writeValueAsString(request.getWinConditions());
-                    log.info("🎯 房间 {} 通关条件更新为: {}", roomCode, winConditionsJson);
                 } catch (Exception e) {
                     log.error("序列化通关条件失败", e);
                     throw new BusinessException("通关条件格式错误");
@@ -382,7 +352,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             if (request.getQuestionTagIds() != null) {
                 try {
                     questionTagIdsJson = objectMapper.writeValueAsString(request.getQuestionTagIds());
-                    log.info("🏷️ 房间 {} 题目标签筛选更新为: {}", roomCode, questionTagIdsJson);
                 } catch (Exception e) {
                     log.error("序列化题目标签失败", e);
                     throw new BusinessException("题目标签格式错误");
@@ -396,7 +365,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             // 🔥 性能优化：更新缓存的 RoomEntity
             gameRoom.setRoomEntity(savedRoom);
 
-            log.info("✅ 房间 {} 设置更新成功", roomCode);
         }
     }
 
@@ -416,8 +384,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     .ifPresent(p -> p.setReady(ready));
 
             // 同步到 Redis
-            roomCache.syncToRedis(roomCode);
-            log.info("✅ Bot玩家 {} 设置准备状态: {}", playerId, ready);
+            roomCache.syncToRedis(roomCode, gameRoom);
             return;
         }
 
@@ -438,11 +405,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .ifPresent(p -> p.setReady(ready));
 
         // 🔥 同步到 Redis
-        roomCache.syncToRedis(roomCode);
-
-        log.info("✅ 玩家 {} 设置准备状态: {}", playerId, ready);
-        log.info("🔧 当前房间所有玩家ready状态: {}",
-            gameRoom.getPlayers().stream().map(p -> p.getName() + ":" + p.getReady()).toList());
+        roomCache.syncToRedis(roomCode, gameRoom);
 
         // 🔥 检查是否所有玩家都准备好了
         long totalPlayers = gameRoom.getPlayers().stream()
@@ -452,7 +415,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
             .filter(PlayerDTO::getReady)
             .count();
-        log.info("🔧 准备情况: {}/{} 玩家已准备", readyPlayers, totalPlayers);
     }
 
     @Override
@@ -466,7 +428,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             roomEntity = roomRepository.findByRoomCode(roomCode)
                     .orElseThrow(() -> new BusinessException("房间不存在"));
             gameRoom.setRoomEntity(roomEntity);
-            log.debug("🔄 房间 {} 的 RoomEntity 已缓存", roomCode);
         }
 
         return toRoomDTO(roomEntity, gameRoom);
@@ -492,7 +453,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     .findFirst()
                     .orElse("未知玩家");
 
-            log.info("⚠️ 玩家 {} ({}) 从房间 {} 断开连接", playerName, playerId, roomCode);
 
             // 🔥 如果游戏进行中且所有非观战玩家都断线，自动推进
             if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
@@ -504,7 +464,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                     log.warn("❌ 房间 {} 所有非观战玩家都断开连接", roomCode);
                     // 🔥 P1-2: 取消定时器，避免幽灵定时器在无人状态下触发
                     timerService.cancelTimeout(roomCode);
-                    log.info("⏹️ 已取消房间 {} 的定时器（所有玩家断线）", roomCode);
                 }
             }
         }
@@ -523,7 +482,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         synchronized (RoomLock.getLock(roomCode)) {
             // 🔥 添加：如果游戏进行中，不移除玩家，只保持断线状态
             if (gameRoom.isStarted() && !gameRoom.isFinished()) {
-                log.info("⚠️ 玩家 {} 在游戏中断线，保留玩家数据，游戏结束后再移除", playerId);
                 // 不执行移除操作，保持在 disconnectedPlayers 列表中
                 return;
             }
@@ -541,7 +499,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
             if (removedPlayer != null) {
                 gameRoom.getPlayers().remove(removedPlayer);
-                log.info("👋 玩家 {} 超时未重连，已从房间 {} 移除", removedPlayer.getName(), roomCode);
             }
 
             // 清理分数
@@ -661,7 +618,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
      * @return 被删除的房间实体（用于发送删除通知）
      */
     @Transactional
-    private RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
+    protected RoomEntity deleteRoomAtomically(String roomCode, GameRoom gameRoom) {
         RoomEntity room;
 
         // 🔥 使用RoomLock确保原子性（问题7）
@@ -681,7 +638,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 return null;
             }
 
-            log.info("🗑️ 开始原子删除房间: {}", roomCode);
 
             // 3. 清理所有关联的玩家记录（问题2）
             if (gameRoom != null) {
@@ -694,7 +650,6 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                             playerEntity.setRoom(null);
                             playerEntity.setReady(false);
                             playerRepository.save(playerEntity);
-                            log.debug("✅ 已清理玩家 {} 的房间关联", playerId);
                         }
                     }
                 }
@@ -702,24 +657,19 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
             // 4. 取消定时器
             timerService.cancelTimeout(roomCode);
-            log.debug("⏹️ 已取消房间 {} 的定时器", roomCode);
 
             // 5. 删除缓存（带重试）（问题5）
             roomCache.removeWithRetry(roomCode);
-            log.debug("🗑️ 已从缓存移除房间 {}", roomCode);
 
             // 6. 主动清理聊天室（问题3）
             chatRoomManager.forceCleanup(roomCode);
-            log.debug("🧹 已清理聊天室 {}", roomCode);
 
             // 7. 真正删除数据库记录（问题1）
             roomRepository.delete(room);
-            log.info("✅ 房间 {} 已从数据库删除", roomCode);
         }
 
         // 🔥 P0-6: 在synchronized块外清理锁，防止内存泄漏
         RoomLock.removeLock(roomCode);
-        log.debug("🔧 已清理房间 {} 的锁对象", roomCode);
 
         return room;
     }

@@ -44,13 +44,26 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：先禁用提交按钮，防止重复点击
     hasSubmitted.value = true
-    const submissionKey = getSubmissionKey()
-    localStorage.setItem(submissionKey, 'true')
+
+    // 🔥 保存当前题目index，用于API返回后验证（避免测试房间中题目快速推进导致的状态不一致）
+    const currentIndex = room.value?.currentIndex
 
     try {
-      // 🔥 改用HTTP API，更可靠
-      await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
+      // 🔥 修复：先调用API，成功后再设置localStorage
+      // 避免页面刷新时localStorage已设置但API未完成的情况
+      const response = await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
+
+      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
+      // 如果API返回的index与提交时不同，说明题目已推进（测试房间中Bot立即触发推进）
+      const returnedIndex = response.data?.currentIndex
+      if (returnedIndex === currentIndex) {
+        const submissionKey = getSubmissionKey()
+        localStorage.setItem(submissionKey, 'true')
+      } else {
+        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)', { currentIndex, returnedIndex })
+      }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 
@@ -62,8 +75,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
     } catch (error) {
       logger.error('❌ 提交失败:', error)
+      // 🔥 API失败，重置提交状态（不需要清理localStorage，因为还没设置）
       hasSubmitted.value = false
-      localStorage.removeItem(submissionKey)
 
       toast.add({
         severity: 'error',
@@ -89,7 +102,11 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：先禁用提交，防止用户在自动提交期间手动提交
     hasSubmitted.value = true
+
+    // 🔥 保存当前题目index，用于API返回后验证
+    const currentIndex = room.value?.currentIndex
 
     let defaultChoice
     if (question.value.type === 'CHOICE') {
@@ -98,12 +115,19 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       defaultChoice = question.value.min || 0
     }
 
-    const submissionKey = getSubmissionKey()
-    localStorage.setItem(submissionKey, 'true')
-
     try {
-      // 🔥 改用HTTP API，更可靠
-      await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
+      // 🔥 修复：先调用API，成功后再设置localStorage
+      const response = await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
+
+      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
+      // timeout触发fillDefaultAnswers后可能立即推进题目
+      const returnedIndex = response.data?.currentIndex
+      if (returnedIndex === currentIndex) {
+        const submissionKey = getSubmissionKey()
+        localStorage.setItem(submissionKey, 'true')
+      } else {
+        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置', { currentIndex, returnedIndex })
+      }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
 
@@ -115,8 +139,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
     } catch (error) {
       logger.error('❌ 自动提交失败:', error)
+      // 🔥 API失败，重置提交状态
       hasSubmitted.value = false
-      localStorage.removeItem(submissionKey)
     }
   }
 

@@ -106,16 +106,11 @@ public class ScoringServiceImpl implements ScoringService {
             currentRound = getCurrentRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
             totalRounds = repeatStrategy.getTotalRounds();
 
-            log.info("💯 房间 {} 计算重复题分数: {} 第 {}/{} 轮",
-                    gameRoom.getRoomCode(), currentQuestion.getStrategyId(), currentRound, totalRounds);
 
             detailDTO = repeatStrategy.calculateRoundResult(context, currentRound);
             incrementRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
 
         } else {
-            log.info("💯 房间 {} 计算普通题分数: {}",
-                    gameRoom.getRoomCode(), currentQuestion.getStrategyId());
-
             detailDTO = strategy.calculateResult(context);
         }
 
@@ -164,7 +159,6 @@ public class ScoringServiceImpl implements ScoringService {
     @Override
     public void clearRounds(String roomCode) {
         roomStrategyRounds.remove(roomCode);
-        log.debug("🧹 清理房间 {} 的轮次记录", roomCode);
     }
 
     // ==================== 私有方法 ====================
@@ -189,6 +183,5 @@ public class ScoringServiceImpl implements ScoringService {
         int current = strategyRounds.getOrDefault(strategyId, 1);
         strategyRounds.put(strategyId, current + 1);
 
-        log.debug("📈 房间 {} 题目 {} 轮次递增: {} -> {}", roomCode, strategyId, current, current + 1);
     }
 }

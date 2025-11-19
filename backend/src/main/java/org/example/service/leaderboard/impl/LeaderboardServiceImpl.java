@@ -65,7 +65,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                         .average()
                         .orElse(0.0);
 
-                log.info("📊 房间 {} 使用接近平均分排名，平均分: {}", gameRoom.getRoomCode(), avgScore);
 
                 // 按离平均分的绝对差值排序
                 leaderboard.sort(Comparator.comparingDouble(p ->
@@ -79,7 +78,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                             gameRoom.getRoomCode());
                     leaderboard.sort(Comparator.comparing(PlayerRankDTO::getTotalScore).reversed());
                 } else {
-                    log.info("📊 房间 {} 使用接近目标分排名，目标分: {}", gameRoom.getRoomCode(), targetScore);
 
                     // 按离目标分的绝对差值排序
                     leaderboard.sort(Comparator.comparingInt(p ->
@@ -111,7 +109,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
         if (!passed && winConditions != null) {
             log.warn("❌ 房间 {} 未达成通关条件", gameRoom.getRoomCode());
         } else {
-            log.info("✅ 房间 {} 通关成功！", gameRoom.getRoomCode());
         }
 
         return leaderboard;
@@ -131,7 +128,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
             boolean allPass = leaderboard.stream()
                     .allMatch(p -> p.getTotalScore() >= conditions.getMinScorePerPlayer());
             if (!allPass) {
-                log.info("❌ 未达成条件：所有人 ≥ {} 分", conditions.getMinScorePerPlayer());
                 return false;
             }
         }
@@ -142,7 +138,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                     .mapToInt(PlayerRankDTO::getTotalScore)
                     .sum();
             if (totalScore < conditions.getMinTotalScore()) {
-                log.info("❌ 未达成条件：总分 {} < {}", totalScore, conditions.getMinTotalScore());
                 return false;
             }
         }
@@ -154,7 +149,6 @@ public class LeaderboardServiceImpl implements LeaderboardService {
                     .average()
                     .orElse(0.0);
             if (avgScore < conditions.getMinAvgScore()) {
-                log.info("❌ 未达成条件：平均分 {} < {}", avgScore, conditions.getMinAvgScore());
                 return false;
             }
         }

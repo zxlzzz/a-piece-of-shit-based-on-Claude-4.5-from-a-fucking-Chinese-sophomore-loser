@@ -38,7 +38,6 @@ public class PlayerServiceImpl implements PlayerService {
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
 
         player.setReady(ready);
-        log.info("更新玩家准备状态: playerId={}, ready={}", playerId, ready);
         return playerRepository.save(player);
     }
 

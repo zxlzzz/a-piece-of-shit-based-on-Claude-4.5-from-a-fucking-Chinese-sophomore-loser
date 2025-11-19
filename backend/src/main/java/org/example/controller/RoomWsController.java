@@ -52,12 +52,10 @@ public class RoomWsController {
             if (isReconnect) {
                 // 🔥 重连逻辑
                 roomLifecycleService.handleReconnect(request.getRoomCode(), request.getPlayerId());
-                log.info("✅ WebSocket: 玩家 {} 重连房间 {}", request.getPlayerName(), request.getRoomCode());
             } else {
                 // 🔥 正常加入逻辑（原有代码）
                 RoomDTO room = gameService.joinRoom(request.getRoomCode(),
                         request.getPlayerId(), request.getPlayerName(), false, null);
-                log.info("✅ WebSocket: 玩家 {} 加入房间 {}", request.getPlayerName(), request.getRoomCode());
             }
 
             // 🔥 统一广播（无论加入还是重连）
@@ -84,7 +82,6 @@ public class RoomWsController {
 
             broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("✅ WebSocket: 房间 {} 开始游戏", roomCode);
         } catch (BusinessException e) {
             String roomCode = request.get("roomCode");
             log.error("❌ 开始游戏失败（业务异常）: {}", e.getMessage());
@@ -110,7 +107,6 @@ public class RoomWsController {
 
             broadcaster.sendRoomUpdate(request.getRoomCode(), room);
 
-            log.info("✅ WebSocket: 玩家 {} 提交答案: {}", request.getPlayerId(), request.getChoice());
         } catch (BusinessException e) {
             log.error("❌ 提交答案失败（业务异常）: {}", e.getMessage());
             broadcaster.sendErrorToPlayer(request.getPlayerId(), e.getMessage());
@@ -141,7 +137,6 @@ public class RoomWsController {
 
             broadcaster.sendRoomUpdate(roomCode, room);
 
-            log.info("✅ WebSocket: 玩家 {} 设置准备状态: {}", playerId, ready);
         } catch (BusinessException e) {
             String playerId = (String) request.get("playerId");
             log.error("❌ 设置准备状态失败（业务异常）: {}", e.getMessage());

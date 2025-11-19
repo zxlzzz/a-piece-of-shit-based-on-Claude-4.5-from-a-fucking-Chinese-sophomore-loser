@@ -13,7 +13,7 @@ spring:
   # JPA 配置（开发环境）
   jpa:
     hibernate:
-      ddl-auto: create  # 🔥 修改：改为create
+      ddl-auto: update  # 🔥 修复：改回update，create会清空所有数据导致无法登录
     show-sql: false     # 不显示 SQL 语句
     properties:
       hibernate.format_sql: false        # 不格式化 SQL 输出

@@ -29,7 +29,6 @@ public class AdminTestController {
             @RequestParam(defaultValue = "3") Integer maxPlayers,
             @RequestParam(defaultValue = "5") Integer questionCount
     ) {
-        log.info("创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
 
         // 创建测试房间
         RoomDTO roomDTO = gameService.createTestRoom(maxPlayers, questionCount);
@@ -41,7 +40,6 @@ public class AdminTestController {
         response.put("maxPlayers", maxPlayers);
         response.put("botCount", maxPlayers - 1);
 
-        log.info("测试房间创建成功: {}", roomDTO.getRoomCode());
 
         return ResponseEntity.ok(response);
     }

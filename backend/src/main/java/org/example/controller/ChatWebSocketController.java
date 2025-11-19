@@ -34,7 +34,6 @@ public class ChatWebSocketController {
             message.setTimestamp(LocalDateTime.now());
             message.setRoomCode(roomCode);
 
-            log.debug("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
 
             // 🔥 记录聊天室活动
             chatRoomManager.recordActivity(roomCode);
@@ -101,7 +100,6 @@ public class ChatWebSocketController {
             // 创建加入消息
             ChatMessage joinMessage = ChatMessage.join(roomCode, message.getSenderName());
 
-            log.debug("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
 
             // 广播加入消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);
@@ -122,7 +120,6 @@ public class ChatWebSocketController {
 
             ChatMessage readyMessage = ChatMessage.ready(roomCode, message.getSenderName(), isReady);
 
-            log.info("玩家 {} 在房间 {} 中{}", message.getSenderName(), roomCode,
                     isReady ? "已准备" : "取消准备");
 
             // 广播准备消息

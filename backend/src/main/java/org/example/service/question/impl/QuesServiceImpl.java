@@ -119,7 +119,6 @@ public class QuesServiceImpl implements QuesService {
             questionRepository.save(savedEntity);
         }
 
-        log.info("成功导入 {} 道题目（包含配置）", questionDTOs.size());
     }
 
     /**
@@ -314,13 +313,11 @@ public class QuesServiceImpl implements QuesService {
     @Transactional
     public void updateQuestion(Long id, QuestionDTO dto) {
         // 🔥 调试日志
-        log.info("📥 收到更新请求: id={}, calculateRule={}", id, dto.getCalculateRule());
 
         // 1. 查询现有题目
         QuestionEntity existingEntity = questionRepository.findById(id)
                 .orElseThrow(() -> new BusinessException("题目不存在: " + id));
 
-        log.info("📥 更新前的 calculateRule: {}", existingEntity.getCalculateRule());
 
         // 2. 更新基础字段（只更新非空字段）
         if (dto.getType() != null) {
@@ -332,9 +329,7 @@ public class QuesServiceImpl implements QuesService {
         // 🔥 支持更新或清空 calculateRule（传空字符串或null都可以清空）
         if (dto.getCalculateRule() != null) {
             existingEntity.setCalculateRule(dto.getCalculateRule().isEmpty() ? null : dto.getCalculateRule());
-            log.info("📥 更新后的 calculateRule: {}", existingEntity.getCalculateRule());
         } else {
-            log.info("📥 dto.getCalculateRule() 为 null，跳过更新");
         }
         if (dto.getStrategyId() != null) {
             existingEntity.setStrategyId(dto.getStrategyId());
@@ -365,7 +360,6 @@ public class QuesServiceImpl implements QuesService {
             updateMetadata(id, dto);
         }
 
-        log.info("题目更新成功: id={}", id);
     }
 
     /**

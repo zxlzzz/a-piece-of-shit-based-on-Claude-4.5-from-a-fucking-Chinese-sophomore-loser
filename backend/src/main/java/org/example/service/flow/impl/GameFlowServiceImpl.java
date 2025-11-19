@@ -148,7 +148,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                 throw new BusinessException("题目加载失败，请检查题库或标签设置");
             }
 
-            log.info("✅ 成功加载 {} 道题目", questions.size());
 
             // 初始化游戏房间状态
             gameRoom.setQuestions(questions);  // ✅ 直接设置 DTO
@@ -165,7 +164,6 @@ public class GameFlowServiceImpl implements GameFlowService {
             timerService.scheduleTimeout(roomCode, timeLimit,
                     () -> advanceQuestion(roomCode, "timeout", true));
 
-            log.info("🎮 房间 {} 开始游戏，题目数: {}, 玩家数: {} (观战者: {})",
                     roomCode, questions.size(), nonSpectatorCount,
                     gameRoom.getPlayers().size() - nonSpectatorCount);
 
@@ -187,7 +185,6 @@ public class GameFlowServiceImpl implements GameFlowService {
         }
 
         try {
-            log.info("📊 推进房间 {} (原因: {})", roomCode, reason);
 
             GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
@@ -218,7 +215,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                         timerService.scheduleTimeout(roomCode, questionTimeout,
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
-                        log.info("🔁 房间 {} 重复题下一轮，题目索引 {} (轮次 {}/{})",
                                 roomCode, gameRoom.getCurrentIndex(),
                                 result.getCurrentRound(), result.getTotalRounds());
 
@@ -236,7 +232,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                     // 🔥 普通题 或 重复题已完成所有轮次：推进到下一题
                     if (result.isRepeatableQuestion()) {
                         scoringService.clearRounds(roomCode);
-                        log.info("✅ 房间 {} 重复题完成全部 {} 轮，准备下一题",
                                 roomCode, result.getTotalRounds());
                     }
 
@@ -246,7 +241,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                         timerService.scheduleTimeout(roomCode, questionTimeout,
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
-                        log.info("➡️ 房间 {} 推进到题目索引 {}", roomCode, gameRoom.getCurrentIndex());
 
                         // 🔥 同步到 Redis
                         roomCache.syncToRedis(roomCode);
@@ -255,7 +249,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                     } else {
                         // 没有更多题目，游戏结束
                         finishGame(roomCode);
-                        log.info("🎉 房间 {} 所有题目完成，游戏结束", roomCode);
                     }
                 }
             }
@@ -267,7 +260,6 @@ public class GameFlowServiceImpl implements GameFlowService {
     @Override
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void finishGame(String roomCode) {
-        log.info("🏁 finishGame 被调用: {}", roomCode);
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
@@ -282,7 +274,6 @@ public class GameFlowServiceImpl implements GameFlowService {
             // ✅ 唯一设置 finished 的地方
             gameRoom.setFinished(true);
 
-            log.info("✅ 开始执行游戏结束流程: {}", roomCode);
 
             try {
                 // 1. 更新房间状态
@@ -335,9 +326,7 @@ public class GameFlowServiceImpl implements GameFlowService {
                 timerService.cancelTimeout(roomCode);
 
                 // 6. 保存游戏结果
-                log.info("📝 开始保存游戏结果到历史记录: {}", roomCode);
                 gamePersistenceService.saveGameResult(roomCode);
-                log.info("✅ 游戏结果已成功保存到历史记录: roomCode={}", roomCode);
 
             } catch (Exception e) {
                 log.error("❌ 游戏结束流程失败: roomCode={}", roomCode, e);
@@ -351,7 +340,6 @@ public class GameFlowServiceImpl implements GameFlowService {
 
                 // 🔥 8. 清理推进锁（P1-4修复）
                 advancing.remove(roomCode);
-                log.debug("🔧 已清理房间 {} 的推进锁", roomCode);
 
                 // 9. 同步最终状态到 Redis
                 roomCache.syncToRedis(roomCode);
@@ -359,7 +347,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                 // 10. 广播结束
                 broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
 
-                log.info("🎉 房间 {} 游戏结束流程完成", roomCode);
                 // 🔥 11. 延迟删除房间（给前端时间接收结束广播并跳转到结果页）
                 // 🔥 修复问题5.1：延长删除时间从2秒到10秒，避免与玩家操作冲突
                 // 使用统一的deleteRoom方法，确保完整清理所有资源
@@ -367,7 +354,6 @@ public class GameFlowServiceImpl implements GameFlowService {
                     try {
                         roomLifecycleService.deleteRoom(roomCode);
                         broadcaster.sendRoomDeleted(roomCode);
-                        log.info("✅ 游戏结束后自动删除房间: {}", roomCode);
                     } catch (Exception e) {
                         log.error("❌ 自动删除房间失败: roomCode={}", roomCode, e);
                     }
@@ -404,6 +390,5 @@ public class GameFlowServiceImpl implements GameFlowService {
         // 记录本题得分详情
         gameRoom.getQuestionScores().put(currentIndex, result.getScoreDetails());
 
-        log.info("✅ 房间 {} 题目索引 {} 分数计算完成", gameRoom.getRoomCode(), currentIndex);
     }
 }

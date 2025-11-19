@@ -39,11 +39,9 @@ public class QuestionTagServiceImpl implements QuestionTagService {
     public void initializeTagsFromJson() {
         // 如果数据库已有数据，跳过初始化
         if (tagRepository.count() > 0) {
-            log.info("✅ 标签数据已存在，跳过初始化");
             return;
         }
 
-        log.info("📝 开始从 question-tags.json 初始化标签数据");
 
         try {
             ClassPathResource resource = new ClassPathResource("question-tags.json");
@@ -63,7 +61,6 @@ public class QuestionTagServiceImpl implements QuestionTagService {
                             .build())
                     .toList();
             tagRepository.saveAll(tags);
-            log.info("✅ 保存了 {} 个标签", tags.size());
 
             // 2. 初始化题目-标签关联
             List<Map<String, Object>> mappings = (List<Map<String, Object>>) data.get("questionTagMappings");
@@ -82,7 +79,6 @@ public class QuestionTagServiceImpl implements QuestionTagService {
             }
 
             relationRepository.saveAll(relations);
-            log.info("✅ 保存了 {} 个题目-标签关联", relations.size());
 
         } catch (IOException e) {
             log.error("❌ 初始化标签数据失败", e);
@@ -160,7 +156,6 @@ public class QuestionTagServiceImpl implements QuestionTagService {
                 .color(color)
                 .build();
         QuestionTagEntity saved = tagRepository.save(entity);
-        log.info("✅ 创建标签: {} (category={})", name, category);
         return toDTO(saved);
     }
 
@@ -175,11 +170,9 @@ public class QuestionTagServiceImpl implements QuestionTagService {
                 .toList();
 
         relationRepository.deleteAll(relations);
-        log.info("🗑️ 删除了 {} 个题目-标签关联", relations.size());
 
         // 删除标签
         tagRepository.deleteById(tagId);
-        log.info("✅ 删除标签: id={}", tagId);
     }
 
     @Override
@@ -199,7 +192,6 @@ public class QuestionTagServiceImpl implements QuestionTagService {
                 .tagId(tagId)
                 .build();
         relationRepository.save(relation);
-        log.info("✅ 添加标签关联: questionId={}, tagId={}", questionId, tagId);
     }
 
     @Override
@@ -208,7 +200,6 @@ public class QuestionTagServiceImpl implements QuestionTagService {
         QuestionTagRelationEntity.QuestionTagRelationId id =
                 new QuestionTagRelationEntity.QuestionTagRelationId(questionId, tagId);
         relationRepository.deleteById(id);
-        log.info("✅ 移除标签关联: questionId={}, tagId={}", questionId, tagId);
     }
 
     @Override

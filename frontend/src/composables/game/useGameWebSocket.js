@@ -131,6 +131,8 @@ export function useGameWebSocket(
 
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
+        const oldQuestionStartTime = room.value?.questionStartTime
+        const newQuestionStartTime = update.questionStartTime
 
         room.value = update
         // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
@@ -141,7 +143,11 @@ export function useGameWebSocket(
           verifySubmissionState(update.submittedPlayerIds)
         }
 
-        if (newIndex !== undefined && oldIndex !== newIndex) {
+        // 🔥 修复：不仅检查 currentIndex 变化，还检查 questionStartTime 变化（重复题场景）
+        const indexChanged = newIndex !== undefined && oldIndex !== newIndex
+        const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
+
+        if (indexChanged || questionTimeChanged) {
           if (oldIndex !== undefined) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
             localStorage.removeItem(oldSubmissionKey)

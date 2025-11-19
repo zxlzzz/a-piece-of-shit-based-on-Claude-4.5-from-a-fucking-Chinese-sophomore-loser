@@ -132,8 +132,19 @@ onMounted(() => {
     const savedRoom = localStorage.getItem('currentRoom')
     if (savedRoom) {
       const roomData = JSON.parse(savedRoom)
-      // 如果房间数据超过设定时间，清除
-      if (roomData._savedAt && Date.now() - roomData._savedAt > ROOM_DATA_EXPIRY_TIME) {
+      const now = Date.now()
+      const savedAt = roomData._savedAt || 0
+
+      // 🔥 修复：如果房间已结束，使用更短的过期时间（15秒）
+      if (roomData.finished || roomData.status === 'FINISHED') {
+        if (now - savedAt > 15000) {  // 15秒
+          logger.info('🧹 已结束的房间缓存已过期，自动清理')
+          localStorage.removeItem('currentRoom')
+        }
+      }
+      // 普通房间，使用标准过期时间（10分钟）
+      else if (now - savedAt > ROOM_DATA_EXPIRY_TIME) {
+        logger.info('🧹 房间缓存已过期，自动清理')
         localStorage.removeItem('currentRoom')
       }
     }

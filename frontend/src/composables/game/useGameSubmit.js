@@ -172,22 +172,32 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：确保 room 数据有效，避免在初始化或题目切换过程中误判
+    if (!room.value || room.value.currentIndex === undefined || room.value.currentIndex < 0) {
+      return
+    }
+
     const submissionKey = getSubmissionKey()
     const localStorageSaysSubmitted = localStorage.getItem(submissionKey) === 'true'
     const backendSaysSubmitted = submittedPlayerIds && submittedPlayerIds.includes(playerStore.playerId)
 
     // 🔥 检测不一致：localStorage说已提交，但后端没有记录
     if (localStorageSaysSubmitted && !backendSaysSubmitted) {
-      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态')
+      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态', {
+        submissionKey,
+        currentIndex: room.value?.currentIndex,
+        submittedPlayerIds
+      })
       localStorage.removeItem(submissionKey)
       hasSubmitted.value = false
 
-      toast.add({
-        severity: 'warn',
-        summary: '提交状态已更新',
-        detail: '检测到提交未成功，请重新提交',
-        life: 3000
-      })
+      // 🔥 修复：不再弹toast，因为这可能是正常的题目推进导致的
+      // toast.add({
+      //   severity: 'warn',
+      //   summary: '提交状态已更新',
+      //   detail: '检测到提交未成功，请重新提交',
+      //   life: 3000
+      // })
     }
     // 🔥 检测不一致：localStorage说未提交，但后端有记录
     else if (!localStorageSaysSubmitted && backendSaysSubmitted) {

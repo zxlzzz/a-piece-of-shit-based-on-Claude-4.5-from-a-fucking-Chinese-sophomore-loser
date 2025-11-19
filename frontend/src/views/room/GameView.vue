@@ -108,22 +108,30 @@ onMounted(() => {
     return
   }
 
-  // 🔥 修复：清理所有旧的submission记录（游戏开始时）
-  // 遍历localStorage，删除所有submission_${roomCode}_*的记录
-  const submissionPrefix = `submission_${roomCode.value}_`
-  const keysToRemove = []
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i)
-    if (key && key.startsWith(submissionPrefix)) {
-      keysToRemove.push(key)
-    }
-  }
-  keysToRemove.forEach(key => {
-    localStorage.removeItem(key)
-    logger.debug('🧹 清理旧的提交记录:', key)
-  })
-
   const savedRoom = playerStore.loadRoom()
+
+  // 🔥 修复：只清理旧题目的submission记录，保留当前题目的
+  if (savedRoom && savedRoom.currentIndex !== undefined && savedRoom.currentIndex >= 0) {
+    const currentSubmissionKey = `submission_${roomCode.value}_${savedRoom.currentIndex}`
+    const submissionPrefix = `submission_${roomCode.value}_`
+    const keysToRemove = []
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      // 只清理其他题目的记录，保留当前题目的
+      if (key && key.startsWith(submissionPrefix) && key !== currentSubmissionKey) {
+        keysToRemove.push(key)
+      }
+    }
+
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key)
+      logger.debug('🧹 清理旧题目的提交记录:', key)
+    })
+
+    logger.info('✅ 保留当前题目的提交记录:', currentSubmissionKey)
+  }
+
   if (savedRoom) {
     room.value = savedRoom
     question.value = savedRoom.currentQuestion
@@ -140,11 +148,13 @@ onMounted(() => {
       return
     }
 
-    // 🔥 修复：游戏开始时不恢复提交状态（因为已经清理了所有记录）
-    // restoreSubmitState() 会在WebSocket更新时根据实际情况恢复
-    // if (question.value) {
-    //   restoreSubmitState()
-    // }
+    // 🔥 修复：恢复当前题目的提交状态
+    if (question.value && savedRoom.currentIndex >= 0) {
+      restoreSubmitState()
+      logger.info('✅ 页面加载时恢复提交状态:', {
+        currentIndex: savedRoom.currentIndex,
+        hasSubmitted: hasSubmitted.value
+      })
     }
 
     // 🔥 改进：验证时间合理性后再恢复倒计时
@@ -162,10 +172,10 @@ onMounted(() => {
         logger.warn('倒计时时间不合理，已跳过恢复:', { elapsed, limit })
       }
     }
-  },
+  }
 
   connectWebSocket()
-)
+})
 
 onUnmounted(() => {
   clearCountdown()

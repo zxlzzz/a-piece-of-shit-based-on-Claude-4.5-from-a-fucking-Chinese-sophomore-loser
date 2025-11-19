@@ -134,29 +134,33 @@ export function useGameWebSocket(
         const oldQuestionStartTime = room.value?.questionStartTime
         const newQuestionStartTime = update.questionStartTime
 
-        // 🔥 修复：不仅检查 currentIndex 变化，还检查 questionStartTime 变化（重复题场景）
+        // 🔥 修复：检测是否是第一次收到题目数据（游戏刚开始）
+        const isFirstLoad = (oldIndex === undefined || oldIndex === -1) && newIndex >= 0
         const indexChanged = newIndex !== undefined && oldIndex !== newIndex
         const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
 
-        // 🔥 修复：先处理题目切换逻辑，再验证提交状态（避免使用过时的localStorage）
-        if (indexChanged || questionTimeChanged) {
-          if (oldIndex !== undefined) {
+        // 🔥 修复：题目切换、重复题换轮、或首次加载时都需要处理
+        if (isFirstLoad || indexChanged || questionTimeChanged) {
+          // 清理旧题目的localStorage（但不清理第一题）
+          if (oldIndex !== undefined && oldIndex >= 0 && oldIndex !== newIndex) {
             const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
             localStorage.removeItem(oldSubmissionKey)
+            logger.debug('🧹 清理上一题提交记录:', oldSubmissionKey)
           }
 
           clearCountdown()
-
           resetSubmitState()
 
           // 🔥 先更新room，再检查新题的提交状态
           room.value = update
           question.value = update.currentQuestion
 
+          // 🔥 所有题目都检查localStorage（包括第一题）
           const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
           const savedSubmission = localStorage.getItem(newSubmissionKey)
           if (savedSubmission === 'true') {
             restoreSubmitState()
+            logger.info('✅ WebSocket恢复提交状态:', { newIndex, hasSubmitted: true })
           }
 
           if (update.questionStartTime) {
@@ -165,6 +169,7 @@ export function useGameWebSocket(
             resetCountdown()
           }
         } else {
+          // 普通更新（玩家列表变化等）
           room.value = update
           question.value = update.currentQuestion
         }

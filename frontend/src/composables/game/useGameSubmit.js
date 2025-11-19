@@ -181,6 +181,16 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：页面刚加载时跳过验证（2秒内），避免刷新导致的状态不一致
+    if (!window._gameViewLoadTime) {
+      window._gameViewLoadTime = Date.now()
+    }
+    const timeSinceLoad = Date.now() - window._gameViewLoadTime
+    if (timeSinceLoad < 2000) {
+      logger.debug('⏭️ 页面刚加载，跳过提交状态验证（避免刷新导致的误判）')
+      return
+    }
+
     const submissionKey = getSubmissionKey()
     const localStorageSaysSubmitted = localStorage.getItem(submissionKey) === 'true'
     const backendSaysSubmitted = submittedPlayerIds && submittedPlayerIds.includes(playerStore.playerId)
@@ -194,18 +204,13 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       })
       localStorage.removeItem(submissionKey)
       hasSubmitted.value = false
-
-      // 🔥 修复：不再弹toast，因为这可能是正常的题目推进导致的
-      // toast.add({
-      //   severity: 'warn',
-      //   summary: '提交状态已更新',
-      //   detail: '检测到提交未成功，请重新提交',
-      //   life: 3000
-      // })
     }
     // 🔥 检测不一致：localStorage说未提交，但后端有记录
     else if (!localStorageSaysSubmitted && backendSaysSubmitted) {
-      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态')
+      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态', {
+        submissionKey,
+        currentIndex: room.value?.currentIndex
+      })
       localStorage.setItem(submissionKey, 'true')
       hasSubmitted.value = true
     }

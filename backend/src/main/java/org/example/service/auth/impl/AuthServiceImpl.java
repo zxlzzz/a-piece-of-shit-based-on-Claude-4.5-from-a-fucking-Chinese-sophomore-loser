@@ -135,7 +135,6 @@ public class AuthServiceImpl implements AuthService {
                 .deleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
-                .deleted(false)
                 .build();
 
         playerRepository.save(guestPlayer);

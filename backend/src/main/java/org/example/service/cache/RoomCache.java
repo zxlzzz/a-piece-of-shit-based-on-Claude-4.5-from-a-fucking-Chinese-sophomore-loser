@@ -185,13 +185,16 @@ public class RoomCache {
      * 🔥 P1-5修复：同步房间到Redis（用于修改GameRoom后持久化）
      * 从Redis读取最新对象，修改后调用此方法保存
      */
-    public void syncToRedis(String roomCode) {
-        GameRoom room = get(roomCode);
-        if (room != null) {
-            put(roomCode, room);
-            log.debug("🔄 房间 {} 已同步到 Redis", roomCode);
+    /**
+     * 同步GameRoom到Redis
+     * @param roomCode 房间代码
+     * @param gameRoom 要同步的GameRoom对象
+     */
+    public void syncToRedis(String roomCode, GameRoom gameRoom) {
+        if (gameRoom != null) {
+            put(roomCode, gameRoom);
         } else {
-            log.warn("⚠️ 尝试同步不存在的房间: {}", roomCode);
+            log.warn("⚠️ 尝试同步null的房间对象: {}", roomCode);
         }
     }
 

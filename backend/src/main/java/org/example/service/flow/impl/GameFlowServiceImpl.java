@@ -319,8 +319,8 @@ public class GameFlowServiceImpl implements GameFlowService {
                 // 5. 取消定时器
                 timerService.cancelTimeout(roomCode);
 
-                // 6. 保存游戏结果
-                gamePersistenceService.saveGameResult(roomCode);
+                // 6. 保存游戏结果（🔥 传入gameRoom对象，而不是roomCode，避免从Redis获取旧对象）
+                gamePersistenceService.saveGameResult(gameRoom);
 
             } catch (Exception e) {
                 log.error("❌ 游戏结束流程失败: roomCode={}", roomCode, e);

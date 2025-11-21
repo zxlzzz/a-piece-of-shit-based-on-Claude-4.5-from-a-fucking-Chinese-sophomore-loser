@@ -42,17 +42,17 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
 
     @Override
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
-    public void saveGameResult(String roomCode) {
-        log.info("📝 开始保存游戏结果: roomCode={}", roomCode);
-
-        GameRoom gameRoom = roomCache.get(roomCode);
+    public void saveGameResult(GameRoom gameRoom) {
         if (gameRoom == null) {
-            log.warn("⚠️ 房间 {} 不存在，跳过保存", roomCode);
+            log.warn("⚠️ GameRoom对象为null，跳过保存");
             return;
         }
 
+        String roomCode = gameRoom.getRoomCode();
+        log.info("📝 开始保存游戏结果: roomCode={}, finished={}", roomCode, gameRoom.isFinished());
+
         if (!gameRoom.isFinished()) {
-            log.warn("⚠️ 房间 {} 未结束，跳过保存", roomCode);
+            log.warn("⚠️ 房间 {} 未结束(finished=false)，跳过保存", roomCode);
             return;
         }
 

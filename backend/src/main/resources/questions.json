@@ -1,6 +1,6 @@
 [
   {
-    "id": 2,
+    "id": 1,
     "type": "BID",
     "text": "村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。",
     "calculateRule": null,
@@ -22,15 +22,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 5,
-        "name": "资源争夺型",
+        "id": 2,
+        "name": "类囚徒困境型",
         "category": "mechanism",
-        "color": "#fbbf24"
+        "color": "#a78bfa"
       }
     ]
   },
   {
-    "id": 3,
+    "id": 2,
     "type": "BID",
     "text": "你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。",
     "calculateRule": null,
@@ -52,15 +52,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 3,
-        "name": "竞争型",
+        "id": 5,
+        "name": "资源争夺型",
         "category": "mechanism",
-        "color": "#f87171"
+        "color": "#fbbf24"
       }
     ]
   },
   {
-    "id": 4,
+    "id": 3,
     "type": "BID",
     "text": "你们二人共同修路，总共需要 6 分。出分较高的人得 8 分，较低的得 4 分，相同则均得 4 分。",
     "calculateRule": null,
@@ -82,15 +82,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 4,
-        "name": "公共资源型",
+        "id": 3,
+        "name": "竞争型",
         "category": "mechanism",
-        "color": "#34d399"
+        "color": "#f87171"
       }
     ]
   },
   {
-    "id": 5,
+    "id": 4,
     "type": "CHOICE",
     "text": "你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10）2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择",
     "calculateRule": null,
@@ -125,15 +125,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 2,
-        "name": "类囚徒困境型",
+        "id": 4,
+        "name": "公共资源型",
         "category": "mechanism",
-        "color": "#a78bfa"
+        "color": "#34d399"
       }
     ]
   },
   {
-    "id": 6,
+    "id": 5,
     "type": "CHOICE",
     "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",
     "calculateRule": null,
@@ -168,15 +168,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 1,
-        "name": "协调型",
+        "id": 2,
+        "name": "类囚徒困境型",
         "category": "mechanism",
-        "color": "#60a5fa"
+        "color": "#a78bfa"
       }
     ]
   },
   {
-    "id": 7,
+    "id": 6,
     "type": "BID",
     "text": "你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。",
     "calculateRule": null,
@@ -198,21 +198,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 5,
-        "name": "资源争夺型",
+        "id": 1,
+        "name": "协调型",
         "category": "mechanism",
-        "color": "#fbbf24"
-      },
-      {
-        "id": 7,
-        "name": "嵌套博弈",
-        "category": "strategy",
-        "color": "#c084fc"
+        "color": "#60a5fa"
       }
     ]
   },
   {
-    "id": 8,
+    "id": 7,
     "type": "BID",
     "text": "现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除",
     "calculateRule": null,
@@ -234,15 +228,21 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 1,
-        "name": "协调型",
+        "id": 5,
+        "name": "资源争夺型",
         "category": "mechanism",
-        "color": "#60a5fa"
+        "color": "#fbbf24"
+      },
+      {
+        "id": 7,
+        "name": "嵌套博弈",
+        "category": "strategy",
+        "color": "#c084fc"
       }
     ]
   },
   {
-    "id": 9,
+    "id": 8,
     "type": "BID",
     "text": "你们二人都想要一个物品（得到后可以十分的价格出售），现从第三人手里购买（均可购买），物品的价格由分别报价，如果你们的报价相差大于等于3分，则出价较低的人无法购买，否则都按自己的出价购买，则你的报价为",
     "calculateRule": null,
@@ -264,15 +264,15 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 2,
-        "name": "类囚徒困境型",
+        "id": 1,
+        "name": "协调型",
         "category": "mechanism",
-        "color": "#a78bfa"
+        "color": "#60a5fa"
       }
     ]
   },
   {
-    "id": 10,
+    "id": 9,
     "type": "BID",
     "text": "选择一项（本题共进行3次），选完3个数后，会将所选数字之和加起来，和最小的玩家额外获得5分，最后计分时，如果你们所选的数有唯一众数（出现次数最多的），则这个数不计分（只不计入最后得分，求和时会算入）",
     "calculateRule": null,
@@ -294,21 +294,15 @@
     "maxPlayers": 4,
     "tags": [
       {
-        "id": 3,
-        "name": "竞争型",
+        "id": 2,
+        "name": "类囚徒困境型",
         "category": "mechanism",
-        "color": "#f87171"
-      },
-      {
-        "id": 6,
-        "name": "重复博弈",
-        "category": "strategy",
-        "color": "#fb923c"
+        "color": "#a78bfa"
       }
     ]
   },
   {
-    "id": 11,
+    "id": 10,
     "type": "BID",
     "text": "你们三人分别有一支小偷团队，现在计划偷7家连续的无人的房子（编号左起1-7），每团队选择一个房子开始，并计算与其他房子的距离，房子的价值为 6 5 5 4 4 4 3",
     "calculateRule": "• 唯一最近 → 独得该房价值\n• 多人最近 → 平分价值\n• 三人等距 → 无人得分",
@@ -334,11 +328,17 @@
         "name": "竞争型",
         "category": "mechanism",
         "color": "#f87171"
+      },
+      {
+        "id": 6,
+        "name": "重复博弈",
+        "category": "strategy",
+        "color": "#fb923c"
       }
     ]
   },
   {
-    "id": 12,
+    "id": 11,
     "type": "BID",
     "text": "你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为",
     "calculateRule": null,
@@ -360,15 +360,15 @@
     "maxPlayers": 3,
     "tags": [
       {
-        "id": 4,
-        "name": "公共资源型",
+        "id": 3,
+        "name": "竞争型",
         "category": "mechanism",
-        "color": "#34d399"
+        "color": "#f87171"
       }
     ]
   },
   {
-    "id": 13,
+    "id": 12,
     "type": "CHOICE",
     "text": "选择一项（x初始为1，偶数次取反后为正数）",
     "calculateRule": null,
@@ -403,10 +403,139 @@
     "maxPlayers": 4,
     "tags": [
       {
-        "id": 1,
-        "name": "协调型",
+        "id": 4,
+        "name": "公共资源型",
         "category": "mechanism",
-        "color": "#60a5fa"
+        "color": "#34d399"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "type": "CHOICE",
+    "text": "酸奶发酵中，有三类微生物的互作，乳酸链球菌（A），保加利亚乳杆菌（B）和酵母菌（C），其中（A）产生的作物会促进（B）的生长，（B）产生的作物会促进（C）的生长，而（C）产生的作物却会抑制（A）的活性，你们分别扮演一类菌群，受到另外两个菌种数量的影响",
+    "calculateRule": null,
+    "strategyId": "Q003",
+    "options": [
+      {
+        "key": "A",
+        "text": "乳酸链球菌（获得8分，每有一个C扣2分）"
+      },
+      {
+        "key": "B",
+        "text": "保加利亚乳杆菌（每有一个A得4分）"
+      },
+      {
+        "key": "C",
+        "text": "乳酸菌（每有一个B得5分）"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 4,
+    "maxPlayers": 7,
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "type": "CHOICE",
+    "text": "在一片丛林中，选择你的角色",
+    "calculateRule": null,
+    "strategyId": "Q013",
+    "options": [
+      {
+        "key": "A",
+        "text": "绵羊（选择此项的人平分12分，但如果有人选了灰狼则不得分）"
+      },
+      {
+        "key": "B",
+        "text": "灰狼（初始分0分，每有一个绵羊得5分）"
+      },
+      {
+        "key": "C",
+        "text": "野猪（获得4分）"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "C",
+    "minPlayers": 3,
+    "maxPlayers": 3,
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
+  },
+  {
+    "id": 15,
+    "type": "CHOICE",
+    "text": "选择一项，仅当有一项选的人唯一最多和一项选的人唯一最少时计分，按剪刀石头布规则判别胜负，胜加对应分，负扣对应分，其他人分数不变，则你的选择是",
+    "calculateRule": null,
+    "strategyId": "Q014",
+    "options": [
+      {
+        "key": "A",
+        "text": "剪刀（2）"
+      },
+      {
+        "key": "B",
+        "text": "石头（10）"
+      },
+      {
+        "key": "C",
+        "text": "布（5）"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 6,
+    "maxPlayers": 8,
+    "tags": [
+      {
+        "id": 3,
+        "name": "竞争型",
+        "category": "mechanism",
+        "color": "#f87171"
       }
     ]
   }

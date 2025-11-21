@@ -89,35 +89,35 @@ const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
 
-// 🔥 全局 WebSocket 连接管理
-const connectGlobalWebSocket = async () => {
-  // 只有在有 playerId 时才连接
-  if (!playerStore.playerId) {
-    logger.debug('App: 没有 playerId，跳过 WebSocket 连接')
-    return
-  }
+// 🔥 全局 WebSocket 连接管理（仅在需要的页面连接）
+// const connectGlobalWebSocket = async () => {
+//   // 只有在有 playerId 时才连接
+//   if (!playerStore.playerId) {
+//     logger.debug('App: 没有 playerId，跳过 WebSocket 连接')
+//     return
+//   }
+//
+//   // 如果已经连接，不重复连接
+//   if (isConnected()) {
+//     logger.debug('App: WebSocket 已连接')
+//     return
+//   }
+//
+//   try {
+//     await connect(playerStore.playerId)
+//     logger.debug('App: 全局 WebSocket 连接成功')
+//   } catch (err) {
+//     logger.error('App: 全局 WebSocket 连接失败', err)
+//   }
+// }
 
-  // 如果已经连接，不重复连接
-  if (isConnected()) {
-    logger.debug('App: WebSocket 已连接')
-    return
-  }
-
-  try {
-    await connect(playerStore.playerId)
-    logger.debug('App: 全局 WebSocket 连接成功')
-  } catch (err) {
-    logger.error('App: 全局 WebSocket 连接失败', err)
-  }
-}
-
-// 监听 playerId 变化，自动建立连接
-watch(() => playerStore.playerId, (newId, oldId) => {
-  if (newId && newId !== oldId) {
-    logger.debug('App: playerId 变化，建立 WebSocket 连接')
-    connectGlobalWebSocket()
-  }
-}, { immediate: true })
+// 🔥 修复：不再全局连接，由各个页面按需连接
+// 监听 playerId 变化（保留，用于其他用途）
+// watch(() => playerStore.playerId, (newId, oldId) => {
+//   if (newId && newId !== oldId) {
+//     logger.debug('App: playerId 变化')
+//   }
+// }, { immediate: true })
 
 onMounted(() => {
   // 注册全局事件监听
@@ -153,8 +153,8 @@ onMounted(() => {
     localStorage.removeItem('currentRoom')
   }
 
-  // 🔥 建立全局 WebSocket 连接
-  connectGlobalWebSocket()
+  // 🔥 建立全局 WebSocket 连接（已禁用，由各页面按需连接）
+  // connectGlobalWebSocket()
 })
 
 onUnmounted(() => {

@@ -141,11 +141,30 @@ export function useGameWebSocket(
 
         // 🔥 修复：题目切换、重复题换轮、或首次加载时都需要处理
         if (isFirstLoad || indexChanged || questionTimeChanged) {
-          // 清理旧题目的localStorage（但不清理第一题）
-          if (oldIndex !== undefined && oldIndex >= 0 && oldIndex !== newIndex) {
-            const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
-            localStorage.removeItem(oldSubmissionKey)
-            logger.debug('🧹 清理上一题提交记录:', oldSubmissionKey)
+          // 🔥 强制清理所有旧题目的localStorage，避免Bot房间快速切换导致的状态残留
+          if (indexChanged && newIndex !== undefined) {
+            const submissionPrefix = `submission_${roomCode.value}_`
+            const keysToRemove = []
+
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (key && key.startsWith(submissionPrefix)) {
+                // 解析题目index
+                const match = key.match(/submission_[^_]+_(\d+)/)
+                if (match) {
+                  const keyIndex = parseInt(match[1])
+                  // 清理所有非当前题目的记录
+                  if (keyIndex < newIndex) {
+                    keysToRemove.push(key)
+                  }
+                }
+              }
+            }
+
+            keysToRemove.forEach(key => {
+              localStorage.removeItem(key)
+              logger.debug('🧹 清理旧题目提交记录:', key)
+            })
           }
 
           clearCountdown()

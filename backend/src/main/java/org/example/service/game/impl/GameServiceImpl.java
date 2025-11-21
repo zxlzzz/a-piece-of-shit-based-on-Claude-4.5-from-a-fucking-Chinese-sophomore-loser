@@ -216,6 +216,10 @@ public class GameServiceImpl implements GameService {
                 // 🔥 总是填充默认答案，已提交的不会被覆盖
                 String reason = force ? "force" : "allSubmitted";
                 gameFlowService.advanceQuestion(roomCode, reason, true);
+                // 🔥 advanceQuestion内部会广播，这里不需要再广播
+            } else {
+                // 🔥 只在未满员时才广播，减少广播次数
+                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             }
 
             return roomLifecycleService.toRoomDTO(roomCode);

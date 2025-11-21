@@ -43,21 +43,41 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
     @Override
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void saveGameResult(String roomCode) {
+        log.info("📝 开始保存游戏结果: roomCode={}", roomCode);
+
         GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom == null || !gameRoom.isFinished()) {
-            log.warn("⚠️ 房间 {} 不存在或未结束，跳过保存", roomCode);
+        if (gameRoom == null) {
+            log.warn("⚠️ 房间 {} 不存在，跳过保存", roomCode);
+            return;
+        }
+
+        if (!gameRoom.isFinished()) {
+            log.warn("⚠️ 房间 {} 未结束，跳过保存", roomCode);
             return;
         }
 
         try {
-            GameEntity game = gameRepository.findById(gameRoom.getGameId())
-                    .orElseThrow(() -> new BusinessException("游戏不存在"));
+            log.info("📝 正在查找游戏实体: gameId={}, roomCode={}, isTestRoom={}",
+                    gameRoom.getGameId(), roomCode, gameRoom.isTestRoom());
 
+            GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                    .orElseThrow(() -> new BusinessException("游戏不存在: gameId=" + gameRoom.getGameId()));
+
+            log.info("📝 游戏实体找到: gameId={}, isTest={}", game.getId(), game.getIsTest());
+
+            log.info("📝 正在构建排行榜数据: playerCount={}", gameRoom.getPlayers().size());
             List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
+            log.info("📝 排行榜构建完成: leaderboardSize={}", leaderboard.size());
+
+            log.info("📝 正在构建题目详情: questionCount={}", gameRoom.getQuestions().size());
             List<QuestionDetailDTO> questionDetails = buildQuestionDetails(gameRoom);
+            log.info("📝 题目详情构建完成: detailsSize={}", questionDetails.size());
 
             String leaderboardJson = objectMapper.writeValueAsString(leaderboard);
             String questionDetailsJson = objectMapper.writeValueAsString(questionDetails);
+
+            log.info("📝 JSON序列化完成: leaderboardLength={}, questionDetailsLength={}",
+                    leaderboardJson.length(), questionDetailsJson.length());
 
             GameResultEntity entity = GameResultEntity.builder()
                     .game(game)
@@ -68,10 +88,14 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
                     .questionDetailsJson(questionDetailsJson)
                     .build();
 
-            gameResultRepository.save(entity);
+            log.info("📝 正在保存GameResultEntity到数据库...");
+            GameResultEntity saved = gameResultRepository.save(entity);
+            log.info("✅ 游戏结果保存成功: roomCode={}, resultId={}, gameId={}, isTest={}",
+                    roomCode, saved.getId(), game.getId(), game.getIsTest());
 
         } catch (Exception e) {
-            log.error("❌ 保存游戏结果失败: roomCode={}", roomCode, e);
+            log.error("❌ 保存游戏结果失败: roomCode={}, gameId={}, error={}",
+                    roomCode, gameRoom.getGameId(), e.getMessage(), e);
             throw new RuntimeException("保存游戏结果失败", e);
         }
     }

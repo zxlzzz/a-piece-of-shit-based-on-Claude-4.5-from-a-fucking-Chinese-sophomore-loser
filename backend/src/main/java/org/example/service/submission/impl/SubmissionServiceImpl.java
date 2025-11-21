@@ -240,6 +240,10 @@ public class SubmissionServiceImpl implements SubmissionService {
                             Integer min = currentQuestion.getMin();
                             Integer max = currentQuestion.getMax();
                             Integer step = currentQuestion.getStep();
+                            // 🔥 修复：防止step为0或null导致除零错误
+                            if (step == null || step == 0) {
+                                step = 1;
+                            }
                             if (min != null && max != null) {
                                 botAnswer = String.valueOf((random.nextInt((max - min) / step + 1) * step) + min);
                             } else {

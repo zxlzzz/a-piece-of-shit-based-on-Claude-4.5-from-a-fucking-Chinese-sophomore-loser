@@ -53,6 +53,12 @@ public class ChatMessage {
     private Boolean isPrivate = false;  // 是否私聊消息（默认false，避免NPE）
 
     /**
+     * 是否为观战者发送的消息
+     */
+    @Builder.Default
+    private Boolean isSpectator = false;
+
+    /**
      * 消息类型枚举
      */
     public enum MessageType {

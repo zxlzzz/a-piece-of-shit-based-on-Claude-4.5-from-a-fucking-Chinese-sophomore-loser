@@ -247,7 +247,34 @@ export const getHistoryList = (playerId, days) => {
   return api.get('/games/history', { params });
 };
 
-export const getHistoryDetail = (gameId) => 
+export const getHistoryDetail = (gameId) =>
   api.get(`/games/history/${gameId}`);
+
+// ============ 练习模式相关API ============
+
+/**
+ * 开始练习会话
+ * @param {number|null} questionId - 题目ID（可选，不提供则随机）
+ * @param {number} playerCount - 玩家人数
+ * @returns {Promise}
+ */
+export const startPractice = (questionId, playerCount) => {
+  const params = { playerCount };
+  if (questionId) params.questionId = questionId;
+  return api.post('/practice/start', null, { params });
+};
+
+/**
+ * 提交练习答案
+ * @param {string} sessionId - 会话ID
+ * @param {string} playerChoice - 玩家选择
+ * @param {string|null} playerId - 玩家ID（可选）
+ * @returns {Promise}
+ */
+export const submitPractice = (sessionId, playerChoice, playerId = null) => {
+  const params = { sessionId, playerChoice };
+  if (playerId) params.playerId = playerId;
+  return api.post('/practice/submit', null, { params });
+};
 
 export default api;

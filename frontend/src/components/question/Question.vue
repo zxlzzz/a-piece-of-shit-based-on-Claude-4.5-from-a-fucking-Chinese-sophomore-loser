@@ -43,9 +43,17 @@
           :max="q.max"
           :step="q.step"
           :tags="q.tags"
+          @practice="handleOpenPractice"
         />
       </div>
     </div>
+
+    <!-- 🔥 练习模式弹窗 -->
+    <PracticeModal
+      v-model:visible="showPracticeModal"
+      :questionId="selectedQuestionId"
+      :playerCount="selectedPlayerCount"
+    />
   </div>
 </template>
 
@@ -54,10 +62,22 @@ import { logger } from '@/utils/logger'
 import { getAllQuestions } from '@/api'
 import { onMounted, ref } from 'vue'
 import QuesShowCard from './QuesShowCard.vue'
+import PracticeModal from '@/components/practice/PracticeModal.vue'
 
 const questions = ref([])
 const loading = ref(true)
 const error = ref(null)
+
+// 🔥 练习模式相关
+const showPracticeModal = ref(false)
+const selectedQuestionId = ref(null)
+const selectedPlayerCount = ref(2)
+
+const handleOpenPractice = (questionId, playerCount) => {
+  selectedQuestionId.value = questionId
+  selectedPlayerCount.value = playerCount || 2
+  showPracticeModal.value = true
+}
 
 onMounted(async () => {
   try {

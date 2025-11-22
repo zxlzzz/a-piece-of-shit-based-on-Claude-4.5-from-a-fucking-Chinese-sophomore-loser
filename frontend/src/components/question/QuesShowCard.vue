@@ -1,7 +1,8 @@
 <script setup>
 import QuestionFeedback from '@/components/feedback/QuestionFeedback.vue'
+import { ref } from 'vue'
 
-defineProps({
+const props = defineProps({
   id: Number,  // 题目ID
   text: String,
   calculateRule: String,
@@ -22,6 +23,25 @@ defineProps({
     default: () => []
   }
 })
+
+const emit = defineEmits(['practice'])
+
+// 🔥 练习模式人数选择
+const practicePlayerCount = ref(2)
+
+// 🔥 解析人数范围，获取默认值
+const getDefaultPlayerCount = () => {
+  if (typeof props.people === 'number') return props.people
+  if (typeof props.people === 'string') {
+    const match = props.people.match(/^\d+/)
+    return match ? parseInt(match[0]) : 2
+  }
+  return 2
+}
+
+const handlePractice = () => {
+  emit('practice', props.id, practicePlayerCount.value)
+}
 </script>
 
 <template>
@@ -145,8 +165,42 @@ defineProps({
       </div>
     </div>
 
-    <!-- 🔥 题目反馈组件 -->
+    <!-- 🔥 练习按钮 -->
     <div v-if="id" class="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div class="mb-4">
+        <div class="flex items-center gap-2 mb-2">
+          <label class="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+            练习人数
+          </label>
+          <select
+            v-model="practicePlayerCount"
+            class="flex-1 px-2 py-1 text-xs sm:text-sm
+                   bg-gray-50 dark:bg-gray-700
+                   border border-gray-300 dark:border-gray-600
+                   text-gray-800 dark:text-white
+                   rounded-md
+                   focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+          >
+            <option :value="2">2人</option>
+            <option :value="3">3人</option>
+            <option :value="4">4人</option>
+            <option :value="5">5人</option>
+            <option :value="6">6人</option>
+          </select>
+        </div>
+        <button
+          @click="handlePractice"
+          class="w-full py-2 rounded-lg font-medium text-sm
+                 bg-purple-600 hover:bg-purple-700 active:scale-95
+                 text-white shadow-sm hover:shadow-md
+                 transition-all flex items-center justify-center gap-2"
+        >
+          <i class="pi pi-play-circle text-sm"></i>
+          开始练习
+        </button>
+      </div>
+
+      <!-- 🔥 题目反馈组件 -->
       <QuestionFeedback :questionId="id" />
     </div>
   </div>

@@ -8,6 +8,7 @@ import { useRouter, useRoute } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
 import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
+import PracticeModal from '@/components/practice/PracticeModal.vue'
 
 const router = useRouter()
 const route = useRoute() // 🔥 新增：用于访问路由参数
@@ -20,6 +21,10 @@ const activeRooms = ref([])
 const refreshing = ref(false)
 const spectatorModes = ref({})  // 观战模式状态 { roomCode: boolean }
 const searchQuery = ref('') // 🔥 房间搜索关键词
+
+// 🔥 练习模式相关
+const showPracticeModal = ref(false)
+const practicePlayerCount = ref(2)  // 默认2人模式
 
 // 🔥 自动刷新（修复问题6：缩短轮询间隔，减少房间删除延迟）
 const REFRESH_INTERVAL = 5000 // 5秒刷新一次（从10秒优化）
@@ -298,6 +303,12 @@ const handleLogout = () => {
   playerStore.clearPlayer()
   router.push('/login')
 }
+
+// 🔥 打开练习模式弹窗
+const handleOpenPractice = (playerCount = 2) => {
+  practicePlayerCount.value = playerCount
+  showPracticeModal.value = true
+}
 </script>
 
 <template>
@@ -346,10 +357,63 @@ const handleLogout = () => {
       <!-- 主要内容区 -->
       <div class="grid gap-4 sm:gap-6 lg:grid-cols-3">
         
-        <!-- 左侧：创建房间 + 当前房间 -->
+        <!-- 左侧：创建房间 + 练习模式 + 当前房间 -->
         <div class="lg:col-span-1 space-y-4 sm:space-y-6">
           <!-- 创建房间卡片 -->
           <CreateRoomCard @create="handleCreate" :loading="loading" />
+
+          <!-- 🔥 练习模式按钮 -->
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 sm:p-6
+                      border border-gray-100 dark:border-gray-700">
+            <div class="flex items-center gap-2 sm:gap-3 mb-4">
+              <div class="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30
+                          flex items-center justify-center">
+                <i class="pi pi-book text-purple-600 dark:text-purple-400 text-base sm:text-lg"></i>
+              </div>
+              <h2 class="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">
+                练习模式
+              </h2>
+            </div>
+
+            <p class="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4">
+              单题练习，与Bot对战，提升策略水平
+            </p>
+
+            <!-- 人数选择 -->
+            <div class="mb-4">
+              <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                选择人数
+              </label>
+              <select
+                v-model="practicePlayerCount"
+                class="w-full px-3 sm:px-4 py-2 sm:py-2.5
+                       bg-gray-50 dark:bg-gray-700
+                       border border-gray-300 dark:border-gray-600
+                       text-gray-800 dark:text-white
+                       text-sm sm:text-base
+                       rounded-lg
+                       focus:ring-2 focus:ring-purple-500 focus:border-transparent
+                       transition-all"
+              >
+                <option :value="2">2人</option>
+                <option :value="3">3人</option>
+                <option :value="4">4人</option>
+                <option :value="5">5人</option>
+                <option :value="6">6人</option>
+              </select>
+            </div>
+
+            <button
+              @click="handleOpenPractice(practicePlayerCount)"
+              class="w-full py-2.5 sm:py-3 rounded-lg font-bold text-sm sm:text-base
+                     bg-purple-600 hover:bg-purple-700 active:scale-95
+                     text-white shadow-sm hover:shadow-md
+                     transition-all flex items-center justify-center gap-2"
+            >
+              <i class="pi pi-play-circle"></i>
+              开始练习
+            </button>
+          </div>
 
           <!-- 当前房间（如果有） -->
           <RoomCard
@@ -543,5 +607,12 @@ const handleLogout = () => {
         </div>
       </div>
     </div>
+
+    <!-- 🔥 练习模式弹窗 -->
+    <PracticeModal
+      v-model:visible="showPracticeModal"
+      :questionId="null"
+      :playerCount="practicePlayerCount"
+    />
   </div>
 </template>

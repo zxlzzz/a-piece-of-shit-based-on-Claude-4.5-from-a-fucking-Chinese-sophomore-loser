@@ -49,10 +49,12 @@ public class Q006RoadBuildingStrategy extends AggregationBasedTemplateStrategy {
 
                     int lowContribution = Integer.parseInt(sorted.get(0).getValue());
                     int highContribution = Integer.parseInt(sorted.get(1).getValue());
+                    boolean same = lowContribution == highContribution;
 
                     if (roadFixed) {
+                        // 相同出价均得4分，否则高者得8分低者得4分
                         scores.put(sorted.get(0).getKey(), 4 - lowContribution);
-                        scores.put(sorted.get(1).getKey(), 8 - highContribution);
+                        scores.put(sorted.get(1).getKey(), (same ? 4 : 8) - highContribution);
                     } else {
                         scores.put(sorted.get(0).getKey(), -lowContribution);
                         scores.put(sorted.get(1).getKey(), -highContribution);

@@ -13,8 +13,8 @@ import java.util.stream.Collectors;
  * 6-8人
  */
 @Service
-public class Q013RockPaperAndScissorStrategy extends BaseQuestionStrategy {
-    public Q013RockPaperAndScissorStrategy(BuffApplier buffApplier) {
+public class Q014RockPaperScissorMinMaxStrategy extends BaseQuestionStrategy {
+    public Q014RockPaperScissorMinMaxStrategy(BuffApplier buffApplier) {
         super(buffApplier);
     }
 
@@ -49,7 +49,7 @@ public class Q013RockPaperAndScissorStrategy extends BaseQuestionStrategy {
 
     @Override
     public String getQuestionIdentifier() {
-        return "Q013";
+        return "Q014";
     }
 }
 

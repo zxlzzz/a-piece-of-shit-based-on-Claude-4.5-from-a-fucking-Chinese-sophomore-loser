@@ -40,9 +40,10 @@ public class Q002PerformanceCostumeStrategy extends ConditionBasedTemplateStrate
             @Override
             public java.util.function.Function<Map<String, String>, Boolean> getConditionChecker() {
                 return submissions -> {
-                    // 集齐侍卫+王子：有A（精致侍卫） 或者 (有B（王子） 且 有C（普通侍卫）)
-                    return submissions.containsValue("A") ||
-                           (submissions.containsValue("B") && submissions.containsValue("C"));
+                    // 集齐侍卫+王子：必须有B（王子）且有A或C（任一侍卫）
+                    boolean hasKing = submissions.containsValue("B");
+                    boolean hasGuard = submissions.containsValue("A") || submissions.containsValue("C");
+                    return hasKing && hasGuard;
                 };
             }
 

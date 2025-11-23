@@ -13,7 +13,7 @@ spring:
   # JPA 配置（开发环境）
   jpa:
     hibernate:
-      ddl-auto: update  # 🔥 修复：改为update，避免每次重启删除数据
+      ddl-auto: create  # 🔥 开发环境使用create，每次重启清空数据用于测试
     show-sql: false     # 不显示 SQL 语句
     properties:
       hibernate.format_sql: false        # 不格式化 SQL 输出

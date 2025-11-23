@@ -49,8 +49,9 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            getClaimsFromToken(token);
-            return !isTokenExpired(token);
+            // 🔥 修复：只解析一次，避免重复解析导致性能浪费
+            Claims claims = getClaimsFromToken(token);
+            return !claims.getExpiration().before(new Date());
         } catch (Exception e) {
             log.error("JWT 验证失败: {}", e.getMessage());
             return false;
@@ -65,8 +66,9 @@ public class JwtUtil {
                 .getBody();
     }
 
-    private boolean isTokenExpired(String token) {
-        Date expiration = getClaimsFromToken(token).getExpiration();
-        return expiration.before(new Date());
-    }
+    // 🔥 已废弃：不再使用，避免重复解析
+    // private boolean isTokenExpired(String token) {
+    //     Date expiration = getClaimsFromToken(token).getExpiration();
+    //     return expiration.before(new Date());
+    // }
 }

@@ -101,6 +101,7 @@ public class AuthServiceImpl implements AuthService {
 
         return AuthResponseDTO.builder()
                 .token(token)
+                .id(player.getId())  // 🔥 修复：添加id字段（与register保持一致）
                 .playerId(player.getPlayerId())
                 .username(username)
                 .name(player.getName())

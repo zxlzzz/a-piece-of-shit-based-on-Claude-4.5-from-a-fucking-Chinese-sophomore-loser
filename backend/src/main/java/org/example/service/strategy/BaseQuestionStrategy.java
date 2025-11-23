@@ -149,6 +149,11 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         return "";
     }
 
+    @Override
+    public Map<String, Integer> calculateScores(Map<String, String> submissions) {
+        return calculateBaseScores(submissions);
+    }
+
     public Map<String, Integer> test(Map<String, String> submissions) {
         return calculateBaseScores(submissions);
     }

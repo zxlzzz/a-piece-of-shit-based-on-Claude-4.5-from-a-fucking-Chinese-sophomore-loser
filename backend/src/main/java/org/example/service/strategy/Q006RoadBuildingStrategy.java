@@ -1,12 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.AggregationBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -14,7 +11,7 @@ import java.util.Map;
  * 2-8
  */
 @Component
-public class Q006RoadBuildingStrategy extends AggregationBasedTemplateStrategy {
+public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
 
     public Q006RoadBuildingStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -26,41 +23,33 @@ public class Q006RoadBuildingStrategy extends AggregationBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.AggregationBasedConfig getConfig() {
-        return new StrategyConfig.AggregationBasedConfig() {
-            @Override
-            public java.util.function.Function<Map<String, String>, Integer> getAggregator() {
-                return submissions -> submissions.values().stream()
-                    .mapToInt(Integer::parseInt)
-                    .sum();
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 计算总贡献
+        int total = submissions.values().stream()
+            .mapToInt(Integer::parseInt)
+            .sum();
+        boolean roadFixed = total >= 6;
 
-            @Override
-            public java.util.function.Function<AggregationContext, Map<String, Integer>> getScoreCalculator() {
-                return context -> {
-                    int total = context.aggregatedValue();
-                    boolean roadFixed = total >= 6;
+        // 按贡献排序（升序）
+        var sorted = submissions.entrySet().stream()
+            .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
+            .toList();
 
-                    var sorted = context.submissions().entrySet().stream()
-                        .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
-                        .toList();
+        int lowContribution = Integer.parseInt(sorted.get(0).getValue());
+        int highContribution = Integer.parseInt(sorted.get(1).getValue());
 
-                    Map<String, Integer> scores = new HashMap<>();
-
-                    int lowContribution = Integer.parseInt(sorted.get(0).getValue());
-                    int highContribution = Integer.parseInt(sorted.get(1).getValue());
-
-                    if (roadFixed) {
-                        scores.put(sorted.get(0).getKey(), 4 - lowContribution);
-                        scores.put(sorted.get(1).getKey(), 8 - highContribution);
-                    } else {
-                        scores.put(sorted.get(0).getKey(), -lowContribution);
-                        scores.put(sorted.get(1).getKey(), -highContribution);
-                    }
-
-                    return scores;
-                };
-            }
-        };
+        if (roadFixed) {
+            // 修路成功：低贡献得4-贡献，高贡献得8-贡献
+            return Map.of(
+                sorted.get(0).getKey(), 4 - lowContribution,
+                sorted.get(1).getKey(), 8 - highContribution
+            );
+        } else {
+            // 修路失败：都扣除贡献
+            return Map.of(
+                sorted.get(0).getKey(), -lowContribution,
+                sorted.get(1).getKey(), -highContribution
+            );
+        }
     }
 }

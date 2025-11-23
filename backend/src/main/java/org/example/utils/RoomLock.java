@@ -1,11 +1,15 @@
 package org.example.utils;
 
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 房间级别的并发控制工具
  * 为每个房间提供唯一的锁对象，确保对同一房间的操作是线程安全的
  */
+@Slf4j
 public class RoomLock {
 
     /**
@@ -37,11 +41,37 @@ public class RoomLock {
     }
 
     /**
+     * 🔥 修复：批量清理指定房间的锁（定时任务调用）
+     * @param activeRoomCodes 当前活跃的房间代码集合
+     * @return 清理的锁数量
+     */
+    public static int cleanupOrphanedLocks(Set<String> activeRoomCodes) {
+        int removed = 0;
+        for (String roomCode : LOCKS.keySet()) {
+            if (!activeRoomCodes.contains(roomCode)) {
+                LOCKS.remove(roomCode);
+                removed++;
+            }
+        }
+        if (removed > 0) {
+            log.info("🧹 清理废弃RoomLock: {} 个，剩余: {} 个", removed, LOCKS.size());
+        }
+        return removed;
+    }
+
+    /**
      * 获取当前锁对象总数（用于监控）
      *
      * @return 锁对象数量
      */
     public static int getLockCount() {
         return LOCKS.size();
+    }
+
+    /**
+     * 🔥 修复：获取所有锁的房间代码（用于监控和调试）
+     */
+    public static Set<String> getAllLockKeys() {
+        return LOCKS.keySet();
     }
 }

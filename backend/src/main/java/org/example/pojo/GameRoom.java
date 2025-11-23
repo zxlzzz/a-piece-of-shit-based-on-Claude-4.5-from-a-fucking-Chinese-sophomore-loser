@@ -125,7 +125,8 @@ public class GameRoom implements Serializable {
      * 获取当前题目
      */
     public QuestionDTO getCurrentQuestion() {
-        if (currentIndex < 0 || currentIndex >= questions.size()) {
+        // 🔥 修复：添加questions空值检查，避免NPE
+        if (questions == null || currentIndex < 0 || currentIndex >= questions.size()) {
             return null;
         }
         return questions.get(currentIndex);
@@ -136,12 +137,12 @@ public class GameRoom implements Serializable {
      * @return true-成功推进, false-已是最后一题
      */
     public boolean nextQuestion() {
-        if (currentIndex + 1 < questions.size()) {
-            currentIndex++;
-            return true;
-        } else {
+        // 🔥 修复：添加questions空值检查
+        if (questions == null || currentIndex + 1 >= questions.size()) {
             return false;
         }
+        currentIndex++;
+        return true;
     }
 
     /**

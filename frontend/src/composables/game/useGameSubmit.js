@@ -62,7 +62,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 题目已推进，跳过localStorage设置 (测试房间快速推进)', { currentIndex, returnedIndex })
+        // 🔥 修复：题目已推进，重置hasSubmitted，因为这已经是新题了
+        hasSubmitted.value = false
+        logger.info('⚠️ 题目已推进，重置提交状态 (测试房间快速推进)', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
@@ -126,7 +128,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        logger.info('⚠️ 自动提交时题目已推进，跳过localStorage设置', { currentIndex, returnedIndex })
+        // 🔥 修复：题目已推进，重置hasSubmitted
+        hasSubmitted.value = false
+        logger.info('⚠️ 自动提交时题目已推进，重置提交状态', { currentIndex, returnedIndex })
       }
 
       // 🔥 房间状态更新会通过WebSocket自动推送
@@ -172,26 +176,41 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
+    // 🔥 修复：确保 room 数据有效，避免在初始化或题目切换过程中误判
+    if (!room.value || room.value.currentIndex === undefined || room.value.currentIndex < 0) {
+      return
+    }
+
+    // 🔥 修复：页面刚加载时跳过验证（2秒内），避免刷新导致的状态不一致
+    if (!window._gameViewLoadTime) {
+      window._gameViewLoadTime = Date.now()
+    }
+    const timeSinceLoad = Date.now() - window._gameViewLoadTime
+    if (timeSinceLoad < 2000) {
+      logger.debug('⏭️ 页面刚加载，跳过提交状态验证（避免刷新导致的误判）')
+      return
+    }
+
     const submissionKey = getSubmissionKey()
     const localStorageSaysSubmitted = localStorage.getItem(submissionKey) === 'true'
     const backendSaysSubmitted = submittedPlayerIds && submittedPlayerIds.includes(playerStore.playerId)
 
     // 🔥 检测不一致：localStorage说已提交，但后端没有记录
     if (localStorageSaysSubmitted && !backendSaysSubmitted) {
-      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态')
+      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态', {
+        submissionKey,
+        currentIndex: room.value?.currentIndex,
+        submittedPlayerIds
+      })
       localStorage.removeItem(submissionKey)
       hasSubmitted.value = false
-
-      toast.add({
-        severity: 'warn',
-        summary: '提交状态已更新',
-        detail: '检测到提交未成功，请重新提交',
-        life: 3000
-      })
     }
     // 🔥 检测不一致：localStorage说未提交，但后端有记录
     else if (!localStorageSaysSubmitted && backendSaysSubmitted) {
-      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态')
+      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态', {
+        submissionKey,
+        currentIndex: room.value?.currentIndex
+      })
       localStorage.setItem(submissionKey, 'true')
       hasSubmitted.value = true
     }

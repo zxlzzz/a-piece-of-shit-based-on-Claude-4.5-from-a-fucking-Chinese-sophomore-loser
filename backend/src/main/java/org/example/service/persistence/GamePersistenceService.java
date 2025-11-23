@@ -10,7 +10,7 @@ public interface GamePersistenceService {
 
     /**
      * 保存游戏结果
-     * @param roomCode 房间码
+     * @param gameRoom 游戏房间对象（必须已设置finished=true）
      */
-    void saveGameResult(String roomCode);
+    void saveGameResult(GameRoom gameRoom);
 }

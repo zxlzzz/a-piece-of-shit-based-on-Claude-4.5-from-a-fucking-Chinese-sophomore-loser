@@ -3,6 +3,8 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.ChatMessage;
+import org.example.pojo.GameRoom;
+import org.example.service.cache.RoomCache;
 import org.example.service.chat.ChatRoomManager;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 public class ChatWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomManager chatRoomManager;
+    private final RoomCache roomCache;
 
     /**
      * 发送聊天消息
@@ -34,6 +37,16 @@ public class ChatWebSocketController {
             message.setTimestamp(LocalDateTime.now());
             message.setRoomCode(roomCode);
 
+            // 🔥 检查发送者是否为观战者
+            GameRoom gameRoom = roomCache.get(roomCode);
+            if (gameRoom != null) {
+                boolean isSpectator = gameRoom.getPlayers().stream()
+                        .filter(p -> p.getPlayerId().equals(message.getSenderId()))
+                        .findFirst()
+                        .map(p -> Boolean.TRUE.equals(p.getSpectator()))
+                        .orElse(false);
+                message.setIsSpectator(isSpectator);
+            }
 
             // 🔥 记录聊天室活动
             chatRoomManager.recordActivity(roomCode);

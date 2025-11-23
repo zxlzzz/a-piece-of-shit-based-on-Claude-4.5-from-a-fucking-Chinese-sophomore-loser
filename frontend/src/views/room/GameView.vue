@@ -109,6 +109,29 @@ onMounted(() => {
   }
 
   const savedRoom = playerStore.loadRoom()
+
+  // 🔥 修复：只清理旧题目的submission记录，保留当前题目的
+  if (savedRoom && savedRoom.currentIndex !== undefined && savedRoom.currentIndex >= 0) {
+    const currentSubmissionKey = `submission_${roomCode.value}_${savedRoom.currentIndex}`
+    const submissionPrefix = `submission_${roomCode.value}_`
+    const keysToRemove = []
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      // 只清理其他题目的记录，保留当前题目的
+      if (key && key.startsWith(submissionPrefix) && key !== currentSubmissionKey) {
+        keysToRemove.push(key)
+      }
+    }
+
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key)
+      logger.debug('🧹 清理旧题目的提交记录:', key)
+    })
+
+    logger.info('✅ 保留当前题目的提交记录:', currentSubmissionKey)
+  }
+
   if (savedRoom) {
     room.value = savedRoom
     question.value = savedRoom.currentQuestion
@@ -125,8 +148,13 @@ onMounted(() => {
       return
     }
 
-    if (question.value) {
+    // 🔥 修复：恢复当前题目的提交状态
+    if (question.value && savedRoom.currentIndex >= 0) {
       restoreSubmitState()
+      logger.info('✅ 页面加载时恢复提交状态:', {
+        currentIndex: savedRoom.currentIndex,
+        hasSubmitted: hasSubmitted.value
+      })
     }
 
     // 🔥 改进：验证时间合理性后再恢复倒计时

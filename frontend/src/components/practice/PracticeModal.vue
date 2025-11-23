@@ -304,43 +304,52 @@ const isDraw = computed(() => {
 </template>
 
 <style scoped>
+/* 强制白色背景，覆盖PrimeVue默认样式 */
 :deep(.p-dialog) {
-  border-radius: 1rem;
-  background: white;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  border-radius: 1rem !important;
+  background: white !important;
+  background-color: white !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
 }
 
-/* 暗色模式下的背景 */
+/* 暗色模式 */
 :deep(.dark .p-dialog) {
-  background: rgb(31, 41, 55);
+  background: rgb(31, 41, 55) !important;
+  background-color: rgb(31, 41, 55) !important;
 }
 
 :deep(.p-dialog-header) {
-  border-top-left-radius: 1rem;
-  border-top-right-radius: 1rem;
-  background: white;
+  border-top-left-radius: 1rem !important;
+  border-top-right-radius: 1rem !important;
+  background: white !important;
+  background-color: white !important;
 }
 
 :deep(.dark .p-dialog-header) {
-  background: rgb(31, 41, 55);
+  background: rgb(31, 41, 55) !important;
+  background-color: rgb(31, 41, 55) !important;
 }
 
 :deep(.p-dialog-content) {
-  padding: 0 1.5rem;
-  background: white;
+  padding: 0 1.5rem !important;
+  background: white !important;
+  background-color: white !important;
 }
 
 :deep(.dark .p-dialog-content) {
-  background: rgb(31, 41, 55);
+  background: rgb(31, 41, 55) !important;
+  background-color: rgb(31, 41, 55) !important;
 }
 
 :deep(.p-dialog-footer) {
-  border-bottom-left-radius: 1rem;
-  border-bottom-right-radius: 1rem;
-  background: white;
+  border-bottom-left-radius: 1rem !important;
+  border-bottom-right-radius: 1rem !important;
+  background: white !important;
+  background-color: white !important;
 }
 
 :deep(.dark .p-dialog-footer) {
-  background: rgb(31, 41, 55);
+  background: rgb(31, 41, 55) !important;
+  background-color: rgb(31, 41, 55) !important;
 }
 </style>

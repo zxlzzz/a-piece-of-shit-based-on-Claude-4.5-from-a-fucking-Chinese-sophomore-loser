@@ -206,6 +206,12 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
      */
     public abstract int getTotalRounds();
 
+    @Override
+    public Map<String, Integer> calculateScores(Map<String, String> submissions) {
+        // 练习模式使用：按最后一轮计算
+        return calculateRoundBaseScores(submissions, getTotalRounds());
+    }
+
     public Map<String, Integer> test(Map<String, String> submissions) {
         return calculateRoundBaseScores(submissions, getTotalRounds());
     }

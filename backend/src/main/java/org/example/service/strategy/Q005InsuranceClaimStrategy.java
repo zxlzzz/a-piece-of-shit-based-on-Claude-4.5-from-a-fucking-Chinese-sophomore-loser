@@ -1,10 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.SortBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -12,7 +11,7 @@ import java.util.Map;
  * 2-8
  */
 @Component
-public class Q005InsuranceClaimStrategy extends SortBasedTemplateStrategy {
+public class Q005InsuranceClaimStrategy extends BaseQuestionStrategy {
 
     public Q005InsuranceClaimStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -24,26 +23,20 @@ public class Q005InsuranceClaimStrategy extends SortBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.SortBasedConfig getConfig() {
-        return new StrategyConfig.SortBasedConfig() {
-            @Override
-            public java.util.function.Function<Map.Entry<String, String>, Integer> getSortKey() {
-                return e -> Integer.parseInt(e.getValue());
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 按索赔金额排序（升序）
+        var sorted = submissions.entrySet().stream()
+            .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
+            .toList();
 
-            @Override
-            public java.util.function.Function<java.util.List<Map.Entry<String, String>>, Map<String, Integer>> getScoreCalculator() {
-                return sorted -> {
-                    int lowClaim = Integer.parseInt(sorted.get(0).getValue());
-                    int highClaim = Integer.parseInt(sorted.get(1).getValue());
-                    boolean same = (lowClaim == highClaim);
+        int lowClaim = Integer.parseInt(sorted.get(0).getValue());
+        int highClaim = Integer.parseInt(sorted.get(1).getValue());
+        boolean same = (lowClaim == highClaim);
 
-                    return Map.of(
-                        sorted.get(0).getKey(), lowClaim,
-                        sorted.get(1).getKey(), same ? highClaim : highClaim - 3
-                    );
-                };
-            }
-        };
+        // 相同都得原价，否则高价者-3
+        return Map.of(
+            sorted.get(0).getKey(), lowClaim,
+            sorted.get(1).getKey(), same ? highClaim : highClaim - 3
+        );
     }
 }

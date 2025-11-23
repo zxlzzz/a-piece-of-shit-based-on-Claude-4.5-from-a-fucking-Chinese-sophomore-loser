@@ -1,10 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.SortBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -12,7 +11,7 @@ import java.util.Map;
  * 0-10
  */
 @Component
-public class Q007DoubleAuctionStrategy extends SortBasedTemplateStrategy {
+public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
 
     public Q007DoubleAuctionStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -24,20 +23,17 @@ public class Q007DoubleAuctionStrategy extends SortBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.SortBasedConfig getConfig() {
-        return new StrategyConfig.SortBasedConfig() {
-            @Override
-            public java.util.function.Function<Map.Entry<String, String>, Integer> getSortKey() {
-                return e -> Integer.parseInt(e.getValue());
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 按第一件出价排序（升序）
+        var sorted = submissions.entrySet().stream()
+            .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
+            .toList();
 
-            @Override
-            public java.util.function.Function<java.util.List<Map.Entry<String, String>>, Map<String, Integer>> getScoreCalculator() {
-                return sorted -> Map.of(
-                    sorted.get(0).getKey(), Integer.parseInt(sorted.get(0).getValue()) + 3,
-                    sorted.get(1).getKey(), 10 - Integer.parseInt(sorted.get(1).getValue())
-                );
-            }
-        };
+        // 低价者赢第一件（价值10），得分=10-出价
+        // 高价者赢第二件（价值13），得分=13-(10-第一件出价)=出价+3
+        return Map.of(
+            sorted.get(0).getKey(), 10 - Integer.parseInt(sorted.get(0).getValue()),
+            sorted.get(1).getKey(), Integer.parseInt(sorted.get(1).getValue()) + 3
+        );
     }
 }

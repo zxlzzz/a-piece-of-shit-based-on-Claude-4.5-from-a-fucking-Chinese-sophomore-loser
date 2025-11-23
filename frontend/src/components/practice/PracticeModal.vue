@@ -127,7 +127,18 @@ const isDraw = computed(() => {
     :closable="true"
     :dismissableMask="true"
     class="practice-dialog"
-    :style="{ width: '90vw', maxWidth: '800px' }"
+    :style="{
+      width: '90vw',
+      maxWidth: '800px',
+      backgroundColor: 'white',
+      borderRadius: '1rem'
+    }"
+    :pt="{
+      root: { style: 'background: white; border-radius: 1rem;' },
+      header: { style: 'background: white;' },
+      content: { style: 'background: white;' },
+      footer: { style: 'background: white;' }
+    }"
   >
     <template #header>
       <div class="flex items-center gap-3">

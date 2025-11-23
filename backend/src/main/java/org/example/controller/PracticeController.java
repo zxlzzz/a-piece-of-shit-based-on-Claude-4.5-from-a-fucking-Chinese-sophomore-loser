@@ -193,7 +193,7 @@ public class PracticeController {
                 // 选择题：检查选项是否存在
                 return question.getOptions() != null &&
                         question.getOptions().stream()
-                                .anyMatch(opt -> opt.getValue().equals(choice));
+                                .anyMatch(opt -> opt.getKey().equals(choice));
             case BID:
                 // 竞价题：检查是否在范围内
                 try {

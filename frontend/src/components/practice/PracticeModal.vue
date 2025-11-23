@@ -128,16 +128,16 @@ const isDraw = computed(() => {
     :dismissableMask="true"
     class="practice-dialog"
     :style="{
-      width: '90vw',
-      maxWidth: '800px',
+      width: '95vw',
+      maxWidth: '900px',
       backgroundColor: 'white',
       borderRadius: '1rem'
     }"
     :pt="{
-      root: { style: 'background: white; border-radius: 1rem;' },
-      header: { style: 'background: white;' },
-      content: { style: 'background: white;' },
-      footer: { style: 'background: white;' }
+      root: { style: 'background: white; border-radius: 1rem; padding: 1.5rem;' },
+      header: { style: 'background: white; padding: 1rem 0;' },
+      content: { style: 'background: white; padding: 1.5rem 0;' },
+      footer: { style: 'background: white; padding: 1rem 0;' }
     }"
   >
     <template #header>
@@ -227,6 +227,33 @@ const isDraw = computed(() => {
 
     <!-- 结果显示 -->
     <div v-else-if="step === 'result' && result" class="py-4">
+      <!-- 题目回顾 -->
+      <div class="mb-6">
+        <h3 class="text-lg font-semibold text-gray-800 dark:text-white mb-3">
+          {{ result.question.text }}
+        </h3>
+
+        <!-- 计分规则 -->
+        <div v-if="result.question.calculateRule" class="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 mb-3">
+          <div class="flex items-center gap-2 mb-1">
+            <i class="pi pi-calculator text-gray-600 dark:text-gray-400 text-sm"></i>
+            <span class="font-medium text-gray-700 dark:text-gray-300 text-sm">计分规则</span>
+          </div>
+          <p class="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-line">
+            {{ result.question.calculateRule }}
+          </p>
+        </div>
+
+        <!-- 选项列表（仅选择题） -->
+        <div v-if="result.question.type === 'CHOICE' && result.question.options" class="space-y-2">
+          <div v-for="option in result.question.options" :key="option.key"
+               class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span class="font-medium">{{ option.key }}.</span>
+            <span>{{ option.text }}</span>
+          </div>
+        </div>
+      </div>
+
       <!-- 双方选择和得分 -->
       <div class="grid grid-cols-2 gap-4 mb-6">
         <!-- 玩家 -->

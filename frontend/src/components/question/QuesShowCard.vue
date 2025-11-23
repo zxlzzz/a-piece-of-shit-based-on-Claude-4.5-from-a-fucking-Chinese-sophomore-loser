@@ -1,6 +1,6 @@
 <script setup>
 import QuestionFeedback from '@/components/feedback/QuestionFeedback.vue'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
   id: Number,  // 题目ID
@@ -26,18 +26,49 @@ const props = defineProps({
 
 const emit = defineEmits(['practice'])
 
-// 🔥 练习模式人数选择
-const practicePlayerCount = ref(2)
+// 🔥 解析人数范围，获取可选人数列表
+const availablePlayerCounts = computed(() => {
+  if (!props.people) return [2, 3, 4, 5, 6]
 
-// 🔥 解析人数范围，获取默认值
-const getDefaultPlayerCount = () => {
-  if (typeof props.people === 'number') return props.people
-  if (typeof props.people === 'string') {
-    const match = props.people.match(/^\d+/)
-    return match ? parseInt(match[0]) : 2
+  const peopleStr = String(props.people)
+
+  // 情况1: "2" 或 2 => 只能2人
+  if (/^\d+$/.test(peopleStr)) {
+    const count = parseInt(peopleStr)
+    return [count]
   }
-  return 2
-}
+
+  // 情况2: "3-5" => 3,4,5人
+  const rangeMatch = peopleStr.match(/^(\d+)-(\d+)$/)
+  if (rangeMatch) {
+    const min = parseInt(rangeMatch[1])
+    const max = parseInt(rangeMatch[2])
+    const counts = []
+    for (let i = min; i <= max; i++) {
+      counts.push(i)
+    }
+    return counts
+  }
+
+  // 情况3: "2,3,5" => 2,3,5人
+  const listMatch = peopleStr.match(/^[\d,]+$/)
+  if (listMatch) {
+    return peopleStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n))
+  }
+
+  // 默认2-6人
+  return [2, 3, 4, 5, 6]
+})
+
+// 🔥 练习模式人数选择（初始化为第一个可选值）
+const practicePlayerCount = ref(availablePlayerCounts.value[0] || 2)
+
+// 🔥 监听可选人数变化，自动调整当前选择
+watch(availablePlayerCounts, (newCounts) => {
+  if (!newCounts.includes(practicePlayerCount.value)) {
+    practicePlayerCount.value = newCounts[0] || 2
+  }
+}, { immediate: true })
 
 const handlePractice = () => {
   emit('practice', props.id, practicePlayerCount.value)
@@ -180,12 +211,11 @@ const handlePractice = () => {
                    text-gray-800 dark:text-white
                    rounded-md
                    focus:ring-1 focus:ring-purple-500 focus:border-transparent"
+            :disabled="availablePlayerCounts.length === 1"
           >
-            <option :value="2">2人</option>
-            <option :value="3">3人</option>
-            <option :value="4">4人</option>
-            <option :value="5">5人</option>
-            <option :value="6">6人</option>
+            <option v-for="count in availablePlayerCounts" :key="count" :value="count">
+              {{ count }}人
+            </option>
           </select>
         </div>
         <button

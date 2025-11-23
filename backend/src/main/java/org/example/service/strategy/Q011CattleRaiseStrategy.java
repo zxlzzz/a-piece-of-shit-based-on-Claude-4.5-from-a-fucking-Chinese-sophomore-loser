@@ -1,10 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.AggregationBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -12,7 +11,7 @@ import java.util.stream.Collectors;
  * 0-3
  */
 @Component
-public class Q011CattleRaiseStrategy extends AggregationBasedTemplateStrategy {
+public class Q011CattleRaiseStrategy extends BaseQuestionStrategy {
 
     public Q011CattleRaiseStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -24,28 +23,22 @@ public class Q011CattleRaiseStrategy extends AggregationBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.AggregationBasedConfig getConfig() {
-        return new StrategyConfig.AggregationBasedConfig() {
-            @Override
-            public java.util.function.Function<java.util.Map<String, String>, Integer> getAggregator() {
-                return submissions -> submissions.values().stream()
-                    .mapToInt(Integer::parseInt)
-                    .sum();
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 计算总牛数
+        int total = submissions.values().stream()
+            .mapToInt(Integer::parseInt)
+            .sum();
 
-            @Override
-            public java.util.function.Function<AggregationContext, java.util.Map<String, Integer>> getScoreCalculator() {
-                return context -> {
-                    int total = context.aggregatedValue();
-                    int value = total <= 3 ? 3 : 3 - (total - 3);
+        // 计算每头牛的价值
+        // <=3头：每头3分
+        // >3头：3-(总数-3)，可以为负数
+        int value = total <= 3 ? 3 : 3 - (total - 3);
 
-                    return context.submissions().entrySet().stream()
-                        .collect(Collectors.toMap(
-                            java.util.Map.Entry::getKey,
-                            e -> Integer.parseInt(e.getValue()) * value
-                        ));
-                };
-            }
-        };
+        // 计算每个玩家的分数 = 养牛数 * 每头价值
+        return submissions.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> Integer.parseInt(e.getValue()) * value
+            ));
     }
 }

@@ -156,18 +156,22 @@ public class RoomCache {
 
     /**
      * 🔥 P1-5修复：移除房间（带重试机制）
+     * 修复：删除失败后记录错误，但不中断流程（数据库删除更重要）
      */
     public void removeWithRetry(String roomCode) {
         String redisKey = getRedisKey(roomCode);
         int maxRetries = 3;
+        boolean deleted = false;
+
         for (int i = 0; i < maxRetries; i++) {
             try {
                 redisTemplate.delete(redisKey);
                 log.info("🗑️ 房间 {} 已从Redis移除", roomCode);
+                deleted = true;
                 return; // 成功，直接返回
             } catch (Exception e) {
                 if (i == maxRetries - 1) {
-                    log.error("❌ Redis 删除失败（roomCode={}），已重试 {} 次", roomCode, maxRetries, e);
+                    log.error("❌ Redis 删除失败（roomCode={}），已重试 {} 次，可能导致缓存残留", roomCode, maxRetries, e);
                 } else {
                     log.warn("⚠️ Redis 删除失败（roomCode={}），第 {}/{} 次重试...", roomCode, i + 1, maxRetries);
                     try {
@@ -178,6 +182,11 @@ public class RoomCache {
                     }
                 }
             }
+        }
+
+        // 🔥 修复：即使删除失败，也要记录警告日志（方便排查缓存残留问题）
+        if (!deleted) {
+            log.warn("⚠️ 房间 {} 的Redis缓存可能未完全删除，将依赖TTL自动过期", roomCode);
         }
     }
 

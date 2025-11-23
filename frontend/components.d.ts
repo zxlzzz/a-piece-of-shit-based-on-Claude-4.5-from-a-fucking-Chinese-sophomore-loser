@@ -21,6 +21,7 @@ declare module 'vue' {
     MobileChatDrawer: typeof import('./src/components/game/MobileChatDrawer.vue')['default']
     NumberBar: typeof import('./src/components/game/NumberBar.vue')['default']
     PlayerListCard: typeof import('./src/components/room/PlayerListCard.vue')['default']
+    PracticeModal: typeof import('./src/components/practice/PracticeModal.vue')['default']
     QuesShowCard: typeof import('./src/components/question/QuesShowCard.vue')['default']
     Question: typeof import('./src/components/question/Question.vue')['default']
     QuestionCard: typeof import('./src/components/game/QuestionCard.vue')['default']

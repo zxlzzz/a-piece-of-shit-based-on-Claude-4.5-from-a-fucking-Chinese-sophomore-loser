@@ -109,7 +109,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         // 🔥 P0修复：使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
             // 检查房间密码（观战者不需要密码）
-            if (!spectator && room.getPassword() != null && !room.getPassword().isEmpty()) {
+            // 🔥 修复：trim()避免空格绕过，检查空字符串
+            if (!spectator && room.getPassword() != null && !room.getPassword().trim().isEmpty()) {
                 if (!room.getPassword().equals(password)) {
                     throw new BusinessException("房间密码错误");
                 }

@@ -131,44 +131,75 @@ export function useGameWebSocket(
 
         const oldIndex = room.value?.currentIndex
         const newIndex = update.currentIndex
+        const oldQuestionStartTime = room.value?.questionStartTime
+        const newQuestionStartTime = update.questionStartTime
 
-        room.value = update
-        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
-        playerStore.setRoom(update)
+        // 🔥 修复：检测是否是第一次收到题目数据（游戏刚开始）
+        const isFirstLoad = (oldIndex === undefined || oldIndex === -1) && newIndex >= 0
+        const indexChanged = newIndex !== undefined && oldIndex !== newIndex
+        const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
 
-        // 🔥 P1-1: 验证提交状态（每次收到房间更新都验证）
-        if (verifySubmissionState && update.submittedPlayerIds) {
-          verifySubmissionState(update.submittedPlayerIds)
-        }
+        // 🔥 修复：题目切换、重复题换轮、或首次加载时都需要处理
+        if (isFirstLoad || indexChanged || questionTimeChanged) {
+          // 🔥 强制清理所有旧题目的localStorage，避免Bot房间快速切换导致的状态残留
+          if (indexChanged && newIndex !== undefined) {
+            const submissionPrefix = `submission_${roomCode.value}_`
+            const keysToRemove = []
 
-        if (newIndex !== undefined && oldIndex !== newIndex) {
-          if (oldIndex !== undefined) {
-            const oldSubmissionKey = `submission_${roomCode.value}_${oldIndex}`
-            localStorage.removeItem(oldSubmissionKey)
+            for (let i = 0; i < localStorage.length; i++) {
+              const key = localStorage.key(i)
+              if (key && key.startsWith(submissionPrefix)) {
+                // 解析题目index
+                const match = key.match(/submission_[^_]+_(\d+)/)
+                if (match) {
+                  const keyIndex = parseInt(match[1])
+                  // 清理所有非当前题目的记录
+                  if (keyIndex < newIndex) {
+                    keysToRemove.push(key)
+                  }
+                }
+              }
+            }
+
+            keysToRemove.forEach(key => {
+              localStorage.removeItem(key)
+              logger.debug('🧹 清理旧题目提交记录:', key)
+            })
           }
-          
+
           clearCountdown()
-          
           resetSubmitState()
+
+          // 🔥 先更新room，再检查新题的提交状态
+          room.value = update
           question.value = update.currentQuestion
-          
+
+          // 🔥 所有题目都检查localStorage（包括第一题）
           const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
           const savedSubmission = localStorage.getItem(newSubmissionKey)
           if (savedSubmission === 'true') {
             restoreSubmitState()
-          } else {
+            logger.info('✅ WebSocket恢复提交状态:', { newIndex, hasSubmitted: true })
           }
-          
+
           if (update.questionStartTime) {
             questionStartTime.value = new Date(update.questionStartTime)
             timeLimit.value = update.timeLimit || 30
             resetCountdown()
           }
         } else {
+          // 普通更新（玩家列表变化等）
+          room.value = update
           question.value = update.currentQuestion
         }
-        
+
+        // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
         playerStore.setRoom(update)
+
+        // 🔥 P1-1: 验证提交状态（在题目切换处理之后，确保localStorage已清理）
+        if (verifySubmissionState && update.submittedPlayerIds) {
+          verifySubmissionState(update.submittedPlayerIds)
+        }
 
         const isGameFinished = update.finished === true || update.status === 'FINISHED'
 

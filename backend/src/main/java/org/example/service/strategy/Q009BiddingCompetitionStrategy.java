@@ -1,10 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.SortBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -12,7 +11,7 @@ import java.util.Map;
  * 1-9
  */
 @Component
-public class Q009BiddingCompetitionStrategy extends SortBasedTemplateStrategy {
+public class Q009BiddingCompetitionStrategy extends BaseQuestionStrategy {
 
     public Q009BiddingCompetitionStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -24,26 +23,22 @@ public class Q009BiddingCompetitionStrategy extends SortBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.SortBasedConfig getConfig() {
-        return new StrategyConfig.SortBasedConfig() {
-            @Override
-            public java.util.function.Function<Map.Entry<String, String>, Integer> getSortKey() {
-                return e -> Integer.parseInt(e.getValue());
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 按出价排序（升序）
+        var sorted = submissions.entrySet().stream()
+            .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
+            .toList();
 
-            @Override
-            public java.util.function.Function<java.util.List<Map.Entry<String, String>>, Map<String, Integer>> getScoreCalculator() {
-                return sorted -> {
-                    int lowBid = Integer.parseInt(sorted.get(0).getValue());
-                    int highBid = Integer.parseInt(sorted.get(1).getValue());
-                    boolean tooFarApart = (highBid - lowBid) >= 3;
+        int lowBid = Integer.parseInt(sorted.get(0).getValue());
+        int highBid = Integer.parseInt(sorted.get(1).getValue());
+        boolean tooFarApart = (highBid - lowBid) >= 3;
 
-                    return Map.of(
-                        sorted.get(0).getKey(), tooFarApart ? 0 : 10 - lowBid,
-                        sorted.get(1).getKey(), 10 - highBid
-                    );
-                };
-            }
-        };
+        // 物品价值10分
+        // 差距>=3：低价者无法购买得0分，高价者得10-出价
+        // 差距<3：都可购买，各得10-出价
+        return Map.of(
+            sorted.get(0).getKey(), tooFarApart ? 0 : 10 - lowBid,
+            sorted.get(1).getKey(), 10 - highBid
+        );
     }
 }

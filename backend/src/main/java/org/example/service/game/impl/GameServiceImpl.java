@@ -197,7 +197,7 @@ public class GameServiceImpl implements GameService {
                 throw new BusinessException("本轮已经提交过答案");
             }
 
-            // 提交答案
+            // 提交答案（内部会自动同步到Redis）
             submissionService.submitAnswer(roomCode, playerId, choice);
 
             // 如果是测试房间且提交者不是Bot，立即触发Bot提交
@@ -205,8 +205,8 @@ public class GameServiceImpl implements GameService {
                 submissionService.autoSubmitBots(gameRoom);
             }
 
-            // 🔥 修复：提交后立即同步到Redis，确保用户刷新页面时能看到最新状态
-            roomCache.syncToRedis(roomCode, gameRoom);
+            // 🔥 修复：重新从Redis获取最新的gameRoom（因为submitAnswer已经同步了）
+            gameRoom = roomCache.getOrThrow(roomCode);
 
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);
@@ -216,6 +216,10 @@ public class GameServiceImpl implements GameService {
                 // 🔥 总是填充默认答案，已提交的不会被覆盖
                 String reason = force ? "force" : "allSubmitted";
                 gameFlowService.advanceQuestion(roomCode, reason, true);
+                // 🔥 advanceQuestion内部会广播，这里不需要再广播
+            } else {
+                // 🔥 只在未满员时才广播，减少广播次数
+                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             }
 
             return roomLifecycleService.toRoomDTO(roomCode);

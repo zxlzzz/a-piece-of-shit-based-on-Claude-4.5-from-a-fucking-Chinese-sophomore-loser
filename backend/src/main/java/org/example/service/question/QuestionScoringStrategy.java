@@ -18,4 +18,6 @@ public interface QuestionScoringStrategy {
     String getQuestionIdentifier();
 
     Map<String, Integer> test(Map<String, String> submissions);
+
+    Map<String, Integer> calculateScores(Map<String, String> submissions);
 }

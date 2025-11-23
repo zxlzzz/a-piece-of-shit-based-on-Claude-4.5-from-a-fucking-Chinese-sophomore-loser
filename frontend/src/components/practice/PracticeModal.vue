@@ -113,12 +113,6 @@ const getOptionText = (optionKey) => {
   return option ? `${option.key}. ${option.text}` : optionKey
 }
 
-// 判断玩家是否获胜
-const isWin = computed(() => {
-  if (!result.value) return false
-  return result.value.playerScore > result.value.botScore
-})
-
 const isDraw = computed(() => {
   if (!result.value) return false
   return result.value.playerScore === result.value.botScore
@@ -222,22 +216,6 @@ const isDraw = computed(() => {
 
     <!-- 结果显示 -->
     <div v-else-if="step === 'result' && result" class="py-4">
-      <!-- 结果标题 -->
-      <div class="text-center mb-8">
-        <div v-if="isWin" class="flex flex-col items-center">
-          <i class="pi pi-trophy text-6xl text-yellow-500 mb-4"></i>
-          <h3 class="text-2xl font-bold text-gray-800 dark:text-white">恭喜获胜！</h3>
-        </div>
-        <div v-else-if="isDraw" class="flex flex-col items-center">
-          <i class="pi pi-minus-circle text-6xl text-gray-500 mb-4"></i>
-          <h3 class="text-2xl font-bold text-gray-800 dark:text-white">平局</h3>
-        </div>
-        <div v-else class="flex flex-col items-center">
-          <i class="pi pi-times-circle text-6xl text-red-500 mb-4"></i>
-          <h3 class="text-2xl font-bold text-gray-800 dark:text-white">再接再厉</h3>
-        </div>
-      </div>
-
       <!-- 双方选择和得分 -->
       <div class="grid grid-cols-2 gap-4 mb-6">
         <!-- 玩家 -->

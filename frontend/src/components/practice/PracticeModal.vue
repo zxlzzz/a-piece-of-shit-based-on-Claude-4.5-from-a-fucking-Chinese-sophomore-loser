@@ -328,19 +328,41 @@ const isDraw = computed(() => {
 <style scoped>
 :deep(.p-dialog) {
   border-radius: 1rem;
+  background: white;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* 暗色模式下的背景 */
+:deep(.dark .p-dialog) {
+  background: rgb(31, 41, 55);
 }
 
 :deep(.p-dialog-header) {
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
+  background: white;
+}
+
+:deep(.dark .p-dialog-header) {
+  background: rgb(31, 41, 55);
 }
 
 :deep(.p-dialog-content) {
   padding: 0 1.5rem;
+  background: white;
+}
+
+:deep(.dark .p-dialog-content) {
+  background: rgb(31, 41, 55);
 }
 
 :deep(.p-dialog-footer) {
   border-bottom-left-radius: 1rem;
   border-bottom-right-radius: 1rem;
+  background: white;
+}
+
+:deep(.dark .p-dialog-footer) {
+  background: rgb(31, 41, 55);
 }
 </style>

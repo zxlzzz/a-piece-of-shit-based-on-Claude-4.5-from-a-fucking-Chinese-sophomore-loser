@@ -86,11 +86,17 @@ public class PracticeController {
         // 生成会话ID
         String sessionId = UUID.randomUUID().toString();
 
+        // 转换为DTO
+        QuestionDTO questionDTO = quesService.convertEntitiesToDTOs(List.of(questionEntity)).get(0);
+
         // 生成Bot选择（基于统计数据）
         String botChoice = statisticsService.generateBotChoice(questionEntity.getId(), playerCount);
 
-        // 转换为DTO
-        QuestionDTO questionDTO = quesService.convertEntitiesToDTOs(List.of(questionEntity)).get(0);
+        // 如果没有统计数据，随机生成Bot选择
+        if (botChoice == null) {
+            botChoice = generateRandomChoice(questionDTO);
+            log.info("📊 没有统计数据，随机生成Bot选择: {}", botChoice);
+        }
 
         // 创建并保存会话
         PracticeSession session = new PracticeSession(
@@ -206,6 +212,28 @@ public class PracticeController {
                 }
             default:
                 return false;
+        }
+    }
+
+    /**
+     * 随机生成Bot选择（当没有统计数据时使用）
+     */
+    private String generateRandomChoice(QuestionDTO question) {
+        switch (question.getType()) {
+            case CHOICE:
+                // 选择题：随机选一个选项
+                if (question.getOptions() != null && !question.getOptions().isEmpty()) {
+                    int randomIndex = (int) (Math.random() * question.getOptions().size());
+                    return question.getOptions().get(randomIndex).getKey();
+                }
+                return "A"; // 默认选项
+            case BID:
+                // 竞价题：在范围内随机选择
+                int range = (question.getMax() - question.getMin()) / question.getStep();
+                int randomSteps = (int) (Math.random() * (range + 1));
+                return String.valueOf(question.getMin() + randomSteps * question.getStep());
+            default:
+                return "A";
         }
     }
 

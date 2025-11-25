@@ -1,0 +1,30 @@
+# === Frontend ===
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+
+# === Backend ===
+target/
+*.iml
+.idea/
+*.class
+*.jar
+*.war
+*.log
+/.mvn/
+.DS_Store
+application-local.yml
+application-local.properties
+
+# === System ===
+*.swp
+*.bak
+*.tmp
+Thumbs.db
+
+# === Docker ===
+/data/
+volumes/

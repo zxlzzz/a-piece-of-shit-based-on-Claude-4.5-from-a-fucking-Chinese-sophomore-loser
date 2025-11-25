@@ -1,0 +1,82 @@
+# ===== Backend =====
+# IDE配置
+backend/.idea/
+backend/*.iml
+backend/*.ipr
+backend/*.iws
+
+# 编译输出
+backend/target/
+backend/out/
+logs
+
+# 日志
+backend/logs/
+backend/*.log
+
+# 环境配置（可能包含密码）
+backend/application-local.properties
+backend/application-local.yml
+backend/.env
+
+# 忽略所有 application-*.yml，但保留必要的配置模板
+backend/src/main/resources/application-*.yml
+backend/src/main/resources/application-*.properties
+!backend/src/main/resources/application.yml           # 保留主配置
+!backend/src/main/resources/application.properties    # 保留主配置
+!backend/src/main/resources/application-dev.yml       # 保留开发环境配置模板
+!backend/src/main/resources/application-prod.yml      # 保留生产环境配置模板
+
+# Maven wrapper
+backend/.mvn/wrapper/maven-wrapper.jar
+
+# ===== Frontend =====
+# 依赖
+frontend/node_modules/
+
+# 构建输出
+frontend/dist/
+frontend/.vite/
+
+# 🔥 添加：前端缓存和临时文件
+frontend/.nuxt/
+frontend/.cache/
+frontend/.turbo/
+frontend/.parcel-cache/
+frontend/.temp/
+frontend/.vite-inspect/
+
+# 测试覆盖率
+backend/coverage/
+frontend/coverage/
+*.lcov
+
+frontend/yarn.lock
+frontend/pnpm-lock.yaml
+
+# IDE配置
+frontend/.vscode/
+frontend/.idea/
+
+# 环境配置
+frontend/.env
+frontend/.env.local
+
+# 日志
+frontend/*.log
+frontend/npm-debug.log*
+
+# ===== 通用 =====
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.swp
+*.bak
+~*
+
+# 数据库文件
+*.db
+*.sqlite

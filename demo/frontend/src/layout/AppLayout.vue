@@ -1,24 +1,16 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import FloatingButton from '@/components/draft/FloatingButton.vue'
 
 const router = useRouter()
 const route = useRoute()
 const mobileMenuOpen = ref(false)
-const draftEnabled = ref(true)
-
-onMounted(() => {
-  const saved = localStorage.getItem('draftEnabled')
-  draftEnabled.value = saved !== 'false'
-})
 
 // 菜单项配置
 const menuItems = [
   { label: '主界面', icon: 'pi pi-home', to: '/' },
   { label: '查找房间', icon: 'pi pi-search', to: '/find' },
   { label: '登录', icon: 'pi pi-user', to: '/login' },
-  { label: '联系', icon: 'pi pi-phone', to: '/call' },
   { label: '历史', icon: 'pi pi-history', to: '/history' },
   { label: '题库', icon: 'pi pi-book', to: '/table' }
 ]
@@ -30,11 +22,6 @@ const navigateTo = (path) => {
 
 const isActive = (path) => {
   return route.path === path
-}
-
-const toggleDraft = () => {
-  draftEnabled.value = !draftEnabled.value
-  localStorage.setItem('draftEnabled', draftEnabled.value)
 }
 </script>
 
@@ -67,20 +54,6 @@ const toggleDraft = () => {
               <i :class="item.icon" class="mr-1.5"></i>
               {{ item.label }}
             </button>
-
-            <!-- 草稿开关 -->
-            <div class="h-6 w-px bg-gray-300 dark:bg-gray-600 mx-1"></div>
-            <button
-              @click="toggleDraft"
-              class="px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-              :class="draftEnabled
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
-              :title="draftEnabled ? '隐藏草稿' : '显示草稿'"
-            >
-              <i :class="draftEnabled ? 'pi pi-pencil' : 'pi pi-eye-slash'" class="mr-1.5"></i>
-              草稿
-            </button>
           </nav>
 
           <!-- 移动端菜单按钮 -->
@@ -111,19 +84,6 @@ const toggleDraft = () => {
               <i :class="item.icon" class="mr-2"></i>
               {{ item.label }}
             </button>
-
-            <!-- 草稿开关 -->
-            <div class="border-t border-gray-200 dark:border-gray-700 my-2"></div>
-            <button
-              @click="toggleDraft"
-              class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-              :class="draftEnabled
-                ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
-                : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50'"
-            >
-              <i :class="draftEnabled ? 'pi pi-pencil' : 'pi pi-eye-slash'" class="mr-2"></i>
-              草稿{{ draftEnabled ? '（已启用）' : '（已禁用）' }}
-            </button>
           </div>
         </div>
       </transition>
@@ -133,9 +93,6 @@ const toggleDraft = () => {
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <router-view></router-view>
     </main>
-
-    <!-- 草稿悬浮球 -->
-    <FloatingButton :enabled="draftEnabled" />
   </div>
 
   <Toast />

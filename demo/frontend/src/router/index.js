@@ -27,11 +27,6 @@ const router = createRouter({
           // 🔥 删除 meta: { requiresAuth: true }
         },
         {
-          path: '/call',
-          name: 'call',
-          component: () => import('@/views/Call.vue')
-        },
-        {
           path: '/history',
           name: 'history',
           component: () => import('@/views/HistoryView.vue')

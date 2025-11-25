@@ -9,7 +9,6 @@ import org.example.entity.QuestionEntity;
 import org.example.entity.QuestionMetadata;
 import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
-import org.example.repository.QuestionTagRelationRepository;
 import org.example.utils.DTOConverter;
 import org.springframework.stereotype.Service;
 
@@ -23,17 +22,14 @@ import static org.example.config.WebSocketConfig.WebSocketChannelInterceptor.log
 public class QuestionSelectorService {
     private final QuestionRepository questionRepository;
     private final QuestionMetadataRepository metadataRepository;
-    private final QuestionTagRelationRepository tagRelationRepository;
     private final DTOConverter dtoConverter;
 
     public QuestionSelectorService(
             QuestionRepository questionRepository,
             QuestionMetadataRepository metadataRepository,
-            QuestionTagRelationRepository tagRelationRepository,
             DTOConverter dtoConverter) {
         this.questionRepository = questionRepository;
         this.metadataRepository = metadataRepository;
-        this.tagRelationRepository = tagRelationRepository;
         this.dtoConverter = dtoConverter;
     }
 
@@ -57,16 +53,6 @@ public class QuestionSelectorService {
     public List<QuestionDTO> selectQuestions(int totalCount, int playerCount, List<Long> tagIds) {
         // 1. 查询所有题目（带配置）
         List<QuestionEntity> allQuestions = questionRepository.findAllWithConfigs();
-
-        // 2. 🔥 如果指定了标签，先根据标签筛选
-        if (tagIds != null && !tagIds.isEmpty()) {
-            Set<Long> filteredQuestionIds = filterQuestionIdsByTags(tagIds);
-            allQuestions = allQuestions.stream()
-                    .filter(q -> filteredQuestionIds.contains(q.getId()))
-                    .toList();
-
-            log.info("🏷️ 根据标签筛选后：{} 道题目", allQuestions.size());
-        }
 
         // 3. 筛选适合人数的题目
         List<QuestionEntity> suitable = allQuestions.stream()
@@ -103,20 +89,6 @@ public class QuestionSelectorService {
         return selectedDTOs;
     }
 
-    /**
-     * 根据标签筛选题目ID
-     */
-    private Set<Long> filterQuestionIdsByTags(List<Long> tagIds) {
-        // 查询所有包含这些标签的题目ID
-        return tagRelationRepository.findByQuestionIdIn(
-                        questionRepository.findAllWithConfigs().stream()
-                                .map(QuestionEntity::getId)
-                                .toList()
-                ).stream()
-                .filter(relation -> tagIds.contains(relation.getTagId()))
-                .map(org.example.entity.QuestionTagRelationEntity::getQuestionId)
-                .collect(Collectors.toSet());
-    }
 
     private QuestionPool buildQuestionPool(
             List<QuestionEntity> questions,

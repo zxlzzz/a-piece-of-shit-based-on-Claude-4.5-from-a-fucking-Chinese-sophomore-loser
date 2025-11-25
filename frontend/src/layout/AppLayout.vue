@@ -49,7 +49,7 @@ const toggleDraft = () => {
           <!-- Logo -->
           <div class="flex items-center gap-3">
             <h1 class="text-xl font-semibold text-gray-900 dark:text-white">
-              答题游戏
+              Boilune
             </h1>
           </div>
 

@@ -225,8 +225,8 @@ const handlePractice = () => {
                  text-white shadow-sm hover:shadow-md
                  transition-all flex items-center justify-center gap-2"
         >
-          <i class="pi pi-play-circle text-sm"></i>
-          开始练习
+          <i class="text-sm"></i>
+          练习
         </button>
       </div>
 

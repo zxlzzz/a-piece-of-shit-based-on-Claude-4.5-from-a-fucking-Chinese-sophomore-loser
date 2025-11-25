@@ -75,7 +75,6 @@ const {
   clearCountdown
 } = useGameCountdown(handleAutoSubmit)
 
-// 🔥 传递 isSpectator 防止观战者通过键盘提交
 useGameKeyboard(computed(() => chatStore.visible), hasSubmitted, question, computed(() => playerStore.isSpectator))
 
 const { connectWebSocket, wsConnected } = useGameWebSocket(
@@ -219,15 +218,7 @@ onUnmounted(() => {
           @toggleChat="chatStore.toggleChat(isMobile)"
         />
 
-        <!-- 🔥 新增：观战模式提示 -->
-        <div v-if="playerStore.isSpectator"
-             class="bg-purple-50 dark:bg-purple-900/20 border border-purple-200
-                    dark:border-purple-800 rounded-lg p-3 sm:p-4 text-center">
-          <i class="pi pi-eye text-purple-600 dark:text-purple-400"></i>
-          <span class="ml-2 text-sm sm:text-base text-purple-700 dark:text-purple-400 font-medium">
-            观战模式 - 您可以观看但不能答题
-          </span>
-        </div>
+        
 
         <!-- 游戏内容 -->
         <GameContent

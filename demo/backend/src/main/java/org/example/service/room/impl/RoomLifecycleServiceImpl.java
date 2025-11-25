@@ -100,7 +100,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
+    public void handleJoin(String roomCode, String playerId, String playerName, String password) {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
@@ -109,14 +109,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
         // 🔥 P0修复：使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
             // 检查房间密码（观战者不需要密码）
-            // 🔥 修复：trim()避免空格绕过，检查空字符串
-            if (!spectator && room.getPassword() != null && !room.getPassword().trim().isEmpty()) {
-                if (!room.getPassword().equals(password)) {
-                    throw new BusinessException("房间密码错误");
-                }
-            }
-
-            // 🔥 修复问题2：检查房间状态（允许已在房间的玩家刷新/重连）
+            // 🔥 修复：trim()避免空格绕过，检查空字符串            // 🔥 修复问题2：检查房间状态（允许已在房间的玩家刷新/重连）
             if (room.getStatus() != RoomStatus.WAITING) {
                 // 检查玩家是否已在房间内（允许重连）
                 boolean playerInRoom = gameRoom.getPlayers().stream()
@@ -137,7 +130,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
 
             // 🔥 检查房间是否已满（观战者不计入人数）
-            if (!spectator) {  // 非观战者才检查容量
+            if (true) {  // 检查容量
                 long nonSpectatorCount = gameRoom.getPlayers().stream()
                         .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                         .count();
@@ -158,8 +151,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 // 🔥 改：直接设置房间和准备状态
                 player.setRoom(room);
                 player.setReady(false);
-                player.setSpectator(spectator != null && spectator);  // 设置观战模式
-
+                
                 playerRepository.save(player);
 
                 PlayerDTO playerDTO = PlayerDTO.builder()
@@ -167,7 +159,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                         .name(playerName)
                         .score(0)
                         .ready(false)
-                        .spectator(spectator != null && spectator)  // 设置观战模式
+                        
                         .build();
 
                 // 🔥 测试房间：真实玩家插入到第一位（成为房主）

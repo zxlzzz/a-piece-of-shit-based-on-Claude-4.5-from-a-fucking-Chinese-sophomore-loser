@@ -48,7 +48,7 @@ public class DevDataInitializer implements ApplicationRunner {
                         .username(username)
                         .password(passwordEncoder.encode("123456"))
                         .name("测试玩家-" + username)
-                        .spectator(false)
+                        
                         .ready(false)
                         .createdAt(LocalDateTime.now())
                         .updatedAt(LocalDateTime.now())

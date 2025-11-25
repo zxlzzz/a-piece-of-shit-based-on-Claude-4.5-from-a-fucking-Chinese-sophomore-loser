@@ -75,7 +75,7 @@ public class GameServiceImpl implements GameService {
                     .playerId(botId)
                     .name(botName)
                     .ready(true)  // Bot默认准备
-                    .spectator(false)
+                    
                     .build();
 
             gameRoom.getPlayers().add(botPlayer);
@@ -99,8 +99,8 @@ public class GameServiceImpl implements GameService {
 
     @Override
     @Transactional
-    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator, String password) {
-        roomLifecycleService.handleJoin(roomCode, playerId, playerName, spectator, password);
+    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, String password) {
+        roomLifecycleService.handleJoin(roomCode, playerId, playerName, password);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
 

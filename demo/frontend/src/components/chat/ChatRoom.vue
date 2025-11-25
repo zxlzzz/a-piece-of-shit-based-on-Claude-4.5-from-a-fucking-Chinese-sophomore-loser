@@ -258,7 +258,7 @@ const getRecipientNames = (message) => {
               <p class="text-xs font-medium mb-0.5"
                  :class="isOwnMessage(msg) ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'">
                 {{ msg.senderName }}
-                <span v-if="msg.isSpectator" class="ml-1 text-xs opacity-70">(观战)</span>
+                
               </p>
               <p class="text-sm">{{ msg.content }}</p>
             </div>

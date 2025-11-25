@@ -53,7 +53,7 @@ const props = defineProps({
         <div class="text-center">
           <p class="text-gray-500 dark:text-gray-400 mb-1">准备状态</p>
           <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
-            {{ room.players?.filter(p => !p.spectator && p.ready).length || 0 }}/{{ room.players?.filter(p => !p.spectator).length || 0 }}
+            {{ room.players?.filter(p => p.ready).length || 0 }}/{{ room.players?.length || 0 }}
           </p>
         </div>
       </div>

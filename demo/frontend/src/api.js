@@ -148,9 +148,9 @@ export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password =
   return api.post('/rooms', null, { params });
 };
 
-export const joinRoom = (roomCode, playerId, playerName, spectator = false, password = null) =>
+export const joinRoom = (roomCode, playerId, playerName, password = null) =>
   api.post(`/rooms/${roomCode}/join`, null, {
-    params: { playerId, playerName, spectator, password }
+    params: { playerId, playerName, password }
   });
 
 export const startGame = (roomCode) =>

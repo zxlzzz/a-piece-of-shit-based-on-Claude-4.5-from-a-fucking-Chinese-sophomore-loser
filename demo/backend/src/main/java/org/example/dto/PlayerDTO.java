@@ -39,6 +39,4 @@ public class PlayerDTO {
     /**
      * 是否为观战者（观战者不参与答题，不计分）
      */
-    @Builder.Default
-    private Boolean spectator = false;
-}
+    @Builder.Default}

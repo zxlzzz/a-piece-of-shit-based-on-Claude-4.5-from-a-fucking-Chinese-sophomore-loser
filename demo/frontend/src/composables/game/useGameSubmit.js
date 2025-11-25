@@ -12,14 +12,10 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     return `submission_${roomCode.value}_${room.value.currentIndex}`
   }
 
-  const handleChoose = async (choice) => {
-    // 🔥 观战者不能提交答案
-    if (playerStore.isSpectator) {
+  const handleChoose = async (choice) => {    if (playerStore.isSpectator) {
       toast.add({
         severity: 'warn',
-        summary: '观战模式',
-        detail: '观战者不能提交答案',
-        life: 2000
+                life: 2000
       })
       return
     }
@@ -89,9 +85,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     }
   }
 
-  const handleAutoSubmit = async () => {
-    // 🔥 观战者不需要自动提交
-    if (playerStore.isSpectator) {
+  const handleAutoSubmit = async () => {    if (playerStore.isSpectator) {
       return
     }
 
@@ -170,9 +164,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
    * 如果 localStorage 说已提交但后端没有记录，则清除 localStorage 并重置状态
    * @param {Array<string>} submittedPlayerIds - 后端返回的已提交玩家ID列表
    */
-  const verifySubmissionState = (submittedPlayerIds) => {
-    // 观战者不需要验证
-    if (playerStore.isSpectator) {
+  const verifySubmissionState = (submittedPlayerIds) => {    if (playerStore.isSpectator) {
       return
     }
 

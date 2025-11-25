@@ -56,7 +56,7 @@ const props = defineProps({
               </span>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">
-              {{ player.spectator ? '观战中' : (player.ready ? '已准备' : '等待中') }}
+              {{ player.ready ? '已准备' : '等待中' }}
             </p>
           </div>
         </div>

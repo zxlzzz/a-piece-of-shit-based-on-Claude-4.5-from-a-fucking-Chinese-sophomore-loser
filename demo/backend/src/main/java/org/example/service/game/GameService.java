@@ -26,11 +26,9 @@ public interface GameService {
     RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);
 
     /**
-     * 加入房间
-     * @param spectator 是否为观战者（观战者不参与答题，不计分）
-     * @param password 房间密码（如果房间有密码保护）
+     * 加入房间     * @param password 房间密码（如果房间有密码保护）
      */
-    RoomDTO joinRoom(String roomCode, String playerId, String playerName, Boolean spectator, String password);
+    RoomDTO joinRoom(String roomCode, String playerId, String playerName, String password);
     /**
      * 开始游戏
      */

@@ -42,8 +42,7 @@ const emit = defineEmits(['ready', 'start', 'leave', 'showCustom'])
       自定义
     </button>
 
-    <!-- 准备按钮（非观战者） -->
-    <button
+        <button
       v-if="!isSpectator"
       @click="emit('ready')"
       :disabled="currentPlayerReady || loading || !wsConnected"
@@ -57,14 +56,7 @@ const emit = defineEmits(['ready', 'start', 'leave', 'showCustom'])
       {{ currentPlayerReady ? '已准备' : '准备' }}
     </button>
 
-    <!-- 观战者显示观战中标识 -->
-    <div v-else class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
-                       bg-purple-50 text-purple-700 border border-purple-200
-                       dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800
-                       text-center">
-      <i class="pi pi-eye mr-1"></i>
-      观战中
-    </div>
+    
 
     <button
       v-if="isRoomOwner"

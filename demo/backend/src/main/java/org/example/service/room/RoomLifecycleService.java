@@ -23,11 +23,9 @@ public interface RoomLifecycleService {
     RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, List<Long> questionTagIds);
 
     /**
-     * 加入房间
-     * @param spectator 是否为观战者
-     * @param password 房间密码
+     * 加入房间     * @param password 房间密码
      */
-    void handleJoin(String roomCode, String playerId, String playerName, Boolean spectator, String password);
+    void handleJoin(String roomCode, String playerId, String playerName, String password);
 
     /**
      * 离开房间

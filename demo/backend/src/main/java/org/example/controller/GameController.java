@@ -72,9 +72,7 @@ public class GameController {
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
             @RequestParam String playerId,
-            @RequestParam String playerName,
-            @RequestParam(defaultValue = "false") Boolean spectator,
-            @RequestParam(required = false) String password) {
+            @RequestParam String playerName,            @RequestParam(required = false) String password) {
         // 🔥 修复：添加重连检测逻辑
         GameRoom gameRoom = roomCache.get(roomCode);
         boolean isReconnect = gameRoom != null &&
@@ -87,7 +85,7 @@ public class GameController {
             room = roomLifecycleService.toRoomDTO(roomCode);
         } else {
             // 新加入场景
-            room = gameService.joinRoom(roomCode, playerId, playerName, spectator, password);
+            room = gameService.joinRoom(roomCode, playerId, playerName, password);
         }
 
         broadcaster.sendRoomUpdate(roomCode, room);

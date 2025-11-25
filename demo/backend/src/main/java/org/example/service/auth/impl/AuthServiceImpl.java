@@ -132,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
                 .password(null)  // 游客没有密码
                 .name(name)
                 .ready(false)
-                .spectator(false)
+                
                 .deleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())

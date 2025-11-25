@@ -12,7 +12,6 @@ export const usePlayerStore = defineStore('player', () => {
   const username = ref(localStorage.getItem('username') || null) // 🔥 新增用户名
   const currentRoomCode = ref(null)
   const currentRoom = ref(null)
-  const isSpectator = ref(localStorage.getItem('isSpectator') === 'true') // 🔥 观战模式
 
   const isLoggedIn = computed(() => !!token.value && !!playerId.value)
   
@@ -30,11 +29,6 @@ export const usePlayerStore = defineStore('player', () => {
     localStorage.setItem('playerName', authData.name)
     localStorage.setItem('username', authData.username)
   }
-  
-  function setSpectator(value) {
-    isSpectator.value = value
-    localStorage.setItem('isSpectator', value ? 'true' : 'false')
-  }
 
   function clearPlayer() {
     token.value = null
@@ -43,14 +37,12 @@ export const usePlayerStore = defineStore('player', () => {
     username.value = null
     currentRoomCode.value = null
     currentRoom.value = null
-    isSpectator.value = false
 
     localStorage.removeItem('token')
     localStorage.removeItem('playerId')
     localStorage.removeItem('playerName')
     localStorage.removeItem('username')
     localStorage.removeItem('currentRoom')
-    localStorage.removeItem('isSpectator')
   }
   
   function setRoom(roomData) {
@@ -104,9 +96,7 @@ export const usePlayerStore = defineStore('player', () => {
     currentRoom,
     isLoggedIn,
     userId,
-    isSpectator,
     setPlayer,
-    setSpectator,
     clearPlayer,
     setRoom,
     clearRoom,

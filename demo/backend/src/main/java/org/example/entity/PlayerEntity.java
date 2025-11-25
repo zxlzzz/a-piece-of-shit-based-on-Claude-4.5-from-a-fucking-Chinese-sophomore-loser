@@ -37,8 +37,6 @@ public class PlayerEntity {
     private Boolean ready;
 
     @Column
-    private Boolean spectator;  // 观战模式（观战者不参与答题，不计分）
-
     // ========== 软删除字段 ==========
     @Column(nullable = false)
     private Boolean deleted = false;  // 软删除标记

@@ -34,10 +34,7 @@ export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
     if (e.key === 'Escape') {
       showChat.value = false
       return
-    }
-    
-    // 🔥 观战者不能提交答案
-    if (isSpectator?.value) {
+    }    if (isSpectator?.value) {
       return
     }
 
@@ -75,9 +72,7 @@ export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
       }
     }
     
-    if (e.key === 'Enter') {
-      // 🔥 观战者不能提交答案
-      if (isSpectator?.value) {
+    if (e.key === 'Enter') {      if (isSpectator?.value) {
         return
       }
       e.preventDefault()

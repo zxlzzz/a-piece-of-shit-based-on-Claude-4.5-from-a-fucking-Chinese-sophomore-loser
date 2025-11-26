@@ -46,7 +46,7 @@ public class GameService {
     @Transactional
     public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds) {
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, timeLimit, gameRoom);
         gameRoom.setRoomEntity(savedRoom);
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
@@ -59,7 +59,7 @@ public class GameService {
         GameRoom gameRoom = new GameRoom();
         gameRoom.setTestRoom(true);  // 标记为测试房间
 
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, 30, gameRoom);
         gameRoom.setRoomEntity(savedRoom);
 
 
@@ -86,16 +86,8 @@ public class GameService {
     }
 
     @Transactional
-    public RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request) {
-        roomLifecycleService.updateSettings(roomCode, request);
-        RoomDTO roomDTO = roomLifecycleService.toRoomDTO(roomCode);
-        broadcaster.sendRoomUpdate(roomCode, roomDTO);
-        return roomDTO;
-    }
-
-    @Transactional
     public RoomDTO joinRoom(String roomCode, String playerId, String playerName, String password) {
-        roomLifecycleService.handleJoin(roomCode, playerId, playerName, password);
+        roomLifecycleService.handleJoin(roomCode, playerId, playerName);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
 
@@ -117,14 +109,6 @@ public class GameService {
             return null;
         }
         return roomLifecycleService.toRoomDTO(roomCode);
-    }
-
-    public void handlePlayerDisconnect(String roomCode, String playerId) {
-        roomLifecycleService.handlePlayerDisconnect(roomCode, playerId);
-    }
-
-    public void removeDisconnectedPlayer(String roomCode, String playerId) {
-        roomLifecycleService.removeDisconnectedPlayer(roomCode, playerId);
     }
 
     public GameRoom getGameRoom(String roomCode) {

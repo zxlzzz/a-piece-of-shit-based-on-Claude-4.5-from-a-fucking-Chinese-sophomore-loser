@@ -66,22 +66,10 @@ public class GameController {
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
             @RequestParam String playerId,
-            @RequestParam String playerName,            @RequestParam(required = false) String password) {
-        // 🔥 修复：添加重连检测逻辑
-        GameRoom gameRoom = roomCache.get(roomCode);
-        boolean isReconnect = gameRoom != null &&
-                gameRoom.getDisconnectedPlayers().containsKey(playerId);
-
-        RoomDTO room;
-        if (isReconnect) {
-            // 重连场景
-            roomLifecycleService.handleReconnect(roomCode, playerId);
-            room = roomLifecycleService.toRoomDTO(roomCode);
-        } else {
-            // 新加入场景
-            room = gameService.joinRoom(roomCode, playerId, playerName, password);
-        }
-
+            @RequestParam String playerName,
+            @RequestParam(required = false) String password) {
+        // 简化实现：直接加入，不处理重连
+        RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, password);
         broadcaster.sendRoomUpdate(roomCode, room);
         return ResponseEntity.ok(room);
     }
@@ -147,17 +135,4 @@ public class GameController {
         return ResponseEntity.ok(history);
     }
 
-    @Data
-    @AllArgsConstructor
-    @NoArgsConstructor
-    public static class UpdateRoomSettingsRequest {
-        private Integer questionCount;
-        private Integer timeLimit;
-        private Boolean chatEnabled;
-        private Boolean privateChatEnabled;  // 🔥 是否启用私聊功能
-        private String rankingMode;
-        private Integer targetScore;
-        private RoomDTO.WinConditions winConditions;
-        private List<Long> questionTagIds;
-    }
 }

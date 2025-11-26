@@ -44,28 +44,17 @@ public class RoomWsController {
     // @MessageMapping("/join")
     public void handleJoin_DEPRECATED(@Payload JoinRequest request) {
         try {
-            // 🔥 检查是否是重连
-            GameRoom gameRoom = gameService.getGameRoom(request.getRoomCode());
-            boolean isReconnect = gameRoom != null &&
-                    gameRoom.getDisconnectedPlayers().containsKey(request.getPlayerId());
+            // 简化实现：直接加入，不处理重连
+            RoomDTO room = gameService.joinRoom(request.getRoomCode(),
+                    request.getPlayerId(), request.getPlayerName(), null);
 
-            if (isReconnect) {
-                // 🔥 重连逻辑
-                roomLifecycleService.handleReconnect(request.getRoomCode(), request.getPlayerId());
-            } else {
-                // 🔥 正常加入逻辑（原有代码）
-                RoomDTO room = gameService.joinRoom(request.getRoomCode(),
-                        request.getPlayerId(), request.getPlayerName(), false, null);
-            }
-
-            // 🔥 统一广播（无论加入还是重连）
+            // 广播房间更新
             RoomDTO updatedRoom = roomLifecycleService.toRoomDTO(request.getRoomCode());
             broadcaster.sendRoomUpdate(request.getRoomCode(), updatedRoom);
 
         } catch (BusinessException e) {
             log.error("❌ 加入房间失败（业务异常）: {}", e.getMessage());
         } catch (Exception e) {
-            // 🔥 添加：捕获所有异常，防止断连
             log.error("❌ 加入房间失败（系统异常）", e);
         }
     }

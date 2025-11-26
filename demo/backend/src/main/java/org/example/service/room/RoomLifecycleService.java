@@ -43,37 +43,20 @@ public class RoomLifecycleService {
     private final ChatRoomManager chatRoomManager;  // 🔥 用于清理聊天室
 
     @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password,GameRoom gameRoom) {
-        return initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit,password, null);
-    }
-
-    @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, java.util.List<Long> questionTagIds) {
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom) {
         String roomCode = generateRoomCode();
 
-        // 🔥 序列化标签IDs
-        String questionTagIdsJson = null;
-        if (questionTagIds != null && !questionTagIds.isEmpty()) {
-            try {
-                questionTagIdsJson = objectMapper.writeValueAsString(questionTagIds);
-            } catch (Exception e) {
-                log.error("序列化questionTagIds失败", e);
-            }
-        }
-
-        // 🔥 创建房间实体（只有基础字段）
         RoomEntity roomEntity = RoomEntity.builder()
                 .roomCode(roomCode)
                 .status(RoomStatus.WAITING)
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
                 .timeLimit(timeLimit != null ? timeLimit : 30)
-                .password(password != null && !password.trim().isEmpty() ? password : null)
-                // 🔥 高级规则使用默认值
+                .password(null)
                 .rankingMode("standard")
                 .targetScore(null)
                 .winConditionsJson(null)
-                .questionTagIdsJson(questionTagIdsJson)
+                .questionTagIdsJson(null)
                 .build();
 
         RoomEntity savedRoom = roomRepository.save(roomEntity);
@@ -88,15 +71,14 @@ public class RoomLifecycleService {
         gameRoom.setCurrentIndex(-1);
         gameRoom.setSubmissions(new ConcurrentHashMap<>());
         gameRoom.setScores(new ConcurrentHashMap<>());
-        gameRoom.setDisconnectedPlayers(new ConcurrentHashMap<>());
         gameRoom.setPlayerGameStates(new ConcurrentHashMap<>());
-        gameRoom.setRoomEntity(savedRoom); // 🔥 性能优化：缓存 RoomEntity，避免后续频繁查询数据库
+        gameRoom.setRoomEntity(savedRoom);
 
         return savedRoom;
     }
 
     @Transactional
-    public void handleJoin(String roomCode, String playerId, String playerName, String password) {
+    public void handleJoin(String roomCode, String playerId, String playerName) {
         RoomEntity room = roomRepository.findByRoomCode(roomCode)
                 .orElseThrow(() -> new BusinessException("房间不存在"));
 
@@ -117,10 +99,7 @@ public class RoomLifecycleService {
                 }
 
                 // 🔥 已在房间的玩家允许刷新/重连，检查是否在断线列表中
-                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
-                    gameRoom.getDisconnectedPlayers().remove(playerId);
                     roomCache.put(roomCode, gameRoom);
-                }
 
                 return; // 跳过后续加入逻辑
             }
@@ -171,10 +150,7 @@ public class RoomLifecycleService {
                 roomCache.put(roomCode, gameRoom);
             } else {
                 // 🔥 修复问题3：玩家已存在，检查是否在断线列表中
-                if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
-                    gameRoom.getDisconnectedPlayers().remove(playerId);
                     roomCache.put(roomCode, gameRoom);
-                }
 
             }
         }
@@ -189,7 +165,6 @@ public class RoomLifecycleService {
 
         // 🔥 P0修复：使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
-            gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
             PlayerDTO leavingPlayer = gameRoom.getPlayers().stream()
                     .filter(p -> p.getPlayerId().equals(playerId))
@@ -227,7 +202,6 @@ public class RoomLifecycleService {
                 // 游戏进行中：标记断线
 
                 long connectedCount = gameRoom.getPlayers().stream()
-                        .filter(p -> !gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()))
                         .count();
 
                 if (connectedCount == 0) {
@@ -253,22 +227,7 @@ public class RoomLifecycleService {
         }
     }
 
-    @Transactional
-    public void handleReconnect(String roomCode, String playerId) {
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-
-        // 🔥 P0修复：使用统一的RoomLock
-        synchronized (RoomLock.getLock(roomCode)) {
-            LocalDateTime disconnectTime = gameRoom.getDisconnectedPlayers().remove(playerId);
-
-            if (disconnectTime != null) {
-                long offlineSeconds = java.time.Duration.between(disconnectTime, LocalDateTime.now()).getSeconds();
-
-                // 🔥 P1-2: 游戏进行中重连
-                // 注意：不在这里重启后端定时器，而是依赖前端 countdown
-                // 当前端倒计时结束时会调用 handleAutoSubmit，自动提交答案并推进游戏
-                if (gameRoom.isStarted() && !gameRoom.isFinished() && gameRoom.getCurrentQuestion() != null) {
-                }
+    
 
                 // 🔥 添加：如果游戏已结束，重连时重置房间过期时间
                 if (gameRoom.isFinished()) {
@@ -284,19 +243,7 @@ public class RoomLifecycleService {
         }
     }
 
-    @Transactional
-    public void updateSettings(String roomCode, GameController.UpdateRoomSettingsRequest request) {
-        RoomEntity room = roomRepository.findByRoomCode(roomCode)
-                .orElseThrow(() -> new BusinessException("房间不存在"));
-
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-
-        // 🔥 P0修复：使用统一的RoomLock
-        synchronized (RoomLock.getLock(roomCode)) {
-            // 校验：游戏未开始
-            if (gameRoom.isStarted()) {
-                throw new BusinessException("游戏已开始，无法修改设置");
-            }
+    
 
             // 更新题目数量（可选）
             if (request.getQuestionCount() != null && request.getQuestionCount() > 0) {
@@ -417,18 +364,13 @@ public class RoomLifecycleService {
         return toRoomDTO(roomEntity, gameRoom);
     }
 
-    @Transactional
-    public void handlePlayerDisconnect(String roomCode, String playerId) {
-        GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom == null) {
-            log.warn("⚠️ 房间 {} 不存在，跳过断线处理", roomCode);
+     不存在，跳过断线处理", roomCode);
             return;
         }
 
         // 🔥 P0修复：使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
             // 🔥 标记断线时间
-            gameRoom.getDisconnectedPlayers().put(playerId, LocalDateTime.now());
 
             String playerName = gameRoom.getPlayers().stream()
                     .filter(p -> p.getPlayerId().equals(playerId))
@@ -441,7 +383,6 @@ public class RoomLifecycleService {
             if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
                 boolean allDisconnected = gameRoom.getPlayers().stream()
                         .filter(p -> !Boolean.TRUE.equals(p.getSpectator())) // 排除观战者
-                        .allMatch(p -> gameRoom.getDisconnectedPlayers().containsKey(p.getPlayerId()));
 
                 if (allDisconnected) {
                     log.warn("❌ 房间 {} 所有非观战玩家都断开连接", roomCode);
@@ -452,11 +393,7 @@ public class RoomLifecycleService {
         }
     }
 
-    @Transactional
-    public void removeDisconnectedPlayer(String roomCode, String playerId) {
-        GameRoom gameRoom = roomCache.get(roomCode);
-        if (gameRoom == null) {
-            log.warn("⚠️ 房间 {} 不存在，跳过移除操作", roomCode);
+     不存在，跳过移除操作", roomCode);
             return;
         }
 
@@ -464,14 +401,12 @@ public class RoomLifecycleService {
         synchronized (RoomLock.getLock(roomCode)) {
             // 🔥 添加：如果游戏进行中，不移除玩家，只保持断线状态
             if (gameRoom.isStarted() && !gameRoom.isFinished()) {
-                // 不执行移除操作，保持在 disconnectedPlayers 列表中
                 return;
             }
 
             // 🔥 只有在游戏未开始或已结束时才真正移除
 
             // 从断线列表移除
-            gameRoom.getDisconnectedPlayers().remove(playerId);
 
             // 从玩家列表移除
             PlayerDTO removedPlayer = gameRoom.getPlayers().stream()

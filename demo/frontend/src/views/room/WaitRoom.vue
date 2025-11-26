@@ -1,5 +1,5 @@
 <script setup>
-import { updateRoomSettings, getRoomStatus, kickPlayer } from '@/api'
+import { getRoomStatus, kickPlayer } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
@@ -9,7 +9,6 @@ import { setPlayerReady, startGame } from '@/api'
 import { useToast } from 'primevue/usetoast'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import CustomForm from '@/components/room/CustomForm.vue'
 import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
@@ -31,7 +30,6 @@ const room = ref(null)
 const subscriptions = ref([])
 const loading = ref(false)
 
-const showCustomForm = ref(false)
 
 // 🔥 改用 ref 而不是 computed，手动管理连接状态
 const wsConnected = ref(false)
@@ -460,49 +458,6 @@ const copyRoomCode = async () => {
   }
 }
 
-const handleCustomFormSubmit = async (formData) => {
-  loading.value = true
-  try {
-    // 🔥 调用后端 API
-    const response = await updateRoomSettings(roomCode.value, {
-      questionCount: formData.questionCount,
-      timeLimit: formData.timeLimit,
-      chatEnabled: formData.chatEnabled,
-      rankingMode: formData.rankingMode,
-      targetScore: formData.targetScore,
-      winConditions: formData.winConditions,
-      questionTagIds: formData.questionTagIds
-    })
-    
-    // 🔥 更新本地房间数据
-    room.value = response.data
-    playerStore.setRoom(response.data)
-    
-    toast.add({
-      severity: 'success',
-      summary: '成功',
-      detail: '游戏设置已更新',
-      life: 2000
-    })
-    
-    showCustomForm.value = false
-    
-  } catch (error) {
-    logger.error('更新设置失败:', error)
-    toast.add({
-      severity: 'error',
-      summary: '失败',
-      detail: error.response?.data?.message || '更新游戏设置失败',
-      life: 3000
-    })
-  } finally {
-    loading.value = false
-  }
-}
-
-const handleCustomFormCancel = () => {
-  showCustomForm.value = false
-}
 // 🔥 新增：刷新房间状态（重连后使用）
 const refreshRoomState = async () => {
   try {
@@ -810,12 +765,6 @@ const refreshRoomState = async () => {
     </div>
 
     <!-- 自定义表单弹窗 -->
-    <CustomForm
-      v-if="showCustomForm"
-      :maxQuestions="20"
-      :currentSettings="room"
-      @submit="handleCustomFormSubmit"
-      @cancel="handleCustomFormCancel"
-    />
+    
   </div>
 </template>

@@ -57,13 +57,7 @@ public class GameController {
         return ResponseEntity.ok(roomDTO);
     }
 
-    @PutMapping("/rooms/{roomCode}/settings")
-    public ResponseEntity<RoomDTO> updateRoomSettings(
-            @PathVariable String roomCode,
-            @RequestBody UpdateRoomSettingsRequest request) {
-        RoomDTO room = gameService.updateRoomSettings(roomCode, request);
-        return ResponseEntity.ok(room);
-    }
+    
 
     /**
      * 🔥 P1-3修复：移除try-catch，让全局异常处理器统一处理错误响应

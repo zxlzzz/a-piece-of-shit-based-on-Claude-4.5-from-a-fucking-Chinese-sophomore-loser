@@ -178,8 +178,6 @@ export const deleteRoom = (roomCode) =>
 export const getAllActiveRooms = () =>
   api.get(`/rooms`);
 
-export const updateRoomSettings = (roomCode, settings) =>
-  api.put(`/rooms/${roomCode}/settings`, settings);
 
 export const listPlayers = () =>
   api.get(`/players`);

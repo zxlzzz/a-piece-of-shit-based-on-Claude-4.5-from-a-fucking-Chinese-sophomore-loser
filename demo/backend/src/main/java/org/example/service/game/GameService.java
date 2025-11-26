@@ -23,7 +23,7 @@ public interface GameService {
     RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount);
 
     // 🔥 新增：更新房间设置
-    RoomDTO updateRoomSettings(String roomCode, GameController.UpdateRoomSettingsRequest request);
+    
 
     /**
      * 加入房间     * @param password 房间密码（如果房间有密码保护）

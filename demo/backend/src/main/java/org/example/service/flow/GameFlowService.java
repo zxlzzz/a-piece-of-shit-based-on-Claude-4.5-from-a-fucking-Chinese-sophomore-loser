@@ -164,7 +164,7 @@ public class GameFlowService {
 
 
             // 🔥 同步到 Redis
-            roomCache.syncToRedis(roomCode, gameRoom);
+            roomCache.put(roomCode, gameRoom);
 
             // 广播
             broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
@@ -211,7 +211,7 @@ public class GameFlowService {
                                 () -> advanceQuestion(roomCode, "timeout", true));
 
                         // 🔥 同步到 Redis
-                        roomCache.syncToRedis(roomCode, gameRoom);
+                        roomCache.put(roomCode, gameRoom);
 
                         broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
                     } else {
@@ -234,7 +234,7 @@ public class GameFlowService {
 
 
                         // 🔥 同步到 Redis
-                        roomCache.syncToRedis(roomCode, gameRoom);
+                        roomCache.put(roomCode, gameRoom);
 
                         broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
                     } else {
@@ -322,7 +322,7 @@ public class GameFlowService {
                 log.error("❌ 游戏结束流程失败: roomCode={}", roomCode, e);
                 // 🔥 修复问题5.2：回滚finished状态，允许重试
                 gameRoom.setFinished(false);
-                roomCache.syncToRedis(roomCode, gameRoom);
+                roomCache.put(roomCode, gameRoom);
                 throw e;
             } finally {
                 // 7. 清理玩家状态
@@ -332,7 +332,7 @@ public class GameFlowService {
                 advancing.remove(roomCode);
 
                 // 9. 同步最终状态到 Redis
-                roomCache.syncToRedis(roomCode, gameRoom);
+                roomCache.put(roomCode, gameRoom);
 
                 // 10. 广播结束
                 broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));

@@ -49,7 +49,6 @@ public class ChatWebSocketController {
             }
 
             // 🔥 记录聊天室活动
-            chatRoomManager.recordActivity(roomCode);
 
             // 🔥 判断是否私聊消息
             if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {

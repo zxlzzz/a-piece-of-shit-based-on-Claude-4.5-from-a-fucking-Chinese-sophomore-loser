@@ -95,7 +95,7 @@ public class SubmissionService {
 
         // 🔥 关键修复：每次提交后立即同步到Redis
         // 这确保了多次从Redis获取时能看到最新的提交状态
-        roomCache.syncToRedis(roomCode, gameRoom);
+        roomCache.put(roomCode, gameRoom);
 
         log.info("✅ 提交答案成功并同步: roomCode={}, playerId={}, choice={}, currentIndex={}, isBot={}",
                 gameRoom.getRoomCode(), playerId, choice, gameRoom.getCurrentIndex(), isBot);

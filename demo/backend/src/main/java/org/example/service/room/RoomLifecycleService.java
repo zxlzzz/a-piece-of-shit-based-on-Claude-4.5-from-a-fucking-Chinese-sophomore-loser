@@ -119,7 +119,7 @@ public class RoomLifecycleService {
                 // 🔥 已在房间的玩家允许刷新/重连，检查是否在断线列表中
                 if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
                     gameRoom.getDisconnectedPlayers().remove(playerId);
-                    roomCache.syncToRedis(roomCode, gameRoom);
+                    roomCache.put(roomCode, gameRoom);
                 }
 
                 return; // 跳过后续加入逻辑
@@ -168,12 +168,12 @@ public class RoomLifecycleService {
                 gameRoom.getScores().put(playerId, 0);
 
                 // 🔥 同步到 Redis
-                roomCache.syncToRedis(roomCode, gameRoom);
+                roomCache.put(roomCode, gameRoom);
             } else {
                 // 🔥 修复问题3：玩家已存在，检查是否在断线列表中
                 if (gameRoom.getDisconnectedPlayers().containsKey(playerId)) {
                     gameRoom.getDisconnectedPlayers().remove(playerId);
-                    roomCache.syncToRedis(roomCode, gameRoom);
+                    roomCache.put(roomCode, gameRoom);
                 }
 
             }
@@ -220,7 +220,7 @@ public class RoomLifecycleService {
 
 
                     // 🔥 同步到 Redis
-                    roomCache.syncToRedis(roomCode, gameRoom);
+                    roomCache.put(roomCode, gameRoom);
                 }
 
             } else {
@@ -235,7 +235,7 @@ public class RoomLifecycleService {
                     if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                         log.warn("⚠️ 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
                         // 🔥 修复问题4.4：同步状态到Redis，以便返回最新状态并广播
-                        roomCache.syncToRedis(roomCode, gameRoom);
+                        roomCache.put(roomCode, gameRoom);
                         // 不删除房间，保留5分钟
                         return true; // 房间仍存在
                     } else {
@@ -246,7 +246,7 @@ public class RoomLifecycleService {
                 }
 
                 // 🔥 游戏进行中标记断线，同步到 Redis
-                roomCache.syncToRedis(roomCode, gameRoom);
+                roomCache.put(roomCode, gameRoom);
             }
 
             return true; // 房间仍存在
@@ -280,7 +280,7 @@ public class RoomLifecycleService {
             }
 
             // 🔥 同步到 Redis
-            roomCache.syncToRedis(roomCode, gameRoom);
+            roomCache.put(roomCode, gameRoom);
         }
     }
 
@@ -369,7 +369,7 @@ public class RoomLifecycleService {
                     .ifPresent(p -> p.setReady(ready));
 
             // 同步到 Redis
-            roomCache.syncToRedis(roomCode, gameRoom);
+            roomCache.put(roomCode, gameRoom);
             return;
         }
 
@@ -390,7 +390,7 @@ public class RoomLifecycleService {
                 .ifPresent(p -> p.setReady(ready));
 
         // 🔥 同步到 Redis
-        roomCache.syncToRedis(roomCode, gameRoom);
+        roomCache.put(roomCode, gameRoom);
 
         // 🔥 检查是否所有玩家都准备好了
         long totalPlayers = gameRoom.getPlayers().stream()
@@ -640,10 +640,9 @@ public class RoomLifecycleService {
             timerService.cancelTimeout(roomCode);
 
             // 5. 删除缓存（带重试）（问题5）
-            roomCache.removeWithRetry(roomCode);
+            roomCache.remove(roomCode);
 
             // 6. 主动清理聊天室（问题3）
-            chatRoomManager.forceCleanup(roomCode);
 
             // 7. 真正删除数据库记录（问题1）
             roomRepository.delete(room);

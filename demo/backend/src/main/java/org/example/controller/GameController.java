@@ -128,7 +128,6 @@ public class GameController {
             @RequestParam String targetPlayerId) {
         RoomDTO room = gameService.kickPlayer(roomCode, ownerId, targetPlayerId);
         broadcaster.sendRoomUpdate(roomCode, room);
-        broadcaster.sendPlayerKicked(roomCode, targetPlayerId);
         return ResponseEntity.ok(room);
     }
 

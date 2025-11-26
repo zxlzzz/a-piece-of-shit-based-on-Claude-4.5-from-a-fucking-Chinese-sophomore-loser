@@ -61,15 +61,12 @@ public class RoomWsController {
             // 🔥 统一广播（无论加入还是重连）
             RoomDTO updatedRoom = roomLifecycleService.toRoomDTO(request.getRoomCode());
             broadcaster.sendRoomUpdate(request.getRoomCode(), updatedRoom);
-            broadcaster.sendWelcomeToPlayer(request.getPlayerId(), request.getRoomCode(), updatedRoom);
 
         } catch (BusinessException e) {
             log.error("❌ 加入房间失败（业务异常）: {}", e.getMessage());
-            broadcaster.sendErrorToPlayer(request.getPlayerId(), e.getMessage());
         } catch (Exception e) {
             // 🔥 添加：捕获所有异常，防止断连
             log.error("❌ 加入房间失败（系统异常）", e);
-            broadcaster.sendErrorToPlayer(request.getPlayerId(), "系统错误，请重试");
         }
     }
 
@@ -85,12 +82,10 @@ public class RoomWsController {
         } catch (BusinessException e) {
             String roomCode = request.get("roomCode");
             log.error("❌ 开始游戏失败（业务异常）: {}", e.getMessage());
-            broadcaster.sendErrorToRoom(roomCode, e.getMessage());
         } catch (Exception e) {
             // 🔥 添加：捕获所有异常
             String roomCode = request.get("roomCode");
             log.error("❌ 开始游戏失败（系统异常）", e);
-            broadcaster.sendErrorToRoom(roomCode, "系统错误，请重试");
         }
     }
 
@@ -109,11 +104,9 @@ public class RoomWsController {
 
         } catch (BusinessException e) {
             log.error("❌ 提交答案失败（业务异常）: {}", e.getMessage());
-            broadcaster.sendErrorToPlayer(request.getPlayerId(), e.getMessage());
         } catch (Exception e) {
             // 🔥 添加：捕获所有异常，防止断连
             log.error("❌ 提交答案失败（系统异常）", e);
-            broadcaster.sendErrorToPlayer(request.getPlayerId(), "提交失败，请重试");
 
             // 🔥 重要：即使出错也要广播房间状态，避免界面卡住
             try {
@@ -140,12 +133,10 @@ public class RoomWsController {
         } catch (BusinessException e) {
             String playerId = (String) request.get("playerId");
             log.error("❌ 设置准备状态失败（业务异常）: {}", e.getMessage());
-            broadcaster.sendErrorToPlayer(playerId, e.getMessage());
         } catch (Exception e) {
             // 🔥 添加：捕获所有异常
             String playerId = (String) request.get("playerId");
             log.error("❌ 设置准备状态失败（系统异常）", e);
-            broadcaster.sendErrorToPlayer(playerId, "系统错误，请重试");
         }
     }
 
@@ -165,7 +156,6 @@ public class RoomWsController {
             }
         } catch (Exception e) {
             log.error("❌ 处理离开请求失败", e);
-            broadcaster.sendErrorToPlayer(playerId, "离开房间失败");
         }
     }
 

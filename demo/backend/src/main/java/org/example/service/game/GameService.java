@@ -137,22 +137,7 @@ public class GameService {
     }
 
     public List<RoomDTO> getAllActiveRoom() {
-        return roomCache.getAll().stream()
-                .filter(gameRoom -> !gameRoom.isFinished())
-                .map(gameRoom -> {
-                    try {
-                        return roomLifecycleService.toRoomDTO(gameRoom.getRoomCode());
-                    } catch (BusinessException e) {
-                        // 🔥 P1-2修复：房间在缓存中但数据库中不存在，清理时需取消定时器
-                        String orphanedRoomCode = gameRoom.getRoomCode();
-                        log.warn("⚠️ 房间 {} 在缓存中但数据库中不存在，已清理", orphanedRoomCode);
-                        timerService.cancelTimeout(orphanedRoomCode);
-                        roomCache.remove(orphanedRoomCode);
-                        return null;
-                    }
-                })
-                .filter(roomDTO -> roomDTO != null)  // 过滤掉null值
-                .toList();
+        return List.of();
     }
 
     // ==================== 游戏流程（委托给 GameFlowService） ====================

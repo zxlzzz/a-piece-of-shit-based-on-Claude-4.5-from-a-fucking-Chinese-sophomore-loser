@@ -1,27 +1,59 @@
 package org.example.service.timer;
 
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.concurrent.*;
+
 /**
- * 题目超时调度服务
- * 负责管理题目倒计时和超时处理
+ * 题目超时调度服务实现
  */
-public interface QuestionTimerService {
+@Service
+@Slf4j
+public class QuestionTimerService {
 
-    /**
-     * 启动超时定时器
-     * @param roomCode 房间码
-     * @param seconds 超时时间（秒）
-     * @param onTimeout 超时回调
-     */
-    void scheduleTimeout(String roomCode, long seconds, Runnable onTimeout);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
+    private final Map<String, ScheduledFuture<?>> activeTimers = new ConcurrentHashMap<>();
 
-    /**
-     * 取消超时定时器
-     * @param roomCode 房间码
-     */
-    void cancelTimeout(String roomCode);
+    public void scheduleTimeout(String roomCode, long seconds, Runnable onTimeout) {
+        // 取消已存在的定时器
+        cancelTimeout(roomCode);
 
-    /**
-     * 关闭调度器（应用关闭时调用）
-     */
-    void shutdown();
+        // 启动新定时器
+        ScheduledFuture<?> future = scheduler.schedule(() -> {
+            try {
+                onTimeout.run();
+            } catch (Exception e) {
+                log.error("❌ 房间 {} 超时回调执行失败", roomCode, e);
+            } finally {
+                activeTimers.remove(roomCode);
+            }
+        }, seconds, TimeUnit.SECONDS);
+
+        activeTimers.put(roomCode, future);
+    }
+
+    public void cancelTimeout(String roomCode) {
+        ScheduledFuture<?> future = activeTimers.remove(roomCode);
+        if (future != null && !future.isCancelled()) {
+            future.cancel(false);
+        }
+    }
+
+    @PreDestroy
+    public void shutdown() {
+        activeTimers.values().forEach(future -> future.cancel(false));
+        activeTimers.clear();
+        scheduler.shutdown();
+        try {
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            scheduler.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
 }

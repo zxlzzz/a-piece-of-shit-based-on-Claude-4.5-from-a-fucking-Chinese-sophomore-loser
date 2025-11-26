@@ -1,6 +1,6 @@
 package org.example.service.scoring;
 
-import lombok.RequiredArgsConstructor;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerSubmissionDTO;
 import org.example.dto.QuestionDTO;
@@ -10,14 +10,15 @@ import org.example.exception.BusinessException;
 import org.example.pojo.GameContext;
 import org.example.pojo.GameRoom;
 import org.example.pojo.PlayerGameState;
-import org.example.service.question.QuestionFactory;
 import org.example.service.question.QuestionScoringStrategy;
 import org.example.service.strategy.QR.RepeatableQuestionStrategy;
 import org.example.service.cache.RoomCache;
 import org.example.service.scoring.ScoringResult;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -26,12 +27,37 @@ import java.util.stream.Collectors;
  * 分数计算服务实现
  */
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class ScoringService {
 
     private final RoomCache roomCache;
-    private final QuestionFactory questionFactory;
+
+    @Autowired
+    private List<QuestionScoringStrategy> allStrategies;
+
+    private final Map<String, QuestionScoringStrategy> STRATEGIES = new ConcurrentHashMap<>();
+
+    public ScoringService(RoomCache roomCache) {
+        this.roomCache = roomCache;
+    }
+
+    @PostConstruct
+    public void init() {
+        allStrategies.forEach(strategy ->
+                STRATEGIES.put(strategy.getQuestionIdentifier(), strategy)
+        );
+        log.info("✅ 已自动注册 {} 个题目策略: {}",
+                STRATEGIES.size(),
+                String.join(", ", STRATEGIES.keySet()));
+    }
+
+    private QuestionScoringStrategy getStrategy(String strategyId) {
+        QuestionScoringStrategy strategy = STRATEGIES.get(strategyId);
+        if (strategy == null) {
+            throw new BusinessException("未找到计分策略: " + strategyId);
+        }
+        return strategy;
+    }
 
     /**
      * 轮次追踪器
@@ -89,10 +115,7 @@ public class ScoringService {
                 .build();
 
         // 获取策略并计算分数
-        QuestionScoringStrategy strategy = questionFactory.getStrategy(currentQuestion.getStrategyId());
-        if (strategy == null) {
-            throw new BusinessException("无法获取题目策略: " + currentQuestion.getStrategyId());
-        }
+        QuestionScoringStrategy strategy = getStrategy(currentQuestion.getStrategyId());
 
         QuestionDetailDTO detailDTO;
         boolean isRepeatable = false;

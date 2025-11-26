@@ -13,7 +13,6 @@ import org.example.repository.PlayerRepository;
 import org.example.repository.QuestionRepository;
 import org.example.repository.SubmissionRepository;
 import org.example.service.cache.RoomCache;
-import org.example.service.statistics.QuestionStatisticsService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +32,6 @@ public class SubmissionService {
     private final GameRepository gameRepository;
     private final SubmissionRepository submissionRepository;
     private final QuestionRepository questionRepository;
-    private final QuestionStatisticsService questionStatisticsService;
 
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void submitAnswer(String roomCode, String playerId, String choice) {
@@ -77,19 +75,6 @@ public class SubmissionService {
                     .build();
 
             submissionRepository.save(submission);
-
-            // 🔥 记录选项统计（异步，不影响主流程）
-            int playerCount = (int) gameRoom.getPlayers().stream()
-                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
-                    .count();
-            questionStatisticsService.recordChoice(
-                    currentQuestion.getId(),
-                    choice,
-                    playerId,
-                    playerCount,
-                    ChoiceRecordEntity.GameType.MATCH,
-                    roomCode
-            );
         }
 
         // 更新内存状态（Bot 和真实玩家都需要）

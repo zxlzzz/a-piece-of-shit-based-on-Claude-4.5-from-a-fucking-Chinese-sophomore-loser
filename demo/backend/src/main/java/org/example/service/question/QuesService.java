@@ -10,10 +10,7 @@ import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.repository.BidQuestionConfigRepository;
 import org.example.repository.ChoiceQuestionConfigRepository;
-import org.example.repository.QuestionMetadataRepository;
 import org.example.repository.QuestionRepository;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -30,33 +27,29 @@ public class QuesService {
     private final ObjectMapper objectMapper;
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
-    private final QuestionMetadataRepository metadataRepository;
 
-    public QuesServiceImpl(
+    public QuesService(
             QuestionRepository questionRepository,
             ObjectMapper objectMapper,
             ChoiceQuestionConfigRepository choiceConfigRepository,
-            BidQuestionConfigRepository bidConfigRepository,
-            QuestionMetadataRepository metadataRepository) {
+            BidQuestionConfigRepository bidConfigRepository) {
         this.questionRepository = questionRepository;
         this.objectMapper = objectMapper;
         this.choiceConfigRepository = choiceConfigRepository;
         this.bidConfigRepository = bidConfigRepository;
-        this.metadataRepository = metadataRepository;
     }
 
     public List<QuestionDTO> convertEntitiesToDTOs(List<QuestionEntity> entities) {
-        return convertToDTO(entities);  // 复用已有的私有方法
+        return convertToDTO(entities);
     }
 
     @Transactional
     public void batchImport(List<QuestionDTO> questionDTOs) {
         for (QuestionDTO dto : questionDTOs) {
-            // 1. 保存基础 Entity
             QuestionEntity entity = QuestionEntity.builder()
                     .type(dto.getType())
                     .text(dto.getText())
-                    .calculateRule(dto.getCalculateRule())  // 🔥 添加计分规则
+                    .calculateRule(dto.getCalculateRule())
                     .strategyId(dto.getStrategyId())
                     .minPlayers(dto.getMinPlayers())
                     .maxPlayers(dto.getMaxPlayers())
@@ -65,9 +58,8 @@ public class QuesService {
                     .build();
 
             QuestionEntity savedEntity = questionRepository.save(entity);
-            Long questionId = savedEntity.getId();
 
-            // 2. 保存选择题配置
+            // 保存选择题配置
             if (dto.getType() == QuestionType.CHOICE && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
                 try {
                     ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
@@ -81,6 +73,7 @@ public class QuesService {
                 }
             }
 
+            // 保存竞价题配置
             if (dto.getType() == QuestionType.BID && dto.getMin() != null && dto.getMax() != null) {
                 BidQuestionConfig config = BidQuestionConfig.builder()
                         .question(savedEntity)
@@ -90,36 +83,7 @@ public class QuesService {
                         .build();
                 bidConfigRepository.save(config);
             }
-
-            // 4. 保存元数据
-            if (hasMetadata(dto)) {
-                QuestionMetadata metadata = QuestionMetadata.builder()
-                        .questionId(savedEntity.getId())
-                        .sequenceGroupId(dto.getSequenceGroupId())
-                        .sequenceOrder(dto.getSequenceOrder())
-                        .totalSequenceCount(dto.getTotalSequenceCount())
-                        .isRepeatable(dto.getIsRepeatable())
-                        .repeatTimes(dto.getRepeatTimes())
-                        .repeatInterval(dto.getRepeatInterval())
-                        .repeatGroupId(dto.getRepeatGroupId())
-                        .build();
-                metadataRepository.save(metadata);
-                savedEntity.setHasMetadata(true);
-            }
-
-            // ✅ 只在最后保存一次
-            questionRepository.save(savedEntity);
         }
-
-    }
-
-    /**
-     * 判断是否有元数据配置
-     */
-    private boolean hasMetadata(QuestionDTO dto) {
-        return dto.getSequenceGroupId() != null
-                || dto.getIsRepeatable() != null
-                || dto.getRepeatTimes() != null;
     }
 
     public List<QuestionDTO> getAllQuestionDTO() {
@@ -159,11 +123,6 @@ public class QuesService {
         return convertToDTO(selected);
     }
 
-// ========== 私有辅助方法 ==========
-
-    /**
-     * 批量转换 Entity → DTO（包含配置信息）
-     */
     private List<QuestionDTO> convertToDTO(List<QuestionEntity> entities) {
         if (entities.isEmpty()) {
             return Collections.emptyList();
@@ -174,39 +133,30 @@ public class QuesService {
                 .collect(Collectors.toList());
 
         Map<Long, ChoiceQuestionConfig> choiceConfigMap = choiceConfigRepository
-                .findByQuestionIds(questionIds)  // 改这里
+                .findByQuestionIds(questionIds)
                 .stream()
                 .collect(Collectors.toMap(c -> c.getQuestion().getId(), c -> c));
 
         Map<Long, BidQuestionConfig> bidConfigMap = bidConfigRepository
-                .findByQuestionIds(questionIds)  // 改这里
+                .findByQuestionIds(questionIds)
                 .stream()
                 .collect(Collectors.toMap(b -> b.getQuestion().getId(), b -> b));
 
-        Map<Long, QuestionMetadata> metadataMap = metadataRepository
-                .findByQuestionIdIn(questionIds)
-                .stream()
-                .collect(Collectors.toMap(QuestionMetadata::getQuestionId, m -> m));
-
         return entities.stream()
-                .map(entity -> convertSingleToDTO(entity, choiceConfigMap, bidConfigMap, metadataMap))
+                .map(entity -> convertSingleToDTO(entity, choiceConfigMap, bidConfigMap))
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 单个 Entity → DTO
-     */
     private QuestionDTO convertSingleToDTO(
             QuestionEntity entity,
             Map<Long, ChoiceQuestionConfig> choiceConfigMap,
-            Map<Long, BidQuestionConfig> bidConfigMap,
-            Map<Long, QuestionMetadata> metadataMap) {
+            Map<Long, BidQuestionConfig> bidConfigMap) {
 
         QuestionDTO dto = new QuestionDTO();
         dto.setId(entity.getId());
         dto.setType(entity.getType());
         dto.setText(entity.getText());
-        dto.setCalculateRule(entity.getCalculateRule());  // 🔥 添加计分规则
+        dto.setCalculateRule(entity.getCalculateRule());
         dto.setStrategyId(entity.getStrategyId());
         dto.setDefaultChoice(entity.getDefaultChoice());
         dto.setMinPlayers(entity.getMinPlayers());
@@ -228,17 +178,6 @@ public class QuesService {
             }
         }
 
-        QuestionMetadata metadata = metadataMap.get(entity.getId());
-        if (metadata != null) {
-            dto.setSequenceGroupId(metadata.getSequenceGroupId());
-            dto.setSequenceOrder(metadata.getSequenceOrder());
-            dto.setTotalSequenceCount(metadata.getTotalSequenceCount());
-            dto.setIsRepeatable(metadata.getIsRepeatable());
-            dto.setRepeatTimes(metadata.getRepeatTimes());
-            dto.setRepeatInterval(metadata.getRepeatInterval());
-            dto.setRepeatGroupId(metadata.getRepeatGroupId());
-        }
-
         return dto;
     }
 
@@ -257,12 +196,7 @@ public class QuesService {
         return Collections.emptyList();
     }
 
-    /**
-     * 删除题目
-     */
     public void deleteById(Long id) {
         questionRepository.deleteById(id);
     }
-
 }
-

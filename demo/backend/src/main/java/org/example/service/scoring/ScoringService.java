@@ -11,7 +11,6 @@ import org.example.pojo.GameContext;
 import org.example.pojo.GameRoom;
 import org.example.pojo.PlayerGameState;
 import org.example.service.question.QuestionScoringStrategy;
-import org.example.service.strategy.QR.RepeatableQuestionStrategy;
 import org.example.service.cache.RoomCache;
 import org.example.service.scoring.ScoringResult;
 import org.springframework.beans.factory.annotation.Autowired;

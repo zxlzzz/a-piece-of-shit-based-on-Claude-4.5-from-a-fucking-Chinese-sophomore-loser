@@ -23,7 +23,6 @@ public class QuestionDataInitializer {
     private final QuestionRepository questionRepository;
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
-    private final QuestionMetadataRepository metadataRepository;
     private final ObjectMapper objectMapper;  // ✅ 注入全局 ObjectMapper
 
     @PostConstruct
@@ -134,27 +133,5 @@ public class QuestionDataInitializer {
                 || dto.getIsRepeatable() != null
                 || dto.getRepeatGroupId() != null;
     }
-
-    private void saveMetadata(QuestionEntity entity, QuestionDTO dto) {
-        QuestionMetadata metadata = QuestionMetadata.builder()
-                .questionId(entity.getId())
-                .sequenceGroupId(dto.getSequenceGroupId())
-                .sequenceOrder(dto.getSequenceOrder())
-                .totalSequenceCount(dto.getTotalSequenceCount())
-                .isRepeatable(dto.getIsRepeatable())
-                .repeatTimes(dto.getRepeatTimes())
-                .repeatInterval(dto.getRepeatInterval())
-                .repeatGroupId(dto.getRepeatGroupId())
-                .build();
-
-        metadataRepository.save(metadata);
-
-        // 更新 hasMetadata 标记
-        entity.setHasMetadata(true);
-        questionRepository.save(entity);
-
-        log.debug("QuestionMetadata 保存成功: questionId={}", entity.getId());
-    }
-
 
 }

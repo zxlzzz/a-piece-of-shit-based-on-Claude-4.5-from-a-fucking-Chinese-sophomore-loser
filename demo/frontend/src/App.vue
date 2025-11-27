@@ -22,16 +22,14 @@ const breakpoints = useBreakpoints({
 })
 const isDesktop = breakpoints.greaterOrEqual('desktop')
 
-//  Toast 去重：记录最近显示的消息（key: message, value: timestamp）
 const recentToasts = ref(new Map())
 
-// 通用 Toast 显示函数（带去重）
 const showToast = (severity, summary, detail, life = TOAST_DEFAULT_LIFE) => {
   const key = `${severity}-${summary}-${detail}`
   const now = Date.now()
   const lastTime = recentToasts.value.get(key)
 
-  // 如果在去重时间窗口内显示过相同消息，忽略
+  
   if (lastTime && now - lastTime < TOAST_DEBOUNCE_TIME) {
     return
   }
@@ -39,29 +37,24 @@ const showToast = (severity, summary, detail, life = TOAST_DEFAULT_LIFE) => {
   toast.add({ severity, summary, detail, life })
   recentToasts.value.set(key, now)
 
-  // 清理过期记录
   setTimeout(() => {
     recentToasts.value.delete(key)
   }, life + TOAST_CLEANUP_DELAY)
 }
 
-// 监听 API 错误（api.js 触发的）
 const handleApiError = (event) => {
   const { message, status, isDev } = event.detail
 
-  // 根据状态码调整严重程度
   const severity = status === 401 || status === 403 ? 'warn' : 'error'
   const summary = status === 401 ? '未登录' : status === 403 ? '无权限' : '请求失败'
 
   showToast(severity, summary, message)
 
-  // 开发环境额外打印详情
   if (isDev) {
     logger.error('[API Error]', event.detail)
   }
 }
 
-// 监听 WebSocket 错误（ws.js 触发的）
 const handleWebSocketError = (event) => {
   const { type, data, error } = event.detail
 
@@ -72,62 +65,45 @@ const handleWebSocketError = (event) => {
   }
 }
 
-// 监听房间删除（ws.js 触发的）
 const handleRoomDeleted = (event) => {
   showToast('warn', '房间已关闭', '房主已关闭房间', 4000)
 }
 
-// 监听欢迎消息（ws.js 触发的）
 const handleWelcome = (event) => {
   if (event.detail?.message) {
     showToast('info', '欢迎', event.detail.message, 2000)
   }
 }
 
-// 监听 Vue 运行时错误（main.js 触发的）
 const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
 
-//  全局 WebSocket 连接管理（仅在需要的页面连接）
 // const connectGlobalWebSocket = async () => {
-//   // 只有在有 playerId 时才连接
-//   if (!playerStore.playerId) {
-//     logger.debug('App: 没有 playerId，跳过 WebSocket 连接')
 //     return
 //   }
 //
-//   // 如果已经连接，不重复连接
+//   
 //   if (isConnected()) {
-//     logger.debug('App: WebSocket 已连接')
 //     return
 //   }
 //
 //   try {
-//     await connect(playerStore.playerId)
-//     logger.debug('App: 全局 WebSocket 连接成功')
 //   } catch (err) {
-//     logger.error('App: 全局 WebSocket 连接失败', err)
 //   }
 // }
 
 ��不再全局连接，由各个页面按需连接
-// 监听 playerId 变化（保留，用于其他用途）
-// watch(() => playerStore.playerId, (newId, oldId) => {
-//   if (newId && newId !== oldId) {
-//     logger.debug('App: playerId 变化')
 //   }
 // }, { immediate: true })
 
 onMounted(() => {
-  // 注册全局事件监听
   window.addEventListener('api-error', handleApiError)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('room-deleted', handleRoomDeleted)
   window.addEventListener('websocket-welcome', handleWelcome)
   window.addEventListener('vue-error', handleVueError)
 
-  //  清理过期数据
   try {
     const savedRoom = localStorage.getItem('currentRoom')
     if (savedRoom) {
@@ -142,7 +118,6 @@ onMounted(() => {
           localStorage.removeItem('currentRoom')
         }
       }
-      // 普通房间，使用标准过期时间（10分钟）
       else if (now - savedAt > ROOM_DATA_EXPIRY_TIME) {
         logger.info('🧹 房间缓存已过期，自动清理')
         localStorage.removeItem('currentRoom')
@@ -153,7 +128,6 @@ onMounted(() => {
     localStorage.removeItem('currentRoom')
   }
 
-  //  建立全局 WebSocket 连接（已禁用，由各页面按需连接）
   // connectGlobalWebSocket()
 })
 
@@ -164,7 +138,6 @@ onUnmounted(() => {
   window.removeEventListener('websocket-welcome', handleWelcome)
   window.removeEventListener('vue-error', handleVueError)
 
-  //  应用卸载时断开连接
   disconnect()
 })
 </script>

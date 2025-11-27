@@ -32,7 +32,7 @@ let activeRoomSubscriptions = new Map(); ��全局跟踪活动的房间订阅，�
  * @returns {Promise<Client>}
  */
 export function connect(playerId, onConnect, onError) {
-  // 如果已连接且是同一玩家，直接返回
+  
   if (connected && currentPlayerId === playerId && stompClient?.connected) {
     if (onConnect) onConnect(stompClient);
     return Promise.resolve(stompClient);
@@ -42,11 +42,11 @@ export function connect(playerId, onConnect, onError) {
   ��使用flag防止并发重置导致的竞态条件
   if (connectPromise) {
     const now = Date.now();
-    // 如果连接 Promise 存在超过设定时间，强制重置
+    
     if (!connectPromise._startTime) {
       connectPromise._startTime = now;
     } else if (now - connectPromise._startTime > WS_CONNECT_PROMISE_TIMEOUT) {
-      // 使用flag确保只重置一次，避免并发重置
+      
       if (!isResettingConnection) {
         isResettingConnection = true;
         logger.error('连接超时，强制重置');
@@ -70,7 +70,6 @@ export function connect(playerId, onConnect, onError) {
 
         isResettingConnection = false;
       } else {
-        // 正在重置中，等待完成
         logger.debug('连接正在重置中，等待完成...');
         return new Promise((resolve, reject) => {
           setTimeout(() => reject(new Error('连接重置中')), 100);
@@ -81,14 +80,13 @@ export function connect(playerId, onConnect, onError) {
     }
   }
 
-  // 如果切换玩家，先断开旧连接
+  
   if (connected && currentPlayerId !== playerId) {
     disconnect();
   }
 
   currentPlayerId = playerId;
 
-  // 创建新的连接 Promise
   connectPromise = new Promise((resolve, reject) => {
     ��使用全局变量存储超时ID，避免泄漏
     connectTimeoutId = setTimeout(() => {
@@ -109,7 +107,6 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
-      //  禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
       heartbeatIncoming: 0,
       heartbeatOutgoing: 0,
 
@@ -124,15 +121,12 @@ export function connect(playerId, onConnect, onError) {
         connectPromise = null;
         manualDisconnect = false;
 
-        // 重连成功
         if (isReconnecting) {
           isReconnecting = false;
           reconnectAttempts = 0;
 
-          // 触发重连成功事件
           window.dispatchEvent(new CustomEvent('websocket-reconnected'));
 
-          // 恢复所有订阅
           restoreSubscriptions();
         } else {
           reconnectAttempts = 0;
@@ -152,13 +146,12 @@ export function connect(playerId, onConnect, onError) {
         connected = false;
         connectPromise = null;
 
-        // 手动断开不自动重连
         if (manualDisconnect) {
           logger.debug('手动断开，不进行重连');
           return;
         }
 
-        // 检查是否已达最大重连次数
+        
         if (reconnectAttempts >= WS_MAX_RECONNECT_ATTEMPTS) {
           logger.error('已达到最大重连次数，停止重连');
           isReconnecting = false;
@@ -166,20 +159,18 @@ export function connect(playerId, onConnect, onError) {
           return;
         }
 
-        // 避免重复触发重连
+        
         if (isReconnecting && reconnectTimer) {
           logger.debug('已在重连中，跳过本次断开事件');
           return;
         }
 
-        // 开始重连流程
         isReconnecting = true;
         const delay = WS_BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts);
         reconnectAttempts++;
 
         logger.debug(`开始第 ${reconnectAttempts} 次重连，延迟 ${delay}ms`);
 
-        // 触发重连中事件（带进度信息）
         window.dispatchEvent(new CustomEvent('websocket-reconnecting', {
           detail: {
             attempts: reconnectAttempts,
@@ -188,7 +179,6 @@ export function connect(playerId, onConnect, onError) {
           }
         }));
 
-        // 清除旧的重连定时器（如果有）
         if (reconnectTimer) {
           clearTimeout(reconnectTimer);
         }
@@ -197,12 +187,11 @@ export function connect(playerId, onConnect, onError) {
           reconnectTimer = null;
           try {
             await reconnect();
-            // 重连成功会触发 onConnect，在那里重置状态
           } catch (err) {
             logger.error('重连失败:', err);
             isReconnecting = false;
-            // 如果还没到最大次数，下次 onDisconnect 会再次触发重连
-            // 如果已到最大次数，上面的检查会阻止重连
+            
+            
           }
         }, delay);
       },
@@ -243,7 +232,6 @@ export function connect(playerId, onConnect, onError) {
     stompClient.activate();
   });
 
-  //  添加时间戳用于超时检测
   connectPromise._startTime = Date.now();
 
   return connectPromise;
@@ -257,10 +245,9 @@ export function connect(playerId, onConnect, onError) {
 function subscribeToPersonalMessages(playerId) {
   if (!ensureConnected("subscribeToPersonalMessages")) return;
 
-  //  先清理旧的个人订阅，避免重复订阅
+  
   cleanupPersonalSubscriptions();
 
-  // 订阅个人错误消息
   const errorSub = safeSubscribe(`/user/queue/error`, (data) => {
     logger.error("收到个人错误消息:", data);
     window.dispatchEvent(new CustomEvent('websocket-error', {
@@ -268,7 +255,6 @@ function subscribeToPersonalMessages(playerId) {
     }));
   });
 
-  // 订阅欢迎消息
   const welcomeSub = safeSubscribe(`/user/queue/welcome`, (data) => {
     window.dispatchEvent(new CustomEvent('websocket-welcome', { detail: data }));
   });
@@ -300,7 +286,6 @@ function cleanupPersonalSubscriptions() {
  *  ��使用快照避免遍历时导致的问题
  */
 function restoreSubscriptions() {
-  // 创建快照副本，避免遍历时导致的问题
   const callbacks = Array.from(subscriptionCallbacks);
   callbacks.forEach(callback => {
     try {
@@ -334,7 +319,6 @@ export function unregisterSubscriptionCallback(callback) {
  * @param {boolean} force - 是否强制清理所有状态
  */
 export function disconnect(force = false) {
-  // 标记为手动断开，防止自动重连
   manualDisconnect = true;
   isReconnecting = false;
   reconnectAttempts = 0;
@@ -361,14 +345,12 @@ export function disconnect(force = false) {
     }
   }
 
-  // 清理所有状态
   stompClient = null;
   connected = false;
   currentPlayerId = null;
   connectPromise = null;
 
   ��总是清理订阅回调，避免内存泄漏
-  // 不再使用 force 参数判断，因为任何断开都应该清理回调
   subscriptionCallbacks = new Set();
 
   ��清理活动房间订阅记录
@@ -479,7 +461,6 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
     window.dispatchEvent(new CustomEvent('room-deleted', { detail: data }));
   });
 
-  //  订阅被踢事件（使用 topic 而不是 user queue）
   let kickedSub = null;
   if (playerId) {
     kickedSub = safeSubscribe(`/topic/player/${playerId}/kicked`, (data) => {
@@ -487,7 +468,6 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
     });
   }
 
-  // 只添加成功的订阅
   if (roomUpdateSub) subscriptions.push(roomUpdateSub);
   if (roomErrorSub) subscriptions.push(roomErrorSub);
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
@@ -535,7 +515,6 @@ export function unsubscribeRoom(roomCode) {
   }
 }
 
-// ============ 发送消息的方法（已废弃） ============
 
 /**
  *  以下WebSocket命令发送方法已废弃
@@ -557,7 +536,6 @@ export function unsubscribeRoom(roomCode) {
  * - sendLeave → 关闭页面自动处理或使用 api.deleteRoom()
  */
 
-// @deprecated 请使用 api.joinRoom()
 export function sendJoin(req) {
   console.warn(' sendJoin已废弃，请使用 api.joinRoom()');
   if (!ensureConnected("sendJoin")) return;
@@ -574,7 +552,6 @@ export function sendJoin(req) {
   });
 }
 
-// @deprecated 请使用 api.startGame()
 export function sendStart(req) {
   console.warn(' sendStart已废弃，请使用 api.startGame()');
   if (!ensureConnected("sendStart")) return;
@@ -589,7 +566,6 @@ export function sendStart(req) {
   });
 }
 
-// @deprecated 请使用 api.submitAnswer()
 export function sendSubmit(req) {
   console.warn(' sendSubmit已废弃，请使用 api.submitAnswer()');
   if (!ensureConnected("sendSubmit")) return;
@@ -607,7 +583,6 @@ export function sendSubmit(req) {
   });
 }
 
-// @deprecated 请使用 api.setPlayerReady()
 export function sendReady(req) {
   console.warn(' sendReady已废弃，请使用 api.setPlayerReady()');
   if (!ensureConnected("sendReady")) return;
@@ -624,7 +599,6 @@ export function sendReady(req) {
   });
 }
 
-// @deprecated 离开房间通过关闭页面自动处理
 export function sendLeave(req) {
   console.warn(' sendLeave已废弃，离开房间通过关闭页面自动处理');
   if (!ensureConnected("sendLeave")) return;
@@ -640,7 +614,6 @@ export function sendLeave(req) {
   });
 }
 
-// ============ 工具方法 ============
 
 export function isConnected() {
   return connected && stompClient && stompClient.connected;

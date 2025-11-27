@@ -2,7 +2,7 @@
 import { ref, computed, watch } from 'vue'
 
 const props = defineProps({
-  id: Number,  // 题目ID
+  id: Number,  
   text: String,
   calculateRule: String,
   type: {
@@ -23,19 +23,16 @@ const props = defineProps({
   }
 })
 
-//  解析人数范围，获取可选人数列表
 const availablePlayerCounts = computed(() => {
   if (!props.people) return [2, 3, 4, 5, 6]
 
   const peopleStr = String(props.people)
 
-  // 情况1: "2" 或 2 => 只能2人
   if (/^\d+$/.test(peopleStr)) {
     const count = parseInt(peopleStr)
     return [count]
   }
 
-  // 情况2: "3-5" => 3,4,5人
   const rangeMatch = peopleStr.match(/^(\d+)-(\d+)$/)
   if (rangeMatch) {
     const min = parseInt(rangeMatch[1])
@@ -47,13 +44,11 @@ const availablePlayerCounts = computed(() => {
     return counts
   }
 
-  // 情况3: "2,3,5" => 2,3,5人
   const listMatch = peopleStr.match(/^[\d,]+$/)
   if (listMatch) {
     return peopleStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n))
   }
 
-  // 默认2-6人
   return [2, 3, 4, 5, 6]
 })
 </script>

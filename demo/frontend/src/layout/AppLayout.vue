@@ -6,7 +6,6 @@ const router = useRouter()
 const route = useRoute()
 const mobileMenuOpen = ref(false)
 
-// 菜单项配置
 const menuItems = [
   { label: '主界面', icon: 'pi pi-home', to: '/' },
   { label: '查找房间', icon: 'pi pi-search', to: '/find' },

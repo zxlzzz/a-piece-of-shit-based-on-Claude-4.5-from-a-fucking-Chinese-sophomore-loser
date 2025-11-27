@@ -31,7 +31,7 @@ const subscriptions = ref([])
 const loading = ref(false)
 
 
-//  改用 ref 而不是 computed，手动管理连接状态
+
 const wsConnected = ref(false)
 
 const isAllReady = computed(() => {
@@ -78,7 +78,7 @@ onMounted(async () => {
       return
     }
 
-    //  新增：如果游戏已经开始，自动跳转到游戏页面
+    
     if (savedRoom.status === 'PLAYING') {
       toast.add({
         severity: 'info',
@@ -100,14 +100,12 @@ onMounted(async () => {
     return
   }
 
-  //  监听 WebSocket 错误事件
   window.addEventListener('room-deleted', handleRoomDeleted)
   window.addEventListener('player-kicked', handlePlayerKicked)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('websocket-reconnecting', handleReconnecting)
   window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
 
-  // 开始连接
   await connectWebSocket()
 })
 
@@ -123,8 +121,6 @@ onUnmounted(() => {
     subscriptions.value = []
   }
 
-  //  离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
-  // chatStore.clearChat() - 保留chatRoom
 })
 
 const handleRoomDeleted = (event) => {
@@ -153,7 +149,7 @@ const handlePlayerKicked = (event) => {
   }, 1500)
 }
 
-//  新增：监听 WebSocket 错误
+
 const handleWebSocketError = (event) => {
   logger.error(' WaitRoom 收到 WebSocket 错误:', event.detail)
   wsConnected.value = false
@@ -171,7 +167,7 @@ const handleReconnecting = (event) => {
   })
 }
 
-//  新增：处理重连失败
+
 const handleMaxReconnectFailed = () => {
   logger.error(' WebSocket 重连失败，已达到最大次数')
   wsConnected.value = false
@@ -183,7 +179,6 @@ const handleMaxReconnectFailed = () => {
     life: 0 // 不自动消失
   })
   
-  // 给用户选择
   setTimeout(() => {
     if (confirm('连接已断开，是否重新连接？')) {
       window.location.reload()
@@ -196,46 +191,38 @@ const handleMaxReconnectFailed = () => {
 const connectWebSocket = async () => {
   logger.debug('🔌 WaitRoom: 开始连接流程')
   
-  //  先更新状态
   wsConnected.value = isConnected()
   logger.debug('🔌 当前连接状态:', wsConnected.value)
   
   if (wsConnected.value) {
     logger.debug(' WaitRoom: WebSocket 显示已连接，验证连接状态...')
     
-    //  尝试订阅，如果失败说明连接已断
     try {
       setupRoomSubscription()
       return // 订阅成功，直接返回
     } catch (err) {
       logger.error(' 订阅失败，可能连接已断开，尝试重连', err)
-      //  强制断开旧连接
       disconnect(true)
       wsConnected.value = false
     }
   }
   
-  // 开始连接
   logger.warn(' WaitRoom: WebSocket 未连接，开始连接...')
   
   try {
     loading.value = true
     
-    // 主动调用 connect() 并等待完成
     await connect(playerStore.playerId)
     
     logger.info(' WaitRoom: WebSocket 连接成功')
     
-    //  更新状态
     wsConnected.value = true
     
-    // 等待 100ms 让连接稳定
     await new Promise(resolve => setTimeout(resolve, 100))
     
   } catch (err) {
     logger.error(' WaitRoom: WebSocket 连接失败', err)
     
-    //  更新状态
     wsConnected.value = false
     
     toast.add({
@@ -249,7 +236,6 @@ const connectWebSocket = async () => {
     
     loading.value = false
     
-    // 给用户选择
     if (confirm('WebSocket 连接失败，是否重试？')) {
       await connectWebSocket() // 递归重试
       return
@@ -261,17 +247,14 @@ const connectWebSocket = async () => {
     loading.value = false
   }
   
-  // 连接成功后，开始订阅
   setupRoomSubscription()
 
   await refreshRoomState()
 }
 
-//  提取订阅逻辑
 const setupRoomSubscription = () => {
   logger.debug('📡 WaitRoom: 开始订阅房间:', roomCode.value)
   
-  //  先清理旧订阅
   if (subscriptions.value.length > 0) {
     logger.debug('🧹 清理旧订阅')
     unsubscribeAll(subscriptions.value)
@@ -323,16 +306,13 @@ const setupRoomSubscription = () => {
       detail: '订阅房间时出现异常',
       life: 3000
     })
-    //  抛出错误，让上层处理
     throw err
   }
 }
 
 const handleReady = async () => {
-  //  改进：支持切换准备状态（准备 <-> 取消准备）
   const newReadyState = !currentPlayerReady.value
 
-  //  先检查连接状态
   if (!wsConnected.value) {
     logger.error(' WebSocket 未连接，无法设置准备状态')
     toast.add({
@@ -346,10 +326,10 @@ const handleReady = async () => {
 
   loading.value = true
   try {
-    //  改用HTTP API，更可靠
+    
     await setPlayerReady(roomCode.value, playerStore.playerId, newReadyState)
 
-    //  房间状态更新会通过WebSocket自动推送
+    
 
     toast.add({
       severity: 'success',
@@ -375,11 +355,9 @@ const handleStart = async () => {
   if (!isAllReady.value) return
 
   try {
-    //  改用HTTP API，更可靠
+    
     await startGame(roomCode.value)
 
-    //  游戏开始后，房间状态会通过WebSocket推送
-    // 前端会自动跳转到游戏页面
 
     toast.add({
       severity: 'info',
@@ -399,7 +377,7 @@ const handleStart = async () => {
 }
 
 const handleLeave = () => {
-  //  新增：添加确认提示，房主离开提示更强烈
+  
   const message = isRoomOwner.value
     ? '您是房主，离开后房间将被解散，确定要离开吗？'
     : '确定要离开房间吗？'
@@ -408,8 +386,6 @@ const handleLeave = () => {
     return
   }
 
-  //  离开房间：清除本地状态并跳转
-  // WebSocket断开连接会被后端监听器捕获，自动处理玩家离开逻辑
   playerStore.clearRoom()
   router.push("/find")
 }
@@ -458,7 +434,7 @@ const copyRoomCode = async () => {
   }
 }
 
-//  新增：刷新房间状态（重连后使用）
+
 const refreshRoomState = async () => {
   try {
     logger.debug('🔄 刷新房间状态...')
@@ -468,7 +444,7 @@ const refreshRoomState = async () => {
     
     logger.info(' 房间状态已刷新:', room.value)
     
-    //  如果游戏已开始，跳转到游戏页面
+    
     if (room.value.status === 'PLAYING') {
       toast.add({
         severity: 'info',
@@ -480,7 +456,6 @@ const refreshRoomState = async () => {
     }
   } catch (error) {
     logger.error('刷新房间状态失败:', error)
-    // 不提示错误，因为订阅会自动更新
   }
 }
 </script>

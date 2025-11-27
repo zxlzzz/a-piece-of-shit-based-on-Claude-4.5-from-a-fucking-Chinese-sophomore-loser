@@ -118,7 +118,6 @@ export const login = (username, password) =>
 export const guestLogin = (name) =>
   api.post('/auth/guest', { name });
 
-// ============ 房间相关API ============
 
 export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null) => {
   const params = { maxPlayers, questionCount, timeLimit, password };

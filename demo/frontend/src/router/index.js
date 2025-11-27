@@ -24,13 +24,12 @@ const router = createRouter({
           path: '/find',
           name: 'find',
           component: () => import('@/views/room/RoomView.vue')
-          //  删除 meta: { requiresAuth: true }
         },
         {
           path: '/history',
           name: 'history',
           component: () => import('@/views/HistoryView.vue')
-          //  P1-8��移除登录检查，允许游客查看（显示空即可）
+          
         },
         {
           path: '/result/:roomId',
@@ -65,19 +64,15 @@ router.beforeEach(async (to, from, next) => {
   const playerStore = usePlayerStore()
   const chatStore = useChatStore()
 
-  //  管理聊天订阅和WebSocket连接
   const roomPages = ['wait', 'game', 'result']
   const fromRoom = roomPages.includes(from.name)
   const toRoom = roomPages.includes(to.name)
 
-  //  离开房间页面去其他页面时，断开聊天订阅和WebSocket
   if (fromRoom && !toRoom) {
     try {
-      // 取消聊天订阅
       chatStore.unsubscribeFromChat()
       chatStore.clearChat()
 
-      // 断开WebSocket
       const { disconnect, isConnected } = await import('@/websocket/ws')
       if (isConnected()) {
         disconnect()
@@ -88,9 +83,7 @@ router.beforeEach(async (to, from, next) => {
     }
   }
 
-  //  进入房间页面时，订阅聊天（如果还没订阅）
   if (toRoom && to.params.roomId) {
-    // 异步订阅，chatStore内部会等待WebSocket连接
     chatStore.subscribeToChat(to.params.roomId).then(() => {
       logger.info(' 路由守卫: 进入房间页面，聊天订阅成功', to.params.roomId)
     }).catch((err) => {
@@ -98,25 +91,22 @@ router.beforeEach(async (to, from, next) => {
     })
   }
 
-  // 1. 检查是否需要登录
   if (to.meta.requiresAuth && !playerStore.isLoggedIn) {
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }
 
-  // 2. 检查房间权限（wait/game/result）
   if (to.name === 'wait' || to.name === 'game' || to.name === 'result') {
     const roomId = to.params.roomId
     const currentRoom = playerStore.currentRoom
 
 
-    //  改进：先尝试从 store 获取，如果没有再从 localStorage 加载
     if (!currentRoom) {
       const loaded = playerStore.loadRoom()
 
       if (!loaded) {
 
-        //  新增：尝试从服务器获取房间状态（静默失败）
+        
         try {
           const { getRoomStatus } = await import('@/api')
           const response = await getRoomStatus(roomId, true)  //  silentError=true
@@ -124,7 +114,7 @@ router.beforeEach(async (to, from, next) => {
           if (response.data) {
             playerStore.setRoom(response.data)
 
-            //  检查result页面：只有finished的游戏才能访问
+            
             if (to.name === 'result' && !response.data.finished) {
               next({ name: response.data.started ? 'game' : 'wait', params: { roomId }, replace: true })
               return
@@ -134,9 +124,8 @@ router.beforeEach(async (to, from, next) => {
             return
           }
         } catch (error) {
-          //  静默处理，清理本地数据，跳转到查找房间页
           playerStore.clearRoom()
-          //  新增：添加错误信息到路由query，让find页面显示
+          
           next({
             name: 'find',
             replace: true,
@@ -153,7 +142,7 @@ router.beforeEach(async (to, from, next) => {
       }
 
       if (loaded) {
-        //  检查result页面：只有finished的游戏才能访问
+        
         if (to.name === 'result' && !loaded.finished) {
           next({ name: loaded.started ? 'game' : 'wait', params: { roomId }, replace: true })
           return
@@ -164,7 +153,7 @@ router.beforeEach(async (to, from, next) => {
       next({ name: 'find', replace: true })
       return
     } else {
-      //  检查result页面：只有finished的游戏才能访问
+      
       if (to.name === 'result' && !currentRoom.finished) {
         next({ name: currentRoom.started ? 'game' : 'wait', params: { roomId }, replace: true })
         return

@@ -17,11 +17,11 @@ export function useGameWebSocket(
   resetSubmitState,
   restoreSubmitState,
   getSubmissionKey,
-  verifySubmissionState  //  P1-1: 新增验证函数参数
+  verifySubmissionState  
 ) {
   const subscriptions = ref([])
-  const wsConnected = ref(false) //  新增：连接状态
-  let isSubscribed = false //  新增：标记是否已订阅
+  const wsConnected = ref(false) 
+  let isSubscribed = false 
 
   const handleReconnecting = (event) => {
     wsConnected.value = false //  更新连接状态
@@ -79,7 +79,7 @@ export function useGameWebSocket(
         restoreSubmitState()
       }
 
-      //  P1-1: 刷新时也验证提交状态
+      
       if (verifySubmissionState && updatedRoom.submittedPlayerIds) {
         verifySubmissionState(updatedRoom.submittedPlayerIds)
       }
@@ -118,7 +118,7 @@ export function useGameWebSocket(
   }
 
   const setupRoomSubscription = () => {
-    //  避免重复订阅
+    
     if (isSubscribed && subscriptions.value.length > 0) {
       logger.debug('已存在订阅，先取消旧订阅');
       unsubscribeAll(subscriptions.value);
@@ -141,7 +141,6 @@ export function useGameWebSocket(
 
         ��题目切换、重复题换轮、或首次加载时都需要处理
         if (isFirstLoad || indexChanged || questionTimeChanged) {
-          //  强制清理所有旧题目的localStorage，避免Bot房间快速切换导致的状态残留
           if (indexChanged && newIndex !== undefined) {
             const submissionPrefix = `submission_${roomCode.value}_`
             const keysToRemove = []
@@ -149,11 +148,9 @@ export function useGameWebSocket(
             for (let i = 0; i < localStorage.length; i++) {
               const key = localStorage.key(i)
               if (key && key.startsWith(submissionPrefix)) {
-                // 解析题目index
                 const match = key.match(/submission_[^_]+_(\d+)/)
                 if (match) {
                   const keyIndex = parseInt(match[1])
-                  // 清理所有非当前题目的记录
                   if (keyIndex < newIndex) {
                     keysToRemove.push(key)
                   }
@@ -170,11 +167,10 @@ export function useGameWebSocket(
           clearCountdown()
           resetSubmitState()
 
-          //  先更新room，再检查新题的提交状态
+          
           room.value = update
           question.value = update.currentQuestion
 
-          //  所有题目都检查localStorage（包括第一题）
           const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
           const savedSubmission = localStorage.getItem(newSubmissionKey)
           if (savedSubmission === 'true') {
@@ -188,15 +184,13 @@ export function useGameWebSocket(
             resetCountdown()
           }
         } else {
-          // 普通更新（玩家列表变化等）
           room.value = update
           question.value = update.currentQuestion
         }
 
-        //  同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
         playerStore.setRoom(update)
 
-        //  P1-1: 验证提交状态（在题目切换处理之后，确保localStorage已清理）
+        
         if (verifySubmissionState && update.submittedPlayerIds) {
           verifySubmissionState(update.submittedPlayerIds)
         }
@@ -247,7 +241,6 @@ export function useGameWebSocket(
     isSubscribed = true
   }
 
-  //  订阅恢复回调（重连后自动调用）
   const subscriptionRestoreCallback = () => {
     logger.debug('GameView: 重连后恢复订阅');
     try {
@@ -259,8 +252,6 @@ export function useGameWebSocket(
   }
 
   const connectWebSocket = async () => {
-    //  简化：不再管理连接，只管理订阅
-    // 连接由 App.vue 全局管理
 
     wsConnected.value = isConnected()
 
@@ -273,7 +264,6 @@ export function useGameWebSocket(
         life: 3000
       })
 
-      //  优化：使用事件驱动等待连接，避免轮询（最多3秒）
       try {
         await waitForConnection(3000)
         wsConnected.value = true
@@ -290,7 +280,6 @@ export function useGameWebSocket(
       }
     }
 
-    // 设置订阅
     setupRoomSubscription()
     await refreshRoomState()
   }
@@ -300,7 +289,6 @@ export function useGameWebSocket(
     window.addEventListener('websocket-reconnected', handleReconnected)
     window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
 
-    //  注册订阅恢复回调
     registerSubscriptionCallback(subscriptionRestoreCallback)
   })
 
@@ -312,7 +300,6 @@ export function useGameWebSocket(
     window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
 
-    //  取消注册订阅恢复回调
     unregisterSubscriptionCallback(subscriptionRestoreCallback)
 
     isSubscribed = false
@@ -321,6 +308,6 @@ export function useGameWebSocket(
   return {
     connectWebSocket,
     refreshRoomState,
-    wsConnected //  新增：返回连接状态
+    wsConnected 
   }
 }

@@ -19,7 +19,7 @@ export const usePlayerStore = defineStore('player', () => {
   function setPlayer(authData) {
     token.value = authData.token
     playerId.value = authData.playerId  // UUID（用于API调用）
-    userId.value = authData.id          //  新增：自增ID（用于显示）
+    userId.value = authData.id          
     playerName.value = authData.name
     username.value = authData.username
     
@@ -69,7 +69,7 @@ export const usePlayerStore = defineStore('player', () => {
     if (saved) {
       const roomData = JSON.parse(saved)
 
-      //  检查房间是否过期（使用统一配置，避免后端重启后数据不同步）
+      
       if (roomData._savedAt && (Date.now() - roomData._savedAt > ROOM_DATA_EXPIRY_TIME)) {
         logger.info('🧹 房间缓存已过期，自动清理')
         clearRoom()

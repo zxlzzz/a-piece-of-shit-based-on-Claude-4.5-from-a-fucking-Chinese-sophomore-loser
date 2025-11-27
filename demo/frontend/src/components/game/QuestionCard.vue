@@ -29,7 +29,6 @@ const onSubmit = () => {
   emit('choose', choice.value)
 }
 
-//  监听全局选择事件（从 GameView 触发）
 const handleSelectOption = (e) => {
   if (props.disabled || props.question?.type !== 'CHOICE') return
   
@@ -40,7 +39,6 @@ const handleSelectOption = (e) => {
   }
 }
 
-//  监听全局提交事件（从 GameView 触发）
 const handleSubmitAnswer = () => {
   if (!props.disabled) {
     onSubmit()

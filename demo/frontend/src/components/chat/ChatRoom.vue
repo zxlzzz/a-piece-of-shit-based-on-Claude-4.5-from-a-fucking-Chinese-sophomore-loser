@@ -26,22 +26,17 @@ const inputMessage = ref('')
 const chatContainer = ref(null)
 const showPlayerList = ref(false)  //  控制玩家列表显示
 
-// 从chatStore获取消息
 const messages = computed(() => chatStore.messages)
 
-//  获取玩家列表（排除自己）
 const otherPlayers = computed(() => {
   if (!playerStore.currentRoom || !playerStore.currentRoom.players) return []
   return playerStore.currentRoom.players.filter(p => p.playerId !== props.playerId)
 })
 
-//  选中的收件人
 const selectedRecipients = computed(() => chatStore.selectedRecipients)
 
-//  是否启用私聊功能
 const privateChatEnabled = computed(() => playerStore.currentRoom?.privateChatEnabled ?? true)
 
-// 消息类型样式映射
 const messageTypeClass = computed(() => ({
   CHAT: 'chat-message',
   SYSTEM: 'system-message',
@@ -53,7 +48,6 @@ const messageTypeClass = computed(() => ({
   GAME_END: 'game-end-message'
 }))
 
-// 发送聊天消息
 const sendChatMessage = () => {
   if (!inputMessage.value.trim()) return
 
@@ -61,12 +55,10 @@ const sendChatMessage = () => {
   inputMessage.value = ''
 }
 
-// 判断是否是自己的消息
 const isOwnMessage = (message) => {
   return message.senderId === props.playerId
 }
 
-// 监听消息变化，自动滚动到底部
 watch(messages, () => {
   nextTick(() => {
     if (chatContainer.value) {
@@ -75,7 +67,6 @@ watch(messages, () => {
   })
 }, { deep: true })
 
-// 按 Enter 发送消息
 const handleKeyPress = (event) => {
   if (event.key === 'Enter' && !event.shiftKey) {
     event.preventDefault()
@@ -83,7 +74,6 @@ const handleKeyPress = (event) => {
   }
 }
 
-//  双击玩家头像选择收件人
 const selectPlayer = (player) => {
   chatStore.addRecipient({
     id: player.playerId,
@@ -92,14 +82,12 @@ const selectPlayer = (player) => {
   showPlayerList.value = false  // 选择后关闭玩家列表
 }
 
-//  移除收件人
 const removeRecipient = (recipientId) => {
   chatStore.removeRecipient(recipientId)
 }
 
-//  点击外部关闭玩家列表
 const closePlayerListOnClickOutside = (event) => {
-  // 如果点击的不是玩家列表按钮或下拉菜单内部，关闭列表
+  
   const playerListButton = event.target.closest('.player-list-trigger')
   const playerListMenu = event.target.closest('.player-list-menu')
 
@@ -108,7 +96,6 @@ const closePlayerListOnClickOutside = (event) => {
   }
 }
 
-// 监听点击事件
 watch(showPlayerList, (newVal) => {
   if (newVal) {
     document.addEventListener('click', closePlayerListOnClickOutside)
@@ -117,12 +104,10 @@ watch(showPlayerList, (newVal) => {
   }
 })
 
-// 组件卸载时清理事件
 onUnmounted(() => {
   document.removeEventListener('click', closePlayerListOnClickOutside)
 })
 
-//  判断消息是否显示收件人（私聊消息）
 const getRecipientNames = (message) => {
   if (!message.isPrivate || !message.recipientIds || message.recipientIds.length === 0) {
     return null

@@ -25,7 +25,6 @@ const switchMode = () => {
 }
 
 const handleSubmit = async () => {
-  // 验证用户名
   const usernameValidation = validateUsername(username.value)
   if (!usernameValidation.valid) {
     toast.add({
@@ -37,7 +36,6 @@ const handleSubmit = async () => {
     return
   }
 
-  // 验证密码
   const passwordValidation = validatePassword(password.value)
   if (!passwordValidation.valid) {
     toast.add({
@@ -49,7 +47,7 @@ const handleSubmit = async () => {
     return
   }
 
-  // 如果是注册，验证昵称
+  
   if (!isLogin.value) {
     const nameValidation = validatePlayerName(name.value)
     if (!nameValidation.valid) {
@@ -68,10 +66,8 @@ const handleSubmit = async () => {
     let resp
 
     if (isLogin.value) {
-      // 登录
       resp = await login(username.value.trim().toLowerCase(), password.value)
     } else {
-      // 注册
       resp = await register(
         username.value.trim().toLowerCase(),
         password.value,
@@ -81,10 +77,10 @@ const handleSubmit = async () => {
 
     const authData = resp.data
 
-    // 保存用户信息到 store
+    
     playerStore.setPlayer(authData)
 
-    //  如果后端没有返回 roomCode，清理前端可能缓存的过期房间数据
+    
     if (!authData.roomCode) {
       playerStore.clearRoom()
       logger.info('🧹 清理本地房间缓存（后端无房间信息）')
@@ -97,7 +93,7 @@ const handleSubmit = async () => {
       life: 2000
     })
 
-    //  检查是否在房间中，自动进入房间
+    
     setTimeout(() => {
       if (authData.roomCode) {
         logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)
@@ -131,7 +127,6 @@ const handleKeyPress = (event) => {
   }
 }
 
-// 计算是否可以提交
 const canSubmit = computed(() => {
   if (isLogin.value) {
     return username.value.trim() && password.value.trim()
@@ -140,11 +135,9 @@ const canSubmit = computed(() => {
   }
 })
 
-// 游客快速试玩
 const handleGuestLogin = async () => {
   loading.value = true
   try {
-    // 生成随机游客昵称
     const randomId = Math.floor(Math.random() * 1000000)
     const guestName = `游客${randomId}`
 
@@ -153,10 +146,9 @@ const handleGuestLogin = async () => {
 
     logger.info('🎮 游客登录成功:', authData)
 
-    // 保存用户信息到 store
+    
     playerStore.setPlayer(authData)
 
-    //  游客登录时始终清理房间缓存（游客不应该有房间）
     if (!authData.roomCode) {
       playerStore.clearRoom()
       logger.info('🧹 清理本地房间缓存（游客登录）')
@@ -169,7 +161,7 @@ const handleGuestLogin = async () => {
       life: 2000
     })
 
-    //  检查是否在房间中（游客通常不会在房间中）
+    
     setTimeout(() => {
       if (authData.roomCode) {
         logger.info('🎮 检测到玩家在房间中，自动进入房间:', authData.roomCode)

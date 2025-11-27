@@ -47,7 +47,6 @@ const props = defineProps({
   }
 })
 
-//  将值对齐到步长
 const alignToStep = (value) => {
   if (value === null || value === '' || isNaN(value)) {
     return null
@@ -55,23 +54,20 @@ const alignToStep = (value) => {
 
   const num = Number(value)
 
-  // 如果值在范围外，先限制在范围内
+  
   if (num < props.minval) return props.minval
   if (num > props.maxval) return props.maxval
 
-  // 如果步长为1，不需要对齐
+  
   if (props.step === 1) return num
 
-  // 计算相对于 minval 的偏移
   const offset = num - props.minval
 
-  // 计算最接近的步长倍数
   const steps = Math.round(offset / props.step)
 
-  // 对齐后的值
   const aligned = props.minval + (steps * props.step)
 
-  // 确保对齐后的值仍在范围内
+  
   if (aligned < props.minval) return props.minval
   if (aligned > props.maxval) return props.maxval
 

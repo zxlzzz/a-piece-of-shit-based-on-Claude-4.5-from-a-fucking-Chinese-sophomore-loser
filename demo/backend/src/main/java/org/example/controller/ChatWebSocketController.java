@@ -37,7 +37,7 @@ public class ChatWebSocketController {
             message.setTimestamp(LocalDateTime.now());
             message.setRoomCode(roomCode);
 
-            // 🔥 检查发送者是否为观战者
+            // 检查发送者是否为观战者
             GameRoom gameRoom = roomCache.get(roomCode);
             if (gameRoom != null) {
                 boolean isSpectator = gameRoom.getPlayers().stream()
@@ -48,14 +48,14 @@ public class ChatWebSocketController {
                 message.setIsSpectator(isSpectator);
             }
 
-            // 🔥 记录聊天室活动
+            // 记录聊天室活动
 
-            // 🔥 判断是否私聊消息
+            // 判断是否私聊消息
             if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {
                 // 私聊消息：点对点发送
                 message.setIsPrivate(true);
 
-                // 🔥 P0-3修复：使用user queue确保隐私，而非topic
+                // ��使用user queue确保隐私，而非topic
                 // 发送给所有收件人
                 for (String recipientId : message.getRecipientIds()) {
                     messagingTemplate.convertAndSendToUser(
@@ -77,10 +77,10 @@ public class ChatWebSocketController {
                 messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", message);
             }
         } catch (Exception e) {
-            log.error("🔥 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
+            log.error(" 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
             // 发送错误通知给发送者
             try {
-                // 🔥 P0-3修复：错误通知也使用user queue
+                // ��错误通知也使用user queue
                 ChatMessage errorMsg = ChatMessage.system(roomCode, "消息发送失败，请重试");
                 messagingTemplate.convertAndSendToUser(
                     message.getSenderId(),
@@ -106,7 +106,7 @@ public class ChatWebSocketController {
             headerAccessor.getSessionAttributes().put("playerName", message.getSenderName());
             headerAccessor.getSessionAttributes().put("roomCode", roomCode);
 
-            // 🔥 记录玩家加入聊天室
+            // 记录玩家加入聊天室
             chatRoomManager.playerJoin(roomCode, message.getSenderId());
 
             // 创建加入消息
@@ -116,7 +116,7 @@ public class ChatWebSocketController {
             // 广播加入消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);
         } catch (Exception e) {
-            log.error("🔥 玩家加入房间失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
+            log.error(" 玩家加入房间失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
         }
     }
 
@@ -136,7 +136,7 @@ public class ChatWebSocketController {
             // 广播准备消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", readyMessage);
         } catch (Exception e) {
-            log.error("🔥 玩家准备状态变更失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
+            log.error(" 玩家准备状态变更失败: roomCode={}, playerId={}", roomCode, message.getSenderId(), e);
         }
     }
 

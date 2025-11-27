@@ -44,7 +44,7 @@ public class GameHistoryService {
 
 
         if (results.isEmpty()) {
-            log.warn("❌ 数据库中没有任何游戏结果记录！");
+            log.warn(" 数据库中没有任何游戏结果记录！");
             return List.of();
         }
 
@@ -83,7 +83,7 @@ public class GameHistoryService {
     public GameHistoryDTO getGameHistoryByRoomCode(String roomCode) {
 
         try {
-            // ✅ 改：使用新方法
+            // 改：使用新方法
             Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCodeWithDetails(roomCode);
 
             if (resultOpt.isPresent()) {
@@ -187,9 +187,9 @@ public class GameHistoryService {
     private GameHistoryDTO getCurrentGameStatus(String roomCode){
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        // 🔥 检查游戏是否已结束
+        // 检查游戏是否已结束
         if (!gameRoom.isFinished()) {
-            log.warn("⚠️ 游戏还未结束，无法获取结果: roomCode={}", roomCode);
+            log.warn(" 游戏还未结束，无法获取结果: roomCode={}", roomCode);
             throw new BusinessException("游戏还未结束");
         }
 

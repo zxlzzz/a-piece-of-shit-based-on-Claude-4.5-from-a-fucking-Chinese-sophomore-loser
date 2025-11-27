@@ -79,7 +79,7 @@ public class RoomEntity implements Serializable {
 
     /**
      * 房间内的玩家列表
-     * 🔥 P0-7修复：移除级联删除和orphanRemoval，防止删除房间时误删玩家
+     *  ��移除级联删除和orphanRemoval，防止删除房间时误删玩家
      * 玩家是独立实体，应通过业务逻辑解绑（setRoom(null)），而非级联删除
      */
     @OneToMany(mappedBy = "room",
@@ -128,7 +128,7 @@ public class RoomEntity implements Serializable {
     private Boolean chatEnabled = true;
 
     /**
-     * 🔥 是否启用私聊功能
+     *  是否启用私聊功能
      */
     @Column(nullable = false)
     @Builder.Default

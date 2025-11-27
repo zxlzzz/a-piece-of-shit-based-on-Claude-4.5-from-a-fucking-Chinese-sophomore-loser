@@ -29,7 +29,7 @@ public class GameController {
     private final RoomLifecycleService roomLifecycleService;
 
     /**
-     * 🔥 P1-3修复：移除try-catch，让全局异常处理器统一处理错误响应
+     *  ��移除try-catch，让全局异常处理器统一处理错误响应
      */
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
@@ -43,13 +43,13 @@ public class GameController {
     }
 
     /**
-     * 🔥 P1-3修复：移除try-catch并简化逻辑
+     *  ��移除try-catch并简化逻辑
      */
     @GetMapping("/rooms/{roomCode}")
     public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
         GameRoom gameRoom = roomCache.get(roomCode);
         if (gameRoom == null) {
-            log.warn("⚠️ 房间不存在: {}", roomCode);
+            log.warn(" 房间不存在: {}", roomCode);
             throw new BusinessException("房间不存在: " + roomCode);
         }
 
@@ -60,7 +60,7 @@ public class GameController {
     
 
     /**
-     * 🔥 P1-3修复：移除try-catch，让全局异常处理器统一处理错误响应
+     *  ��移除try-catch，让全局异常处理器统一处理错误响应
      */
     @PostMapping("/rooms/{roomCode}/join")
     public ResponseEntity<RoomDTO> joinRoom(

@@ -2,7 +2,7 @@ package org.example.pojo;
 
 import lombok.Builder;
 import lombok.Data;
-import org.example.dto.QuestionDTO;  // 🔥 改成 DTO
+import org.example.dto.QuestionDTO;  //  改成 DTO
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -15,7 +15,7 @@ public class GameContext implements Serializable {
     private static final long serialVersionUID = 1L;
     private String roomCode;
 
-    // 🔥 改成 QuestionDTO
+    // 改成 QuestionDTO
     private QuestionDTO currentQuestion;
 
     private Map<String, String> currentSubmissions;

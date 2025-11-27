@@ -11,9 +11,9 @@ import java.util.Optional;
 
 public interface GameRepository extends JpaRepository<GameEntity, Long> {
 
-    // ✅ 改成
+    // 改成
     Optional<GameEntity> findByRoom(RoomEntity room);
-    // ✅ 添加这个方法（JOIN FETCH）
+    // 添加这个方法（JOIN FETCH）
     @Query("SELECT g FROM GameEntity g " +
             "JOIN FETCH g.room r " +
             "WHERE r.roomCode = :roomCode")

@@ -33,16 +33,16 @@ public class SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final QuestionRepository questionRepository;
 
-    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
     public void submitAnswer(String roomCode, String playerId, String choice) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();  // ✅ DTO
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();  //  DTO
 
         if (currentQuestion == null) {
             throw new BusinessException("当前没有有效题目");
         }
 
-        // 🔥 检查是否是观战者
+        // 检查是否是观战者
         boolean isSpectator = gameRoom.getPlayers().stream()
                 .filter(p -> p.getPlayerId().equals(playerId))
                 .findFirst()
@@ -53,11 +53,11 @@ public class SubmissionService {
             throw new BusinessException("观战者不能提交答案");
         }
 
-        // 🔥 Bot 玩家：只更新内存，不保存到数据库
+        // Bot 玩家：只更新内存，不保存到数据库
         boolean isBot = playerId.startsWith("BOT_");
 
         if (!isBot) {
-            // 🔥 真实玩家：保存到数据库
+            // 真实玩家：保存到数据库
             QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
                     .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
 
@@ -93,19 +93,19 @@ public class SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
-        // 🔥 关键修复：每次提交后立即同步到Redis
+        // 关键修复：每次提交后立即同步到Redis
         // 这确保了多次从Redis获取时能看到最新的提交状态
         roomCache.put(roomCode, gameRoom);
 
-        log.info("✅ 提交答案成功并同步: roomCode={}, playerId={}, choice={}, currentIndex={}, isBot={}",
+        log.info(" 提交答案成功并同步: roomCode={}, playerId={}, choice={}, currentIndex={}, isBot={}",
                 gameRoom.getRoomCode(), playerId, choice, gameRoom.getCurrentIndex(), isBot);
     }
 
-    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
     public void fillDefaultAnswers(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
-            log.warn("⚠️ 当前题目为空，无法填充默认答案");
+            log.warn(" 当前题目为空，无法填充默认答案");
             return;
         }
 
@@ -119,21 +119,21 @@ public class SubmissionService {
         Map<String, String> currentRoundSubmissions = gameRoom.getSubmissions()
                 .get(gameRoom.getCurrentIndex());
 
-        // 🔥 修改：遍历所有玩家（包括断线的），但跳过观战者和Bot
+        // 修改：遍历所有玩家（包括断线的），但跳过观战者和Bot
         for (PlayerDTO player : gameRoom.getPlayers()) {
-            // 🔥 跳过观战者
+            // 跳过观战者
             if (Boolean.TRUE.equals(player.getSpectator())) {
                 continue;
             }
 
             String playerId = player.getPlayerId();
 
-            // 🔥 跳过 Bot 玩家（Bot 应该已经提交了）
+            // 跳过 Bot 玩家（Bot 应该已经提交了）
             if (playerId.startsWith("BOT_")) {
                 continue;
             }
 
-            // 🔥 检查是否已提交
+            // 检查是否已提交
             if (currentRoundSubmissions == null || !currentRoundSubmissions.containsKey(playerId)) {
 
                 // 获取默认答案
@@ -173,7 +173,7 @@ public class SubmissionService {
             return false;
         }
 
-        // 🔥 只检查非观战者玩家
+        // 只检查非观战者玩家
         long totalPlayers = gameRoom.getPlayers().stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .count();
@@ -195,7 +195,7 @@ public class SubmissionService {
     public void autoSubmitBots(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
-            log.warn("⚠️ autoSubmitBots: 当前题目为空，跳过Bot自动提交");
+            log.warn(" autoSubmitBots: 当前题目为空，跳过Bot自动提交");
             return;
         }
 
@@ -235,7 +235,7 @@ public class SubmissionService {
                             Integer min = currentQuestion.getMin();
                             Integer max = currentQuestion.getMax();
                             Integer step = currentQuestion.getStep();
-                            // 🔥 修复：防止step为0或null导致除零错误
+                            // 修复：防止step为0或null导致除零错误
                             if (step == null || step == 0) {
                                 step = 1;
                             }

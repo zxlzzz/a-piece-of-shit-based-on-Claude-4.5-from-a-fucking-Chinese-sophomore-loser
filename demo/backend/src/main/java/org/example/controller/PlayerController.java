@@ -64,17 +64,17 @@ public class PlayerController {
     /**
      * 删除玩家（硬删除）
      * DELETE /api/players/{playerId}
-     * 🔥 P2-4修复：添加警告日志，建议使用软删除
-     * ⚠️ 警告：此操作会永久删除玩家及其所有游戏历史记录
+     *  ��添加警告日志，建议使用软删除
+     *  警告：此操作会永久删除玩家及其所有游戏历史记录
      */
     @DeleteMapping("/{playerId}")
     @Transactional
     public ResponseEntity<Void> deletePlayer(@PathVariable String playerId) {
-        log.warn("⚠️ 收到玩家硬删除请求: playerId={}", playerId);
+        log.warn(" 收到玩家硬删除请求: playerId={}", playerId);
         PlayerEntity player = playerRepository.findByPlayerId(playerId)
                 .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
         playerRepository.delete(player);
-        log.warn("⚠️ 硬删除玩家及其所有历史记录: playerId={}", playerId);
+        log.warn(" 硬删除玩家及其所有历史记录: playerId={}", playerId);
         return ResponseEntity.ok().build();
     }
 }

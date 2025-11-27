@@ -34,21 +34,21 @@ public class GameEntity {
     @Column(nullable = false)
     private Boolean isTest = false;
 
-    // ✅ 一对多：游戏 -> 玩家参与记录
+    // 一对多：游戏 -> 玩家参与记录
     @OneToMany(mappedBy = "game",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     private List<PlayerGameEntity> playerGames = new ArrayList<>();
 
-    // ✅ 一对多：游戏 -> 提交记录
+    // 一对多：游戏 -> 提交记录
     @OneToMany(mappedBy = "game",
             cascade = CascadeType.ALL,
             orphanRemoval = true,
             fetch = FetchType.LAZY)
     private List<SubmissionEntity> submissions = new ArrayList<>();
 
-    // ✅ 一对一：游戏 -> 结果
+    // 一对一：游戏 -> 结果
     @OneToOne(mappedBy = "game",
             cascade = CascadeType.ALL,
             orphanRemoval = true,

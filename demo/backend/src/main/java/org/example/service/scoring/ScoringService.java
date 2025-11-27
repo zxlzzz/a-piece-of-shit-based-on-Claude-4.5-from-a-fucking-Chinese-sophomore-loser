@@ -45,7 +45,7 @@ public class ScoringService {
         allStrategies.forEach(strategy ->
                 STRATEGIES.put(strategy.getQuestionIdentifier(), strategy)
         );
-        log.info("✅ 已自动注册 {} 个题目策略: {}",
+        log.info(" 已自动注册 {} 个题目策略: {}",
                 STRATEGIES.size(),
                 String.join(", ", STRATEGIES.keySet()));
     }
@@ -68,17 +68,17 @@ public class ScoringService {
 
     /**
      * 计算分数
-     * 🔥 注意：此方法不是线程安全的，必须在调用方使用 RoomLock 进行同步
+     *  注意：此方法不是线程安全的，必须在调用方使用 RoomLock 进行同步
      * 调用方必须持有 RoomLock.getLock(roomCode) 的锁
      */
     public ScoringResult calculateScores(GameRoom gameRoom) {
-        // 🔥 改成 QuestionDTO
+        // 改成 QuestionDTO
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         int currentIndex = gameRoom.getCurrentIndex();
         Map<String, String> submissions = gameRoom.getSubmissions().get(currentIndex);
 
         if (submissions == null || submissions.isEmpty()) {
-            log.warn("⚠️ 房间 {} 题目索引 {} 没有提交记录", gameRoom.getRoomCode(), currentIndex);
+            log.warn(" 房间 {} 题目索引 {} 没有提交记录", gameRoom.getRoomCode(), currentIndex);
             return ScoringResult.builder()
                     .baseScores(new HashMap<>())
                     .finalScores(new HashMap<>())
@@ -89,10 +89,10 @@ public class ScoringService {
                     .build();
         }
 
-        // 构建玩家状态（🔥 过滤观战者）
+        // 构建玩家状态（ 过滤观战者）
         Map<String, PlayerGameState> playerStates = new HashMap<>();
         gameRoom.getPlayers().stream()
-                .filter(player -> !Boolean.TRUE.equals(player.getSpectator()))  // 🔥 排除观战者
+                .filter(player -> !Boolean.TRUE.equals(player.getSpectator()))  //  排除观战者
                 .forEach(player -> {
                     int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
                     PlayerGameState state = gameRoom.getOrCreatePlayerState(
@@ -107,7 +107,7 @@ public class ScoringService {
         // 构建游戏上下文（使用 DTO）
         GameContext context = GameContext.builder()
                 .roomCode(gameRoom.getRoomCode())
-                .currentQuestion(currentQuestion)  // ✅ 现在是 DTO
+                .currentQuestion(currentQuestion)  //  现在是 DTO
                 .currentSubmissions(submissions)
                 .playerStates(playerStates)
                 .currentQuestionIndex(currentIndex)
@@ -171,7 +171,7 @@ public class ScoringService {
             return false;
         }
 
-        // 🔥 判断：currentRound < totalRounds 时继续
+        // 判断：currentRound < totalRounds 时继续
         return result.getCurrentRound() < result.getTotalRounds();
     }
 

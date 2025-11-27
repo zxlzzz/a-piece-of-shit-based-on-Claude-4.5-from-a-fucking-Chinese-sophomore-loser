@@ -39,10 +39,10 @@ public class GamePersistenceService {
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
 
-    @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
     public void saveGameResult(GameRoom gameRoom) {
         if (gameRoom == null) {
-            log.warn("⚠️ GameRoom对象为null，跳过保存");
+            log.warn(" GameRoom对象为null，跳过保存");
             return;
         }
 
@@ -50,7 +50,7 @@ public class GamePersistenceService {
         log.info("📝 开始保存游戏结果: roomCode={}, finished={}", roomCode, gameRoom.isFinished());
 
         if (!gameRoom.isFinished()) {
-            log.warn("⚠️ 房间 {} 未结束(finished=false)，跳过保存", roomCode);
+            log.warn(" 房间 {} 未结束(finished=false)，跳过保存", roomCode);
             return;
         }
 
@@ -88,11 +88,11 @@ public class GamePersistenceService {
 
             log.info("📝 正在保存GameResultEntity到数据库...");
             GameResultEntity saved = gameResultRepository.save(entity);
-            log.info("✅ 游戏结果保存成功: roomCode={}, resultId={}, gameId={}, isTest={}",
+            log.info(" 游戏结果保存成功: roomCode={}, resultId={}, gameId={}, isTest={}",
                     roomCode, saved.getId(), game.getId(), game.getIsTest());
 
         } catch (Exception e) {
-            log.error("❌ 保存游戏结果失败: roomCode={}, gameId={}, error={}",
+            log.error(" 保存游戏结果失败: roomCode={}, gameId={}, error={}",
                     roomCode, gameRoom.getGameId(), e.getMessage(), e);
             throw new RuntimeException("保存游戏结果失败", e);
         }
@@ -163,17 +163,17 @@ public class GamePersistenceService {
             return "题目数据错误";
         }
 
-        // ✅ 修复1: 使用枚举比较,而不是字符串
+ 使用枚举比较,而不是字符串
         if (question.getType() == QuestionType.BID) {
-            // ✅ 修复2: 使用正确的 Repository 方法
+ 使用正确的 Repository 方法
             return bidConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
                     .orElse("自由出价");
         }
 
-        // ✅ 修复3: 使用枚举比较
+ 使用枚举比较
         if (question.getType() == QuestionType.CHOICE) {
-            // ✅ 修复4: 使用正确的 Repository 方法
+ 使用正确的 Repository 方法
             return choiceConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> {
                         try {

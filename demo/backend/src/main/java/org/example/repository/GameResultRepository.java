@@ -13,21 +13,21 @@ import java.util.Optional;
 
 public interface GameResultRepository extends JpaRepository<GameResultEntity, Long> {
 
-    // ✅ 新增：通过 gameId 查询（带 JOIN FETCH）
+    // 新增：通过 gameId 查询（带 JOIN FETCH）
     @Query("SELECT gr FROM GameResultEntity gr " +
             "JOIN FETCH gr.game g " +
             "JOIN FETCH g.room " +
             "WHERE g.id = :gameId")
     Optional<GameResultEntity> findByGameIdWithDetails(@Param("gameId") Long gameId);
 
-    // ✅ 修改：通过 roomCode 查询（带 JOIN FETCH）
+    // 修改：通过 roomCode 查询（带 JOIN FETCH）
     @Query("SELECT gr FROM GameResultEntity gr " +
             "JOIN FETCH gr.game g " +
             "JOIN FETCH g.room r " +
             "WHERE r.roomCode = :roomCode")
     Optional<GameResultEntity> findByRoomCodeWithDetails(@Param("roomCode") String roomCode);
 
-    // ✅ 修改：时间过滤查询（带 JOIN FETCH）
+    // 修改：时间过滤查询（带 JOIN FETCH）
     @Query("SELECT gr FROM GameResultEntity gr " +
             "JOIN FETCH gr.game g " +
             "JOIN FETCH g.room " +
@@ -35,7 +35,7 @@ public interface GameResultRepository extends JpaRepository<GameResultEntity, Lo
             "ORDER BY gr.createdAt DESC")
     List<GameResultEntity> findByCreatedAtAfterOrderByCreatedAtDesc(@Param("after") LocalDateTime after);
 
-    // ✅ 修改：查询所有（带 JOIN FETCH）
+    // 修改：查询所有（带 JOIN FETCH）
     @Query("SELECT gr FROM GameResultEntity gr " +
             "JOIN FETCH gr.game g " +
             "JOIN FETCH g.room " +

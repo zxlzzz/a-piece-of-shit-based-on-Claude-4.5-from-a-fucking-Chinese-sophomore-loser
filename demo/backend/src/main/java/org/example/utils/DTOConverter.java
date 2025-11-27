@@ -22,12 +22,12 @@ import java.util.List;
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor  // ✅ 添加 Lombok 注解
+@RequiredArgsConstructor  //  添加 Lombok 注解
 public class DTOConverter {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ✅ 改为非静态字段（使用依赖注入）
+    // 改为非静态字段（使用依赖注入）
     private final ChoiceQuestionConfigRepository choiceConfigRepo;
     private final BidQuestionConfigRepository bidConfigRepo;
 
@@ -43,7 +43,7 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
-                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
+                .calculateRule(entity.getCalculateRule())  //  添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())
@@ -53,7 +53,7 @@ public class DTOConverter {
 
     /**
      * QuestionEntity → QuestionDTO（带配置）
-     * ✅ 推荐使用这个方法
+     *  推荐使用这个方法
      */
     public QuestionDTO toQuestionDTOWithConfig(QuestionEntity entity) {
         if (entity == null) {
@@ -64,14 +64,14 @@ public class DTOConverter {
                 .id(entity.getId())
                 .type(entity.getType())
                 .text(entity.getText())
-                .calculateRule(entity.getCalculateRule())  // 🔥 添加计分规则
+                .calculateRule(entity.getCalculateRule())  //  添加计分规则
                 .strategyId(entity.getStrategyId())
                 .defaultChoice(entity.getDefaultChoice())
                 .minPlayers(entity.getMinPlayers())
                 .maxPlayers(entity.getMaxPlayers())
                 .build();
 
-        // 🔥 选择题：优先用 JOIN FETCH，否则查库
+        // 选择题：优先用 JOIN FETCH，否则查库
         if (entity.getType() == QuestionType.CHOICE) {
             if (entity.getChoiceConfig() != null) {
                 dto.setOptions(parseOptions(entity.getChoiceConfig().getOptionsJson()));
@@ -81,7 +81,7 @@ public class DTOConverter {
             }
         }
 
-        // 🔥 竞价题：优先用 JOIN FETCH，否则查库
+        // 竞价题：优先用 JOIN FETCH，否则查库
         if (entity.getType() == QuestionType.BID) {
             if (entity.getBidConfig() != null) {
                 dto.setMin(entity.getBidConfig().getMinValue());

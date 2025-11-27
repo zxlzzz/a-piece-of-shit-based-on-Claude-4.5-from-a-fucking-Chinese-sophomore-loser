@@ -33,9 +33,9 @@ public class RoomCache {
                 ROOM_EXPIRY_MS,
                 TimeUnit.MILLISECONDS
             );
-            log.debug("✅ 房间 {} 已保存到Redis", roomCode);
+            log.debug(" 房间 {} 已保存到Redis", roomCode);
         } catch (Exception e) {
-            log.error("❌ Redis 写入失败（roomCode={}）", roomCode, e);
+            log.error(" Redis 写入失败（roomCode={}）", roomCode, e);
             throw new BusinessException("房间保存失败");
         }
     }
@@ -47,7 +47,7 @@ public class RoomCache {
                 return (GameRoom) redisValue;
             }
         } catch (Exception e) {
-            log.error("❌ Redis 读取失败（roomCode={}）", roomCode, e);
+            log.error(" Redis 读取失败（roomCode={}）", roomCode, e);
         }
         return null;
     }
@@ -64,7 +64,7 @@ public class RoomCache {
         try {
             return Boolean.TRUE.equals(redisTemplate.hasKey(getRedisKey(roomCode)));
         } catch (Exception e) {
-            log.error("❌ Redis 检查失败（roomCode={}）", roomCode, e);
+            log.error(" Redis 检查失败（roomCode={}）", roomCode, e);
             return false;
         }
     }
@@ -74,7 +74,7 @@ public class RoomCache {
             redisTemplate.delete(getRedisKey(roomCode));
             log.info("🗑️ 房间 {} 已从Redis移除", roomCode);
         } catch (Exception e) {
-            log.error("❌ Redis 删除失败（roomCode={}）", roomCode, e);
+            log.error(" Redis 删除失败（roomCode={}）", roomCode, e);
         }
     }
 

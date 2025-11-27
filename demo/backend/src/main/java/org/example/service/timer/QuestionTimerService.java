@@ -26,7 +26,7 @@ public class QuestionTimerService {
             try {
                 onTimeout.run();
             } catch (Exception e) {
-                log.error("❌ 房间 {} 超时回调执行失败", roomCode, e);
+                log.error(" 房间 {} 超时回调执行失败", roomCode, e);
             } finally {
                 activeTimers.remove(roomCode);
             }

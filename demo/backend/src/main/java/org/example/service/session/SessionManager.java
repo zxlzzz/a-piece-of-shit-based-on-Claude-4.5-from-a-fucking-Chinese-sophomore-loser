@@ -36,7 +36,7 @@ public class SessionManager {
     private final Map<String, String> sessionToPlayer = new ConcurrentHashMap<>();
 
     /**
-     * 🔥 P0-2修复：立即注册会话ID映射（在异步查询DB之前）
+     *  ��立即注册会话ID映射（在异步查询DB之前）
      * 确保后续消息能通过sessionId找到playerId，避免状态不一致
      *
      * @param sessionId WebSocket会话ID
@@ -44,7 +44,7 @@ public class SessionManager {
      */
     public void registerSessionIdMapping(String sessionId, String playerId) {
         sessionToPlayer.put(sessionId, playerId);
-        log.debug("✅ 立即注册会话映射: sessionId={}, playerId={}", sessionId, playerId);
+        log.debug(" 立即注册会话映射: sessionId={}, playerId={}", sessionId, playerId);
     }
 
     /**
@@ -197,8 +197,8 @@ public class SessionManager {
     }
 
     /**
-     * 🔥 定时清理过期会话（防止内存泄漏）
-     * 🔥 P0-5修复：每5分钟执行一次，清理超过60分钟未活动的会话
+     *  定时清理过期会话（防止内存泄漏）
+     *  ��每5分钟执行一次，清理超过60分钟未活动的会话
      * 使用lastHeartbeat（最后活动时间）而非loginTime
      * 60分钟阈值确保长时间游戏的用户不会被误清理
      */
@@ -210,7 +210,7 @@ public class SessionManager {
 
             // 找出所有过期的会话
             activeSessions.forEach((playerId, session) -> {
-                // 🔥 P0-5修复：使用lastHeartbeat（最后活动时间）判断
+                // ��使用lastHeartbeat（最后活动时间）判断
                 if (session.getLastHeartbeat().isBefore(threshold)) {
                     toRemove.add(playerId);
                 }
@@ -231,7 +231,7 @@ public class SessionManager {
                         toRemove.size(), activeSessions.size());
             }
         } catch (Exception e) {
-            log.error("🔥 定时清理过期会话失败", e);
+            log.error(" 定时清理过期会话失败", e);
         }
     }
 

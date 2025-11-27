@@ -23,14 +23,14 @@ public class RoomStateBroadcaster {
      */
     public void sendRoomUpdate(String roomCode, RoomDTO room) {
         if (room == null) {
-            log.warn("⚠️ 尝试广播空房间状态, roomCode={}", roomCode);
+            log.warn(" 尝试广播空房间状态, roomCode={}", roomCode);
             return;
         }
         try {
             messagingTemplate.convertAndSend("/topic/room/" + roomCode, room);
-            log.info("✅ 广播房间更新: roomCode={}, status={}", roomCode, room.getStatus());
+            log.info(" 广播房间更新: roomCode={}, status={}", roomCode, room.getStatus());
         } catch (Exception e) {
-            log.error("❌ 广播房间更新失败, roomCode={}: {}", roomCode, e.getMessage(), e);
+            log.error(" 广播房间更新失败, roomCode={}: {}", roomCode, e.getMessage(), e);
         }
     }
 
@@ -43,9 +43,9 @@ public class RoomStateBroadcaster {
                     "/topic/room/" + roomCode + "/deleted",
                     Map.of("message", "房间已删除", "roomCode", roomCode)
             );
-            log.info("✅ 广播房间删除: {}", roomCode);
+            log.info(" 广播房间删除: {}", roomCode);
         } catch (Exception e) {
-            log.error("❌ 广播房间删除失败, roomCode={}: {}", roomCode, e.getMessage());
+            log.error(" 广播房间删除失败, roomCode={}: {}", roomCode, e.getMessage());
         }
     }
 }

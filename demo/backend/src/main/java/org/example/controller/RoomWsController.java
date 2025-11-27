@@ -18,7 +18,7 @@ import org.springframework.stereotype.Controller;
 import java.util.Map;
 
 /**
- * 🔥 已废弃：WebSocket命令处理器
+ *  已废弃：WebSocket命令处理器
  *
  * 优化策略：采用混合模式
  * - 所有操作命令改用HTTP API（GameController.java）
@@ -40,7 +40,7 @@ public class RoomWsController {
     private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
 
-    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/join
+    // 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/join
     // @MessageMapping("/join")
     public void handleJoin_DEPRECATED(@Payload JoinRequest request) {
         try {
@@ -53,13 +53,13 @@ public class RoomWsController {
             broadcaster.sendRoomUpdate(request.getRoomCode(), updatedRoom);
 
         } catch (BusinessException e) {
-            log.error("❌ 加入房间失败（业务异常）: {}", e.getMessage());
+            log.error(" 加入房间失败（业务异常）: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("❌ 加入房间失败（系统异常）", e);
+            log.error(" 加入房间失败（系统异常）", e);
         }
     }
 
-    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/start
+    // 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/start
     // @MessageMapping("/start")
     public void handleStart_DEPRECATED(@Payload Map<String, String> request) {
         try {
@@ -70,15 +70,15 @@ public class RoomWsController {
 
         } catch (BusinessException e) {
             String roomCode = request.get("roomCode");
-            log.error("❌ 开始游戏失败（业务异常）: {}", e.getMessage());
+            log.error(" 开始游戏失败（业务异常）: {}", e.getMessage());
         } catch (Exception e) {
-            // 🔥 添加：捕获所有异常
+            // 添加：捕获所有异常
             String roomCode = request.get("roomCode");
-            log.error("❌ 开始游戏失败（系统异常）", e);
+            log.error(" 开始游戏失败（系统异常）", e);
         }
     }
 
-    // 🔥 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/submit
+    // 已废弃：请使用 HTTP POST /api/rooms/{roomCode}/submit
     // @MessageMapping("/submit")
     public void handleSubmit_DEPRECATED(@Payload SubmitRequest request) {
         try {
@@ -92,22 +92,22 @@ public class RoomWsController {
             broadcaster.sendRoomUpdate(request.getRoomCode(), room);
 
         } catch (BusinessException e) {
-            log.error("❌ 提交答案失败（业务异常）: {}", e.getMessage());
+            log.error(" 提交答案失败（业务异常）: {}", e.getMessage());
         } catch (Exception e) {
-            // 🔥 添加：捕获所有异常，防止断连
-            log.error("❌ 提交答案失败（系统异常）", e);
+            // 添加：捕获所有异常，防止断连
+            log.error(" 提交答案失败（系统异常）", e);
 
-            // 🔥 重要：即使出错也要广播房间状态，避免界面卡住
+            // 重要：即使出错也要广播房间状态，避免界面卡住
             try {
                 RoomDTO room = gameService.getRoomStatus(request.getRoomCode());
                 broadcaster.sendRoomUpdate(request.getRoomCode(), room);
             } catch (Exception ex) {
-                log.error("❌ 广播房间状态失败", ex);
+                log.error(" 广播房间状态失败", ex);
             }
         }
     }
 
-    // 🔥 已废弃：请使用 HTTP PUT /api/rooms/{roomCode}/players/{playerId}/ready
+    // 已废弃：请使用 HTTP PUT /api/rooms/{roomCode}/players/{playerId}/ready
     // @MessageMapping("/ready")
     public void handleReady_DEPRECATED(@Payload Map<String, Object> request) {
         try {
@@ -121,15 +121,15 @@ public class RoomWsController {
 
         } catch (BusinessException e) {
             String playerId = (String) request.get("playerId");
-            log.error("❌ 设置准备状态失败（业务异常）: {}", e.getMessage());
+            log.error(" 设置准备状态失败（业务异常）: {}", e.getMessage());
         } catch (Exception e) {
-            // 🔥 添加：捕获所有异常
+            // 添加：捕获所有异常
             String playerId = (String) request.get("playerId");
-            log.error("❌ 设置准备状态失败（系统异常）", e);
+            log.error(" 设置准备状态失败（系统异常）", e);
         }
     }
 
-    // 🔥 已废弃：离开房间通过关闭页面/浏览器自动处理，或使用HTTP DELETE
+    // 已废弃：离开房间通过关闭页面/浏览器自动处理，或使用HTTP DELETE
     // @MessageMapping("/leave")
     public void handleLeave_DEPRECATED(@Payload Map<String, String> payload) {
         String roomCode = payload.get("roomCode");
@@ -144,7 +144,7 @@ public class RoomWsController {
                 broadcaster.sendRoomDeleted(roomCode);
             }
         } catch (Exception e) {
-            log.error("❌ 处理离开请求失败", e);
+            log.error(" 处理离开请求失败", e);
         }
     }
 

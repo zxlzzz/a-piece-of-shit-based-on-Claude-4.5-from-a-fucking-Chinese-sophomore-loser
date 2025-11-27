@@ -12,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
 
-    // 🔥 过滤软删除的记录
+    // 过滤软删除的记录
     @Query("SELECT p FROM PlayerEntity p WHERE p.playerId = ?1 AND p.deleted = false")
     Optional<PlayerEntity> findByPlayerId(String playerId);
 

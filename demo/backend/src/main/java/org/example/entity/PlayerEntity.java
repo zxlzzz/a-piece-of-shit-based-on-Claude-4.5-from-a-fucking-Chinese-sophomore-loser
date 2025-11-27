@@ -50,7 +50,7 @@ public class PlayerEntity {
     private RoomEntity room;
 
     /**
-     * 🔥 P1-7修复：统一级联配置，删除玩家时同时删除历史记录
+     *  ��统一级联配置，删除玩家时同时删除历史记录
      * 如果需要保留历史，应该使用软删除而不是硬删除
      */
     @OneToMany(mappedBy = "player",
@@ -60,7 +60,7 @@ public class PlayerEntity {
     private List<PlayerGameEntity> playerGames = new ArrayList<>();
 
     /**
-     * 🔥 P1-7修复：添加级联删除，保持数据一致性
+     *  ��添加级联删除，保持数据一致性
      * submissions属于玩家的答题记录，删除玩家时应一并删除
      */
     @OneToMany(mappedBy = "player",

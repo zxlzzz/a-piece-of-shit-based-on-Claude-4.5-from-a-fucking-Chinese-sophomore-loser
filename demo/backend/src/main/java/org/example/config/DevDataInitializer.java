@@ -16,10 +16,10 @@ import java.util.UUID;
 /**
  * 开发环境数据初始化器
  * 自动创建测试账号
- * ⚠️ 只在开发环境运行（@Profile("dev")）
+ *  只在开发环境运行（@Profile("dev")）
  */
 @Component
-@Profile("dev")  // 🔥 只在开发环境激活
+@Profile("dev")  //  只在开发环境激活
 @RequiredArgsConstructor
 @Slf4j
 public class DevDataInitializer implements ApplicationRunner {
@@ -56,7 +56,7 @@ public class DevDataInitializer implements ApplicationRunner {
                         .build();
 
                 playerRepository.save(player);
-                log.info("✅ 创建测试账号: {} (密码: 123456)", username);
+                log.info(" 创建测试账号: {} (密码: 123456)", username);
             } else {
                 log.info("⏭️  测试账号已存在: {}", username);
             }

@@ -125,7 +125,7 @@ public class GameRoom implements Serializable {
      * 获取当前题目
      */
     public QuestionDTO getCurrentQuestion() {
-        // 🔥 修复：添加questions空值检查，避免NPE
+        // 修复：添加questions空值检查，避免NPE
         if (questions == null || currentIndex < 0 || currentIndex >= questions.size()) {
             return null;
         }
@@ -137,7 +137,7 @@ public class GameRoom implements Serializable {
      * @return true-成功推进, false-已是最后一题
      */
     public boolean nextQuestion() {
-        // 🔥 修复：添加questions空值检查
+        // 修复：添加questions空值检查
         if (questions == null || currentIndex + 1 >= questions.size()) {
             return false;
         }

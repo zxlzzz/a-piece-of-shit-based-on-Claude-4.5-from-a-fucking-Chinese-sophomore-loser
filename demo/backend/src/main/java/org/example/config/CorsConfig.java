@@ -25,7 +25,7 @@ public class CorsConfig implements WebMvcConfigurer {
                 .allowedOriginPatterns(origins)  // 使用具体的域名列表
                 .allowedMethods(allowedMethods.split(","))
                 .allowedHeaders("*")
-                .exposedHeaders("X-Total-Count", "X-Page-Number")  // ✅ 如果需要暴露自定义响应头
+                .exposedHeaders("X-Total-Count", "X-Page-Number")  //  如果需要暴露自定义响应头
                 .allowCredentials(true)
                 .maxAge(maxAge);
     }

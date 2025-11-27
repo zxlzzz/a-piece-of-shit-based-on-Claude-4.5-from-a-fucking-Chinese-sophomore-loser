@@ -41,7 +41,7 @@ public class RoomLock {
     }
 
     /**
-     * 🔥 修复：批量清理指定房间的锁（定时任务调用）
+     *  修复：批量清理指定房间的锁（定时任务调用）
      * @param activeRoomCodes 当前活跃的房间代码集合
      * @return 清理的锁数量
      */
@@ -69,7 +69,7 @@ public class RoomLock {
     }
 
     /**
-     * 🔥 修复：获取所有锁的房间代码（用于监控和调试）
+     *  修复：获取所有锁的房间代码（用于监控和调试）
      */
     public static Set<String> getAllLockKeys() {
         return LOCKS.keySet();

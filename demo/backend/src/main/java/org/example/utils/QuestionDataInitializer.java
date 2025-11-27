@@ -23,7 +23,7 @@ public class QuestionDataInitializer {
     private final QuestionRepository questionRepository;
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
-    private final ObjectMapper objectMapper;  // ✅ 注入全局 ObjectMapper
+    private final ObjectMapper objectMapper;  //  注入全局 ObjectMapper
 
     @PostConstruct
     @Transactional

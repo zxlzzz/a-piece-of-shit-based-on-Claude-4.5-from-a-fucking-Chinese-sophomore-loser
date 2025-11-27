@@ -26,20 +26,20 @@ public class SubmissionEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ✅ 多对一：提交 -> 题目
+    // 多对一：提交 -> 题目
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)
-    private QuestionEntity question;  // ❌ 不加cascade，题目是公共资源
+    private QuestionEntity question;  //  不加cascade，题目是公共资源
 
-    // ✅ 多对一：提交 -> 玩家
+    // 多对一：提交 -> 玩家
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_id", nullable = false)
-    private PlayerEntity player;  // ❌ 不加cascade
+    private PlayerEntity player;  //  不加cascade
 
-    // ✅ 多对一：提交 -> 游戏
+    // 多对一：提交 -> 游戏
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
-    private GameEntity game;  // ❌ 不加cascade
+    private GameEntity game;  //  不加cascade
 
     @Column(nullable = false)
     private String choice;

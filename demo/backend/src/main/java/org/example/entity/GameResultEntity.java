@@ -25,10 +25,10 @@ public class GameResultEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id", nullable = false)
     private RoomEntity room;
-    // ✅ 一对一：结果 -> 游戏
+    // 一对一：结果 -> 游戏
     @OneToOne
     @JoinColumn(name = "game_id", nullable = false, unique = true)
-    private GameEntity game;  // ❌ 不加cascade，由Game端管理
+    private GameEntity game;  //  不加cascade，由Game端管理
 
     @Column(nullable = false)
     private Integer questionCount;
@@ -50,7 +50,7 @@ public class GameResultEntity {
     @Column(nullable = false)
     private LocalDateTime updatedAt;  // 更新时间
 
-    // ✅ 如果需要获取 roomCode，可以这样：
+    // 如果需要获取 roomCode，可以这样：
     public String getRoomCode() {
         return game.getRoom().getRoomCode();
     }

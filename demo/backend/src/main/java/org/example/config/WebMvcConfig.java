@@ -20,7 +20,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
                 .addResolver(new PathResourceResolver() {
                     @Override
                     protected Resource getResource(String resourcePath, Resource location) throws IOException {
-                        // ✅ 更准确的API路径检查
+                        // 更准确的API路径检查
                         if (isApiPath(resourcePath)) {
                             return null;
                         }

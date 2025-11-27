@@ -45,7 +45,7 @@ public class QuestionEntity {
     @Column
     private Boolean hasMetadata = false;
 
-    // ========== ✅ 新增：关联配置 ==========
+    // ==========  新增：关联配置 ==========
     @OneToOne(mappedBy = "question", fetch = FetchType.LAZY)
     private ChoiceQuestionConfig choiceConfig;
 

@@ -49,7 +49,7 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            // 🔥 修复：只解析一次，避免重复解析导致性能浪费
+            // 修复：只解析一次，避免重复解析导致性能浪费
             Claims claims = getClaimsFromToken(token);
             return !claims.getExpiration().before(new Date());
         } catch (Exception e) {
@@ -66,9 +66,9 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // 🔥 已废弃：不再使用，避免重复解析
+    // 已废弃：不再使用，避免重复解析
     // private boolean isTokenExpired(String token) {
-    //     Date expiration = getClaimsFromToken(token).getExpiration();
-    //     return expiration.before(new Date());
+    // Date expiration = getClaimsFromToken(token).getExpiration();
+    // return expiration.before(new Date());
     // }
 }

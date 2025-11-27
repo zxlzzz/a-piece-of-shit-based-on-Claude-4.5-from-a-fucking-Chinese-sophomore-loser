@@ -27,7 +27,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // 🔥 修复：跳过公开路径（认证接口、WebSocket）
+        // 修复：跳过公开路径（认证接口、WebSocket）
         String path = request.getRequestURI();
         if (path.startsWith("/api/auth/") || path.startsWith("/ws/")) {
             filterChain.doFilter(request, response);
@@ -51,16 +51,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
-                    // 🔥 P1-4修复：token验证失败，返回401而不是继续处理
-                    log.warn("❌ JWT验证失败（token无效或过期）");
+                    // ��token验证失败，返回401而不是继续处理
+                    log.warn(" JWT验证失败（token无效或过期）");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
                     response.getWriter().write("{\"error\":\"Token无效或已过期\"}");
                     return; // 阻止继续处理
                 }
             } catch (Exception e) {
-                // 🔥 P1-4修复：token验证异常，返回401而不是继续处理
-                log.error("❌ JWT认证失败: {}", e.getMessage());
+                // ��token验证异常，返回401而不是继续处理
+                log.error(" JWT认证失败: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");
                 response.getWriter().write("{\"error\":\"Token验证失败\"}");

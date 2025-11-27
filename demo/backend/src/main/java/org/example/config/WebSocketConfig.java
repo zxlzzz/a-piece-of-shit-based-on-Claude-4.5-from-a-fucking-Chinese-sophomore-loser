@@ -42,13 +42,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Autowired
     private ApplicationContext applicationContext;
 
-    // 🔥 修复循环依赖：不在构造函数注入SessionManager
+    // 修复循环依赖：不在构造函数注入SessionManager
     // 将在拦截器Bean中使用@Lazy注入，实现真正的懒加载
     public WebSocketConfig(PlayerRepository playerRepository) {
         this.playerRepository = playerRepository;
     }
 
-    // 🔥 先定义 TaskScheduler bean（用于心跳检测，虽然已禁用但仍需配置）
+    // 先定义 TaskScheduler bean（用于心跳检测，虽然已禁用但仍需配置）
     @Bean
     public TaskScheduler taskScheduler() {
         ThreadPoolTaskScheduler scheduler = new ThreadPoolTaskScheduler();
@@ -58,7 +58,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         return scheduler;
     }
 
-    // 🔥 WebSocket 连接处理专用线程池
+    // WebSocket 连接处理专用线程池
     // 避免每次连接都创建新线程，提高并发能力，防止线程泄漏
     @Bean(name = "wsConnectionExecutor")
     public Executor wsConnectionExecutor() {
@@ -72,7 +72,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         return executor;
     }
 
-    // 🔥 拦截器Bean - 使用@Lazy注入SessionManager打破循环依赖
+    // 拦截器Bean - 使用@Lazy注入SessionManager打破循环依赖
     @Bean
     public WebSocketChannelInterceptor webSocketChannelInterceptor(
             @Lazy SessionManager sessionManager,
@@ -93,8 +93,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // 应用程序消息前缀
         registry.setApplicationDestinationPrefixes("/app");
 
-        // 🔥 启用简单消息代理，支持主题和队列
-        // ⚠️ 禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
+        // 启用简单消息代理，支持主题和队列
+        // 禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
         registry.enableSimpleBroker("/topic", "/queue", "/user")
                 .setTaskScheduler(taskScheduler());
 
@@ -104,11 +104,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
-        // 🔥 从ApplicationContext获取拦截器bean，避免循环依赖
+        // 从ApplicationContext获取拦截器bean，避免循环依赖
         registration.interceptors(applicationContext.getBean(WebSocketChannelInterceptor.class));
 
-        // 🔥 配置消息处理线程池和队列
-        // 🔥 修复P2-2：队列容量从50000降到5000，避免OOM风险
+        // 配置消息处理线程池和队列
+        // 修复��队列容量从50000降到5000，避免OOM风险
         // 如果队列接近满载，说明服务器处理能力不足，应该拒绝而不是无限堆积
         registration.taskExecutor()
                 .corePoolSize(32)       // 核心线程数：32
@@ -119,8 +119,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientOutboundChannel(ChannelRegistration registration) {
-        // 🔥 出站通道配置
-        // 🔥 修复P2-2：队列容量从50000降到5000
+        // 出站通道配置
+        // 修复��队列容量从50000降到5000
         registration.taskExecutor()
                 .corePoolSize(32)       // 核心线程数：32
                 .maxPoolSize(64)        // 最大线程数：64
@@ -150,7 +150,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             StompHeaderAccessor accessor = StompHeaderAccessor.wrap(message);
             StompCommand command = accessor.getCommand();
 
-            // 🔥 修复P1-6：优化Principal恢复逻辑
+            // 修复��优化Principal恢复逻辑
             // 只在特定命令类型需要时才恢复，而不是对所有消息都检查
             // CONNECT时已设置Principal，后续的SEND、SUBSCRIBE等命令应该已有Principal
             // 只有在确实需要Principal的命令上才检查和恢复
@@ -173,20 +173,20 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     // 连接时的处理
                     String playerId = accessor.getFirstNativeHeader("playerId");
                     if (playerId != null) {
-                        // 🔥 创建Principal并设置到accessor
+                        // 创建Principal并设置到accessor
                         StompPrincipal principal = new StompPrincipal(playerId);
                         accessor.setUser(principal);
 
-                        // 🔥 关键修复：将playerId保存到session attributes，确保后续消息能获取到用户身份
+                        // 关键修复：将playerId保存到session attributes，确保后续消息能获取到用户身份
                         if (accessor.getSessionAttributes() != null) {
                             accessor.getSessionAttributes().put("playerId", playerId);
 
-                            // 🔥 P0-2修复：立即注册sessionToPlayer映射，确保后续消息能找到playerId
+                            // ��立即注册sessionToPlayer映射，确保后续消息能找到playerId
                             String sessionId = accessor.getSessionId();
                             sessionManager.registerSessionIdMapping(sessionId, playerId);
 
-                            // 🔥 优化：使用线程池异步查询玩家信息并注册完整会话（避免阻塞连接建立，防止线程泄漏）
-                            // 🔥 修复P0-2：确保异步注册失败时能清理状态，避免不一致
+                            // 优化：使用线程池异步查询玩家信息并注册完整会话（避免阻塞连接建立，防止线程泄漏）
+                            // 修复��确保异步注册失败时能清理状态，避免不一致
                             Map<String, Object> sessionAttrs = accessor.getSessionAttributes();
                             executor.execute(() -> {
                                 try {
@@ -196,7 +196,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                         String playerName = player.getName();
                                         boolean isRegisteredUser = player.getUsername() != null;
 
-                                        // 🔥 修复懒加载问题：安全获取roomCode
+                                        // 修复懒加载问题：安全获取roomCode
                                         String roomCode = null;
                                         try {
                                             if (player.getRoom() != null) {
@@ -207,7 +207,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                             log.debug("无法加载玩家房间信息（懒加载）: playerId={}", playerId);
                                         }
 
-                                        // 🔥 注册会话（注册用户和游客都注册，确保sessionToPlayer映射完整）
+                                        // 注册会话（注册用户和游客都注册，确保sessionToPlayer映射完整）
                                         sessionManager.registerSession(
                                             sessionId,
                                             playerId,
@@ -219,8 +219,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                         log.info("🔌 WebSocket连接建立: playerId={}, name={}, sessionId={}, isRegistered={}, roomCode={}",
                                             playerId, playerName, sessionId, isRegisteredUser, roomCode);
                                     } else {
-                                        log.warn("⚠️ WebSocket连接但未找到玩家（可能已删除）: playerId={}", playerId);
-                                        // 🔥 P0-2修复：玩家不存在时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
+                                        log.warn(" WebSocket连接但未找到玩家（可能已删除）: playerId={}", playerId);
+                                        // ��玩家不存在时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
                                         if (sessionAttrs != null) {
                                             sessionAttrs.remove("playerId");
                                         }
@@ -228,8 +228,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                         log.info("已清理不存在玩家的会话映射: playerId={}, sessionId={}", playerId, sessionId);
                                     }
                                 } catch (Exception e) {
-                                    log.error("⚠️ 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
-                                    // 🔥 P0-2修复：异步处理失败时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
+                                    log.error(" 处理WebSocket连接失败: playerId={}, sessionId={}", playerId, sessionId, e);
+                                    // ��异步处理失败时清理sessionAttributes和sessionToPlayer映射，避免状态不一致
                                     if (sessionAttrs != null) {
                                         sessionAttrs.remove("playerId");
                                     }
@@ -238,10 +238,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                 }
                             });
                         } else {
-                            log.warn("⚠️ Session attributes为null，无法保存playerId");
+                            log.warn(" Session attributes为null，无法保存playerId");
                         }
                     } else {
-                        log.warn("⚠️ WebSocket连接但未提供playerId header！sessionId: {}",
+                        log.warn(" WebSocket连接但未提供playerId header！sessionId: {}",
                             accessor.getSessionId());
                     }
                     break;
@@ -253,7 +253,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     if (user != null) {
                         log.info("🔌 WebSocket连接断开: playerId={}, sessionId={}", user.getName(), sessionId);
                     }
-                    // 🔥 清理会话
+                    // 清理会话
                     if (sessionId != null) {
                         sessionManager.removeSession(sessionId);
                     }
@@ -267,7 +267,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                     break;
             }
 
-            // 🔥 P0-5修复：更新活动时间，防止活跃用户被误清理
+            // ��更新活动时间，防止活跃用户被误清理
             // 对于非CONNECT和DISCONNECT的命令，更新lastHeartbeat
             if (command != null && command != StompCommand.CONNECT && command != StompCommand.DISCONNECT) {
                 String sessionId = accessor.getSessionId();

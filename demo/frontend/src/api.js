@@ -6,36 +6,27 @@ const api = axios.create({
   timeout: API_TIMEOUT,
 });
 
-// ============ 请求拦截器（添加 token）============
 api.interceptors.request.use(
   (config) => {
-    // 自动添加 token 到请求头
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
     return config;
   },
   (error) => {
-
     return Promise.reject(error);
   }
 );
 
-// ============ 响应拦截器 ============
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // 🔥 检查是否需要静默处理（配置中设置了 silentError: true）
     const silentError = error.config?.silentError;
-
-    // 🔥 过滤不需要全局提示的错误
     const shouldShowToast = !silentError && !isIgnorableError(error);
 
-    // 只有需要提示的错误才触发全局事件
     if (shouldShowToast) {
       const errorMessage = getErrorMessage(error);
       window.dispatchEvent(new CustomEvent('api-error', {
@@ -52,13 +43,11 @@ api.interceptors.response.use(
   }
 );
 
-// 🔥 根据错误类型返回友好的提示信息
 function getErrorMessage(error) {
   const isDev = import.meta.env.DEV;
   const status = error.response?.status;
   const backendMessage = error.response?.data?.message;
 
-  // 有响应（HTTP 错误）
   if (error.response) {
     switch (status) {
       case 400:
@@ -79,30 +68,25 @@ function getErrorMessage(error) {
         return backendMessage || (isDev ? error.message : '请求失败');
     }
   }
-  // 请求发出去了但没收到响应（网络断了、后端没启动）
   else if (error.request) {
     return isDev
       ? '网络连接失败（服务器可能未启动）'
       : '网络连接失败，请检查网络';
   }
-  // 请求配置错误
   else {
     return isDev ? `请求配置错误: ${error.message}` : '请求失败';
   }
 }
 
-// 🔥 判断是否是可忽略的错误（不需要弹窗提示）
 function isIgnorableError(error) {
   const status = error.response?.status;
   const message = error.response?.data?.message || '';
   const url = error.config?.url || '';
 
-  // 房间不存在（404/400）- 静默处理
   if ((status === 404 || status === 400) && url.includes('/rooms/')) {
     return true;
   }
 
-  // 房间已结束/不存在等业务错误 - 静默处理
   if (message.includes('房间不存在') ||
       message.includes('房间已结束') ||
       message.includes('房间已过期') ||
@@ -111,7 +95,6 @@ function isIgnorableError(error) {
     return true;
   }
 
-  // 重复提交等正常业务逻辑 - 静默处理
   if (message.includes('已经提交') ||
       message.includes('已提交') ||
       message.includes('已准备') ||
@@ -119,15 +102,12 @@ function isIgnorableError(error) {
     return true;
   }
 
-  // 🔥 自动恢复操作失败 - 静默处理（GET请求且是查询房间状态）
   if (error.config?.method === 'get' && url.includes('/rooms/') && status === 404) {
     return true;
   }
 
   return false;
 }
-
-// ============ 认证相关API（新增）============
 
 export const register = (username, password, name) =>
   api.post('/auth/register', { username, password, name });
@@ -178,41 +158,14 @@ export const deleteRoom = (roomCode) =>
 export const getAllActiveRooms = () =>
   api.get(`/rooms`);
 
-
-export const listPlayers = () =>
-  api.get(`/players`);
-
-export const getPlayer = (playerId) =>
-  api.get(`/players/${playerId}`);
-
-export const updatePlayerReady = (playerId, ready) =>
-  api.put(`/players/${playerId}/ready`, null, {
-    params: { ready }
-  });
-
-export const deletePlayer = (playerId) =>
-  api.delete(`/players/${playerId}`);
-
 export const kickPlayer = (roomCode, ownerId, targetPlayerId) =>
   api.post(`/rooms/${roomCode}/kick`, null, {
     params: { ownerId, targetPlayerId }
   });
 
 
-// ============ 题目相关API ============
-
 export const getAllQuestions = () =>
   api.get(`/question`);
-
-export const getRandomQuestions = (count = 10) =>
-  api.get(`/question/random`, { params: { count } });
-
-export const getSuitableQuestions = (playerCount, questionCount = 10) =>
-  api.get(`/questions/suitable`, {
-    params: { playerCount, questionCount }
-  });
-
-// ============ 游戏历史相关API ============
 
 export const getGameHistory = (roomCode) => 
   api.get(`/rooms/${roomCode}/history`);

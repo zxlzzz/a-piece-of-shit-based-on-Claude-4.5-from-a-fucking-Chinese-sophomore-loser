@@ -7,11 +7,11 @@ import { useToast } from 'primevue/usetoast'
 import { useBreakpoints } from '@vueuse/core'
 import { logger } from '@/utils/logger'
 
-// 🔥 导入组件
+//  导入组件
 import GameHeader from '@/components/game/GameHeader.vue'
 import GameContent from '@/components/game/GameContent.vue'
 
-// 🔥 导入 composables
+//  导入 composables
 import { useGameCountdown } from '@/composables/game/useGameCountdown'
 import { useGameSubmit } from '@/composables/game/useGameSubmit'
 import { useGameKeyboard } from '@/composables/game/useGameKeyboard'
@@ -55,7 +55,7 @@ const totalPlayers = computed(() => {
   return room.value?.players?.length || 0
 })
 
-// 🔥 使用 components
+//  使用 components
 const {
   hasSubmitted,
   handleChoose,
@@ -64,7 +64,7 @@ const {
   restoreSubmitState,
   cleanupSubmission,
   getSubmissionKey,
-  verifySubmissionState  // 🔥 P1-1: 验证提交状态
+  verifySubmissionState  //  P1-1: 验证提交状态
 } = useGameSubmit(roomCode, playerStore, toast, question, room)
 
 const {
@@ -91,7 +91,7 @@ const { connectWebSocket, wsConnected } = useGameWebSocket(
   resetSubmitState,
   restoreSubmitState,
   getSubmissionKey,
-  verifySubmissionState  // 🔥 P1-1: 传递验证函数
+  verifySubmissionState  //  P1-1: 传递验证函数
 )
 
 // 生命周期
@@ -109,7 +109,7 @@ onMounted(() => {
 
   const savedRoom = playerStore.loadRoom()
 
-  // 🔥 修复：只清理旧题目的submission记录，保留当前题目的
+  ��只清理旧题目的submission记录，保留当前题目的
   if (savedRoom && savedRoom.currentIndex !== undefined && savedRoom.currentIndex >= 0) {
     const currentSubmissionKey = `submission_${roomCode.value}_${savedRoom.currentIndex}`
     const submissionPrefix = `submission_${roomCode.value}_`
@@ -128,14 +128,14 @@ onMounted(() => {
       logger.debug('🧹 清理旧题目的提交记录:', key)
     })
 
-    logger.info('✅ 保留当前题目的提交记录:', currentSubmissionKey)
+    logger.info(' 保留当前题目的提交记录:', currentSubmissionKey)
   }
 
   if (savedRoom) {
     room.value = savedRoom
     question.value = savedRoom.currentQuestion
 
-    // 🔥 新增：如果游戏已经结束，自动跳转到结果页面
+    //  新增：如果游戏已经结束，自动跳转到结果页面
     if (savedRoom.status === 'FINISHED' || savedRoom.finished === true) {
       toast.add({
         severity: 'info',
@@ -147,16 +147,16 @@ onMounted(() => {
       return
     }
 
-    // 🔥 修复：恢复当前题目的提交状态
+    ��恢复当前题目的提交状态
     if (question.value && savedRoom.currentIndex >= 0) {
       restoreSubmitState()
-      logger.info('✅ 页面加载时恢复提交状态:', {
+      logger.info(' 页面加载时恢复提交状态:', {
         currentIndex: savedRoom.currentIndex,
         hasSubmitted: hasSubmitted.value
       })
     }
 
-    // 🔥 改进：验证时间合理性后再恢复倒计时
+    //  改进：验证时间合理性后再恢复倒计时
     if (savedRoom.currentQuestion && savedRoom.questionStartTime) {
       const startTime = new Date(savedRoom.questionStartTime)
       const elapsed = (Date.now() - startTime.getTime()) / 1000
@@ -180,7 +180,7 @@ onUnmounted(() => {
   clearCountdown()
   cleanupSubmission()
 
-  // 🔥 离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
+  //  离开房间时不清除ChatRoom，让聊天历史持续到下一个页面
   // chatStore.clearChat()
 })
 </script>

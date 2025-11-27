@@ -32,7 +32,7 @@ const toggleQuestion = (index) => {
   expandedQuestion.value = expandedQuestion.value === index ? null : index
 }
 
-// 🔥 修复问题7.1: 返回大厅时清理playerStore和chatStore
+ 返回大厅时清理playerStore和chatStore
 const handleBackToLobby = () => {
   playerStore.clearRoom()
   chatStore.clearChat()
@@ -128,7 +128,7 @@ const getMyChoice = (questionDetail) => {
       </div>
     </div>
 
-    <!-- 🔥 新增：操作按钮 -->
+    <!--  新增：操作按钮 -->
     <div class="flex flex-col sm:flex-row gap-3 justify-center">
       <button
         @click="handleBackToLobby"
@@ -243,7 +243,7 @@ const getMyChoice = (questionDetail) => {
               </div>
             </div>
 
-            <!-- 🔥 题目反馈组件 -->
+            <!--  题目反馈组件 -->
             >
           </div>
         </div>

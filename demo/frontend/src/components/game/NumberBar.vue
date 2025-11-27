@@ -47,7 +47,7 @@ const props = defineProps({
   }
 })
 
-// 🔥 将值对齐到步长
+//  将值对齐到步长
 const alignToStep = (value) => {
   if (value === null || value === '' || isNaN(value)) {
     return null
@@ -92,22 +92,22 @@ const model = computed({
 <style scoped>
 .custom-input-number {
   width: 100%;
-  max-width: 280px; /* 🔥 移动端适配 */
+  max-width: 280px; /*  移动端适配 */
 }
 
 :deep(.custom-input-number input) {
   width: 100%;
   text-align: center;
-  font-size: 1.25rem; /* 🔥 移动端 20px */
+  font-size: 1.25rem; /*  移动端 20px */
   font-weight: bold;
-  padding: 0.75rem; /* 🔥 移动端减小 */
+  padding: 0.75rem; /*  移动端减小 */
   background-color: white;
   color: #111827;
   border: 2px solid #d1d5db;
   border-radius: 0.5rem;
 }
 
-/* 🔥 桌面端放大 */
+/*  桌面端放大 */
 @media (min-width: 640px) {
   :deep(.custom-input-number input) {
     font-size: 1.5rem; /* 24px */

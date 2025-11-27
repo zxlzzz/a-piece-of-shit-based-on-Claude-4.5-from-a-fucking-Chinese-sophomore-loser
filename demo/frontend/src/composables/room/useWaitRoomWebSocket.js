@@ -7,9 +7,9 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   const wsConnected = ref(false)
   const subscriptions = ref([])
   const loading = ref(false)
-  let roomUpdateCallback = null // 🔥 保存room更新回调
-  let isSubscribed = false // 🔥 标记是否已订阅
-  let isActive = false // 🔥 修复：标记页面是否活跃，防止卸载后执行回调
+  let roomUpdateCallback = null //  保存room更新回调
+  let isSubscribed = false //  标记是否已订阅
+  let isActive = false ��标记页面是否活跃，防止卸载后执行回调
 
   const handleRoomDeleted = () => {
     toast.add({
@@ -24,7 +24,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const handleWebSocketError = (event) => {
-    logger.error('🔥 WaitRoom 收到 WebSocket 错误:', event.detail)
+    logger.error(' WaitRoom 收到 WebSocket 错误:', event.detail)
     wsConnected.value = false
   }
 
@@ -42,7 +42,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     })
   }
 
-  // 🔥 重连成功处理
+  //  重连成功处理
   const handleReconnected = () => {
     wsConnected.value = true
 
@@ -55,7 +55,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const handleMaxReconnectFailed = () => {
-    logger.error('❌ WebSocket 重连失败，已达到最大次数')
+    logger.error(' WebSocket 重连失败，已达到最大次数')
     wsConnected.value = false
 
     toast.add({
@@ -65,7 +65,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
       life: 4000
     })
 
-    // 🔥 自动跳转而不是confirm弹窗
+    //  自动跳转而不是confirm弹窗
     setTimeout(() => {
       router.push('/find')
     }, 3000)
@@ -74,10 +74,10 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   const setupRoomSubscription = (room, onRoomUpdate) => {
     logger.debug('WaitRoom: 设置房间订阅');
 
-    // 🔥 保存回调用于重连恢复
+    //  保存回调用于重连恢复
     roomUpdateCallback = onRoomUpdate
 
-    // 🔥 避免重复订阅
+    //  避免重复订阅
     if (isSubscribed && subscriptions.value.length > 0) {
       logger.debug('已存在订阅，先取消旧订阅');
       unsubscribeAll(subscriptions.value);
@@ -101,7 +101,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
           }
         },
         (error) => {
-          logger.error('🔥 房间错误:', error)
+          logger.error(' 房间错误:', error)
           toast.add({
             severity: 'error',
             summary: '房间错误',
@@ -116,11 +116,11 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
         isSubscribed = true
         logger.debug('WaitRoom: 订阅成功，共', subs.length, '个订阅');
       } else {
-        logger.error('❌ WaitRoom: 订阅返回空数组')
+        logger.error(' WaitRoom: 订阅返回空数组')
         throw new Error('订阅返回空数组')
       }
     } catch (err) {
-      logger.error('❌ WaitRoom: 订阅异常:', err)
+      logger.error(' WaitRoom: 订阅异常:', err)
       isSubscribed = false
       toast.add({
         severity: 'error',
@@ -154,13 +154,13 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const connectWebSocket = async (room, onRoomUpdate) => {
-    // 🔥 简化：不再管理连接，只管理订阅
+    //  简化：不再管理连接，只管理订阅
     // 连接由 App.vue 全局管理
 
     wsConnected.value = isConnected()
 
     if (!wsConnected.value) {
-      logger.error('❌ WaitRoom: WebSocket 未连接，等待全局连接建立')
+      logger.error(' WaitRoom: WebSocket 未连接，等待全局连接建立')
       toast.add({
         severity: 'warn',
         summary: '等待连接',
@@ -168,7 +168,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
         life: 3000
       })
 
-      // 🔥 优化：使用事件驱动等待连接，避免轮询（最多3秒）
+      //  优化：使用事件驱动等待连接，避免轮询（最多3秒）
       try {
         await waitForConnection(3000)
         wsConnected.value = true
@@ -191,7 +191,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
       setupRoomSubscription(room, onRoomUpdate)
       await refreshRoomState(room)
     } catch (err) {
-      logger.error('❌ WaitRoom: 订阅失败', err)
+      logger.error(' WaitRoom: 订阅失败', err)
       toast.add({
         severity: 'error',
         summary: '订阅失败',
@@ -203,8 +203,8 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     }
   }
 
-  // 🔥 订阅恢复回调（重连后自动调用）
-  // 🔥 修复：只在页面活跃时恢复订阅，避免页面卸载后仍执行回调
+  //  订阅恢复回调（重连后自动调用）
+  ��只在页面活跃时恢复订阅，避免页面卸载后仍执行回调
   const subscriptionRestoreCallback = () => {
     // 只在页面活跃时恢复订阅
     if (!isActive) {
@@ -217,7 +217,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
       try {
         // setupRoomSubscription不使用room参数，可以安全传递null
         setupRoomSubscription(null, roomUpdateCallback);
-        logger.info('✅ WaitRoom: 重连后订阅恢复成功');
+        logger.info(' WaitRoom: 重连后订阅恢复成功');
       } catch (err) {
         logger.error('WaitRoom: 恢复订阅失败:', err);
       }
@@ -229,7 +229,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   const cleanup = () => {
     logger.debug('WaitRoom: 清理资源');
 
-    // 🔥 修复：标记页面不再活跃，防止回调执行
+    ��标记页面不再活跃，防止回调执行
     isActive = false;
 
     window.removeEventListener('room-deleted', handleRoomDeleted)
@@ -238,7 +238,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     window.removeEventListener('websocket-reconnected', handleReconnected)
     window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
 
-    // 🔥 取消注册订阅恢复回调
+    //  取消注册订阅恢复回调
     unregisterSubscriptionCallback(subscriptionRestoreCallback)
 
     if (subscriptions.value.length > 0) {
@@ -251,7 +251,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
   }
 
   const init = () => {
-    // 🔥 修复：标记页面活跃
+    ��标记页面活跃
     isActive = true;
 
     window.addEventListener('room-deleted', handleRoomDeleted)
@@ -260,7 +260,7 @@ export function useWaitRoomWebSocket(roomCode, playerStore, router, toast) {
     window.addEventListener('websocket-reconnected', handleReconnected)
     window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
 
-    // 🔥 注册订阅恢复回调
+    //  注册订阅恢复回调
     registerSubscriptionCallback(subscriptionRestoreCallback)
   }
 

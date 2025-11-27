@@ -14,15 +14,15 @@ let stompClient = null;
 let connected = false;
 let currentPlayerId = null;
 let connectPromise = null;
-let connectTimeoutId = null; // 🔥 修复：存储连接超时ID，避免泄漏
+let connectTimeoutId = null; ��存储连接超时ID，避免泄漏
 let reconnectAttempts = 0;
 let reconnectTimer = null;
-let isReconnecting = false; // 🔥 标记是否正在重连
-let manualDisconnect = false; // 🔥 标记是否手动断开（手动断开不自动重连）
-let isResettingConnection = false; // 🔥 修复P1-1：防止并发重置连接导致的竞态条件
-let subscriptionCallbacks = new Set(); // 🔥 修复：使用Set避免重复，提升线程安全
-let personalSubscriptions = []; // 🔥 修复：存储个人消息订阅，避免内存泄漏
-let activeRoomSubscriptions = new Map(); // 🔥 修复问题2.1：全局跟踪活动的房间订阅，防止重复订阅
+let isReconnecting = false; //  标记是否正在重连
+let manualDisconnect = false; //  标记是否手动断开（手动断开不自动重连）
+let isResettingConnection = false; ��防止并发重置连接导致的竞态条件
+let subscriptionCallbacks = new Set(); ��使用Set避免重复，提升线程安全
+let personalSubscriptions = []; ��存储个人消息订阅，避免内存泄漏
+let activeRoomSubscriptions = new Map(); ��全局跟踪活动的房间订阅，防止重复订阅
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -38,8 +38,8 @@ export function connect(playerId, onConnect, onError) {
     return Promise.resolve(stompClient);
   }
 
-  // 🔥 修改：如果正在连接中，检查是否超时
-  // 🔥 修复P1-1：使用flag防止并发重置导致的竞态条件
+  ��如果正在连接中，检查是否超时
+  ��使用flag防止并发重置导致的竞态条件
   if (connectPromise) {
     const now = Date.now();
     // 如果连接 Promise 存在超过设定时间，强制重置
@@ -51,7 +51,7 @@ export function connect(playerId, onConnect, onError) {
         isResettingConnection = true;
         logger.error('连接超时，强制重置');
 
-        // 🔥 修复：清除超时处理器，避免资源泄漏
+        ��清除超时处理器，避免资源泄漏
         if (connectTimeoutId) {
           clearTimeout(connectTimeoutId);
           connectTimeoutId = null;
@@ -90,7 +90,7 @@ export function connect(playerId, onConnect, onError) {
 
   // 创建新的连接 Promise
   connectPromise = new Promise((resolve, reject) => {
-    // 🔥 修复：使用全局变量存储超时ID，避免泄漏
+    ��使用全局变量存储超时ID，避免泄漏
     connectTimeoutId = setTimeout(() => {
       logger.error(`连接超时（${WS_CONNECT_TIMEOUT / 1000}秒）`);
       connectTimeoutId = null;
@@ -109,12 +109,12 @@ export function connect(playerId, onConnect, onError) {
 
       reconnectDelay: WS_RECONNECT_DELAY,
 
-      // ⚠️ 禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
+      //  禁用心跳检测：玩家答题时可能长时间无操作，心跳会导致误判断连
       heartbeatIncoming: 0,
       heartbeatOutgoing: 0,
 
       onConnect: (frame) => {
-        // 🔥 修复：清除超时处理器
+        ��清除超时处理器
         if (connectTimeoutId) {
           clearTimeout(connectTimeoutId);
           connectTimeoutId = null;
@@ -243,7 +243,7 @@ export function connect(playerId, onConnect, onError) {
     stompClient.activate();
   });
 
-  // 🔥 添加时间戳用于超时检测
+  //  添加时间戳用于超时检测
   connectPromise._startTime = Date.now();
 
   return connectPromise;
@@ -252,12 +252,12 @@ export function connect(playerId, onConnect, onError) {
 
 /**
  * 订阅个人消息（错误通知、欢迎消息等）
- * 🔥 修复：存储订阅对象，避免内存泄漏
+ *  ��存储订阅对象，避免内存泄漏
  */
 function subscribeToPersonalMessages(playerId) {
   if (!ensureConnected("subscribeToPersonalMessages")) return;
 
-  // 🔥 先清理旧的个人订阅，避免重复订阅
+  //  先清理旧的个人订阅，避免重复订阅
   cleanupPersonalSubscriptions();
 
   // 订阅个人错误消息
@@ -273,16 +273,16 @@ function subscribeToPersonalMessages(playerId) {
     window.dispatchEvent(new CustomEvent('websocket-welcome', { detail: data }));
   });
 
-  // 🔥 修复：存储订阅以便后续清理
+  ��存储订阅以便后续清理
   if (errorSub) personalSubscriptions.push(errorSub);
   if (welcomeSub) personalSubscriptions.push(welcomeSub);
 
-  logger.debug(`✅ 已订阅个人消息，当前订阅数: ${personalSubscriptions.length}`);
+  logger.debug(` 已订阅个人消息，当前订阅数: ${personalSubscriptions.length}`);
 }
 
 /**
  * 清理个人消息订阅
- * 🔥 修复：防止内存泄漏
+ *  ��防止内存泄漏
  */
 function cleanupPersonalSubscriptions() {
   personalSubscriptions.forEach(sub => {
@@ -297,10 +297,10 @@ function cleanupPersonalSubscriptions() {
 
 /**
  * 恢复重连后的订阅
- * 🔥 修复：使用快照避免遍历时修改导致的问题
+ *  ��使用快照避免遍历时导致的问题
  */
 function restoreSubscriptions() {
-  // 创建快照副本，避免遍历时修改导致的问题
+  // 创建快照副本，避免遍历时导致的问题
   const callbacks = Array.from(subscriptionCallbacks);
   callbacks.forEach(callback => {
     try {
@@ -313,7 +313,7 @@ function restoreSubscriptions() {
 
 /**
  * 注册订阅回调（用于重连后恢复）
- * 🔥 修复：使用Set自动去重
+ *  ��使用Set自动去重
  */
 export function registerSubscriptionCallback(callback) {
   if (typeof callback === 'function') {
@@ -323,7 +323,7 @@ export function registerSubscriptionCallback(callback) {
 
 /**
  * 移除订阅回调
- * 🔥 修复：使用Set的delete方法
+ *  ��使用Set的delete方法
  */
 export function unregisterSubscriptionCallback(callback) {
   subscriptionCallbacks.delete(callback);
@@ -344,13 +344,13 @@ export function disconnect(force = false) {
     reconnectTimer = null;
   }
 
-  // 🔥 修复：清理连接超时处理器
+  ��清理连接超时处理器
   if (connectTimeoutId) {
     clearTimeout(connectTimeoutId);
     connectTimeoutId = null;
   }
 
-  // 🔥 修复：清理个人消息订阅，避免内存泄漏
+  ��清理个人消息订阅，避免内存泄漏
   cleanupPersonalSubscriptions();
 
   if (stompClient) {
@@ -367,11 +367,11 @@ export function disconnect(force = false) {
   currentPlayerId = null;
   connectPromise = null;
 
-  // 🔥 修复：总是清理订阅回调，避免内存泄漏
+  ��总是清理订阅回调，避免内存泄漏
   // 不再使用 force 参数判断，因为任何断开都应该清理回调
   subscriptionCallbacks = new Set();
 
-  // 🔥 修复问题2.1：清理活动房间订阅记录
+  ��清理活动房间订阅记录
   activeRoomSubscriptions.clear();
 }
 
@@ -398,7 +398,7 @@ export function waitForConnection(maxWait = 10000) {
       return;
     }
 
-    logger.warn('⚠️ WebSocket 未连接，等待连接...');
+    logger.warn(' WebSocket 未连接，等待连接...');
 
     const timeout = setTimeout(() => {
       window.removeEventListener('websocket-connected', onConnected);
@@ -408,7 +408,7 @@ export function waitForConnection(maxWait = 10000) {
     const onConnected = () => {
       clearTimeout(timeout);
       window.removeEventListener('websocket-connected', onConnected);
-      logger.info('✅ WebSocket 连接成功');
+      logger.info(' WebSocket 连接成功');
       resolve();
     };
 
@@ -417,7 +417,7 @@ export function waitForConnection(maxWait = 10000) {
 }
 
 /**
- * 通用订阅（修改：增加错误处理）
+ * 通用订阅（��增加错误处理）
  */
 export function safeSubscribe(destination, onMessage) {
   if (!ensureConnected("subscribe " + destination)) {
@@ -445,16 +445,16 @@ export function safeSubscribe(destination, onMessage) {
 
 /**
  * 房间统一订阅
- * 🔥 修复问题2.1：添加重复订阅检测，防止快速刷新时订阅竞态条件
+ *  ��添加重复订阅检测，防止快速刷新时订阅竞态条件
  * @param {string} roomCode - 房间码
  * @param {function} onRoomUpdate - 房间更新回调
  * @param {function} onRoomError - 房间错误回调
  * @param {string} playerId - 玩家ID（可选，用于订阅被踢事件）
  */
 export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
-  // 🔥 修复问题2.1：检查是否已有该房间的活动订阅
+  ��检查是否已有该房间的活动订阅
   if (activeRoomSubscriptions.has(roomCode)) {
-    logger.warn(`⚠️ 房间 ${roomCode} 已存在订阅，先取消旧订阅`);
+    logger.warn(` 房间 ${roomCode} 已存在订阅，先取消旧订阅`);
     const oldSubs = activeRoomSubscriptions.get(roomCode);
     unsubscribeAll(oldSubs);
     activeRoomSubscriptions.delete(roomCode);
@@ -479,7 +479,7 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
     window.dispatchEvent(new CustomEvent('room-deleted', { detail: data }));
   });
 
-  // 🔥 订阅被踢事件（使用 topic 而不是 user queue）
+  //  订阅被踢事件（使用 topic 而不是 user queue）
   let kickedSub = null;
   if (playerId) {
     kickedSub = safeSubscribe(`/topic/player/${playerId}/kicked`, (data) => {
@@ -493,15 +493,15 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
   if (kickedSub) subscriptions.push(kickedSub);
 
-  // 🔥 修复问题2.1：记录活动订阅
+  ��记录活动订阅
   activeRoomSubscriptions.set(roomCode, subscriptions);
-  logger.debug(`✅ 房间 ${roomCode} 订阅成功，订阅数: ${subscriptions.length}`);
+  logger.debug(` 房间 ${roomCode} 订阅成功，订阅数: ${subscriptions.length}`);
 
   return subscriptions;
 }
 
 /**
- * 取消订阅（修改：增加错误处理）
+ * 取消订阅（��增加错误处理）
  */
 export function unsubscribe(subscription) {
   if (subscription && typeof subscription.unsubscribe === 'function') {
@@ -523,7 +523,7 @@ export function unsubscribeAll(subscriptions) {
 }
 
 /**
- * 🔥 修复问题2.1：取消房间订阅并从活动订阅Map中移除
+ *  ��取消房间订阅并从活动订阅Map中移除
  * @param {string} roomCode - 房间码
  */
 export function unsubscribeRoom(roomCode) {
@@ -531,14 +531,14 @@ export function unsubscribeRoom(roomCode) {
     const subs = activeRoomSubscriptions.get(roomCode);
     unsubscribeAll(subs);
     activeRoomSubscriptions.delete(roomCode);
-    logger.debug(`✅ 已取消房间 ${roomCode} 的订阅`);
+    logger.debug(` 已取消房间 ${roomCode} 的订阅`);
   }
 }
 
 // ============ 发送消息的方法（已废弃） ============
 
 /**
- * 🔥 以下WebSocket命令发送方法已废弃
+ *  以下WebSocket命令发送方法已废弃
  *
  * 优化策略：采用混合模式
  * - 所有操作命令改用HTTP API（见 api.js）
@@ -559,7 +559,7 @@ export function unsubscribeRoom(roomCode) {
 
 // @deprecated 请使用 api.joinRoom()
 export function sendJoin(req) {
-  console.warn('⚠️ sendJoin已废弃，请使用 api.joinRoom()');
+  console.warn(' sendJoin已废弃，请使用 api.joinRoom()');
   if (!ensureConnected("sendJoin")) return;
 
   const payload = {
@@ -576,7 +576,7 @@ export function sendJoin(req) {
 
 // @deprecated 请使用 api.startGame()
 export function sendStart(req) {
-  console.warn('⚠️ sendStart已废弃，请使用 api.startGame()');
+  console.warn(' sendStart已废弃，请使用 api.startGame()');
   if (!ensureConnected("sendStart")) return;
 
   const payload = {
@@ -591,7 +591,7 @@ export function sendStart(req) {
 
 // @deprecated 请使用 api.submitAnswer()
 export function sendSubmit(req) {
-  console.warn('⚠️ sendSubmit已废弃，请使用 api.submitAnswer()');
+  console.warn(' sendSubmit已废弃，请使用 api.submitAnswer()');
   if (!ensureConnected("sendSubmit")) return;
 
   const payload = {
@@ -609,7 +609,7 @@ export function sendSubmit(req) {
 
 // @deprecated 请使用 api.setPlayerReady()
 export function sendReady(req) {
-  console.warn('⚠️ sendReady已废弃，请使用 api.setPlayerReady()');
+  console.warn(' sendReady已废弃，请使用 api.setPlayerReady()');
   if (!ensureConnected("sendReady")) return;
 
   const payload = {
@@ -626,7 +626,7 @@ export function sendReady(req) {
 
 // @deprecated 离开房间通过关闭页面自动处理
 export function sendLeave(req) {
-  console.warn('⚠️ sendLeave已废弃，离开房间通过关闭页面自动处理');
+  console.warn(' sendLeave已废弃，离开房间通过关闭页面自动处理');
   if (!ensureConnected("sendLeave")) return;
 
   const payload = {
@@ -651,7 +651,7 @@ export function getCurrentPlayerId() {
 }
 
 /**
- * 重新连接（修改：返回 Promise）
+ * 重新连接（��返回 Promise）
  */
 export function reconnect() {
   if (currentPlayerId) {

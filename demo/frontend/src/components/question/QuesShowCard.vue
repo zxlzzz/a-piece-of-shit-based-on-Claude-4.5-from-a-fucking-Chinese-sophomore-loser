@@ -23,7 +23,7 @@ const props = defineProps({
   }
 })
 
-// 🔥 解析人数范围，获取可选人数列表
+//  解析人数范围，获取可选人数列表
 const availablePlayerCounts = computed(() => {
   if (!props.people) return [2, 3, 4, 5, 6]
 
@@ -85,7 +85,7 @@ const availablePlayerCounts = computed(() => {
         {{ text }}
       </p>
 
-      <!-- 🔥 计分规则（如果有） -->
+      <!--  计分规则（如果有） -->
       <div v-if="calculateRule" class="mb-3 sm:mb-4">
         <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
                     rounded-lg p-3 sm:p-4 border-l-4 border-purple-500">
@@ -99,7 +99,7 @@ const availablePlayerCounts = computed(() => {
         </div>
       </div>
 
-      <!-- 🔥 标签显示 -->
+      <!--  标签显示 -->
       <div v-if="tags && tags.length > 0" class="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6">
         <span
           v-for="tag in tags"
@@ -112,7 +112,7 @@ const availablePlayerCounts = computed(() => {
         </span>
       </div>
 
-      <!-- 🔥 选择题：显示选项 -->
+      <!--  选择题：显示选项 -->
       <div v-if="type === 'CHOICE' && Array.isArray(choice) && choice.length > 0">
         <h4 class="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 mb-2 sm:mb-3">
           选项
@@ -148,7 +148,7 @@ const availablePlayerCounts = computed(() => {
         </ul>
       </div>
 
-      <!-- 🔥 竞价题：显示范围和步长 -->
+      <!--  竞价题：显示范围和步长 -->
       <div v-else-if="type === 'BID'">
         <div class="space-y-2 sm:space-y-3">
           <!-- 范围显示 -->

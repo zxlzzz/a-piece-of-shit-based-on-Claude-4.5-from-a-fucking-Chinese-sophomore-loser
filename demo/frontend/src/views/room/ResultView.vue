@@ -36,7 +36,7 @@ onMounted(async () => {
   }
 })
 
-// 🔥 修复问题7.1: 返回大厅时清理playerStore
+ 返回大厅时清理playerStore
 const handleBackToLobby = () => {
   playerStore.clearRoom()
   chatStore.clearChat()  // 同时清理聊天记录
@@ -47,14 +47,14 @@ const handleBackToLobby = () => {
 <template>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 p-3 sm:p-6 transition-[padding] duration-300 ease-in-out"
        :class="chatStore.visible && isDesktop ? 'pr-[420px]' : ''">
-    <!-- 🔥 修复布局：当全局聊天打开时，给右侧留出空间 -->
+    <!--  布局：当全局聊天打开时，给右侧留出空间 -->
     <div class="max-w-4xl mx-auto">
       <div class="space-y-4 sm:space-y-6">
         <!-- 顶部栏 -->
         <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5">
           <div class="flex items-center justify-between flex-wrap gap-3 sm:gap-4">
             <h1 class="text-lg sm:text-2xl font-semibold text-gray-900 dark:text-white">游戏结果</h1>
-            <!-- 🔥 切换全局聊天 -->
+            <!--  切换全局聊天 -->
             <button
               v-if="playerStore.room?.chatEnabled ?? true"
               @click="chatStore.toggleChat(isMobile)"
@@ -66,7 +66,7 @@ const handleBackToLobby = () => {
             >
               <i class="pi transition-transform" :class="chatStore.visible ? 'pi-times text-blue-600 dark:text-blue-400' : 'pi-comment'"></i>
 
-              <!-- 🔥 未读私聊消息红点 -->
+              <!--  未读私聊消息红点 -->
               <span v-if="chatStore.unreadPrivateCount > 0 && !chatStore.visible"
                     class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs
                            rounded-full flex items-center justify-center animate-pulse">

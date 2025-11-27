@@ -26,7 +26,7 @@ app.component('Toast', Toast)
 app.component('Sidebar', Sidebar)
 app.component('InputNumber', InputNumber)
 
-// 🔥 全局错误处理（Vue 运行时错误）
+//  全局错误处理（Vue 运行时错误）
 app.config.errorHandler = (err, instance, info) => {
   // 开发环境：完整错误信息
   if (import.meta.env.DEV) {

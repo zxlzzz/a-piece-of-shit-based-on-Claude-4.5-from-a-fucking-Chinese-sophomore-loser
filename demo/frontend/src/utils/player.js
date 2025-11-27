@@ -117,7 +117,7 @@ export function generatePlayerColor(seed) {
   return colors[index]
 }
 
-// ❌ 删除 generatePlayerId（后端自动生成UUID）
+//  删除 generatePlayerId（后端自动生成UUID）
 
 export default {
   validateUsername,

@@ -40,30 +40,30 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
-    // 🔥 修复：先禁用提交按钮，防止重复点击
+    ��先禁用提交按钮，防止重复点击
     hasSubmitted.value = true
 
-    // 🔥 保存当前题目index，用于API返回后验证（避免测试房间中题目快速推进导致的状态不一致）
+    //  保存当前题目index，用于API返回后验证（避免测试房间中题目快速推进导致的状态不一致）
     const currentIndex = room.value?.currentIndex
 
     try {
-      // 🔥 修复：先调用API，成功后再设置localStorage
+      ��先调用API，成功后再设置localStorage
       // 避免页面刷新时localStorage已设置但API未完成的情况
       const response = await submitAnswer(roomCode.value, playerStore.playerId, choice.toString())
 
-      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
+      //  API成功后，使用API返回的currentIndex判断题目是否已推进
       // 如果API返回的index与提交时不同，说明题目已推进（测试房间中Bot立即触发推进）
       const returnedIndex = response.data?.currentIndex
       if (returnedIndex === currentIndex) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        // 🔥 修复：题目已推进，重置hasSubmitted，因为这已经是新题了
+        ��题目已推进，重置hasSubmitted，因为这已经是新题了
         hasSubmitted.value = false
-        logger.info('⚠️ 题目已推进，重置提交状态 (测试房间快速推进)', { currentIndex, returnedIndex })
+        logger.info(' 题目已推进，重置提交状态 (测试房间快速推进)', { currentIndex, returnedIndex })
       }
 
-      // 🔥 房间状态更新会通过WebSocket自动推送
+      //  房间状态更新会通过WebSocket自动推送
 
       toast.add({
         severity: 'success',
@@ -72,8 +72,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         life: 2000
       })
     } catch (error) {
-      logger.error('❌ 提交失败:', error)
-      // 🔥 API失败，重置提交状态（不需要清理localStorage，因为还没设置）
+      logger.error(' 提交失败:', error)
+      //  API失败，重置提交状态（不需要清理localStorage，因为还没设置）
       hasSubmitted.value = false
 
       toast.add({
@@ -94,14 +94,14 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     }
 
     if (!question.value || !question.value.id) {
-      logger.error('❌ 题目不存在，无法自动提交')
+      logger.error(' 题目不存在，无法自动提交')
       return
     }
 
-    // 🔥 修复：先禁用提交，防止用户在自动提交期间手动提交
+    ��先禁用提交，防止用户在自动提交期间手动提交
     hasSubmitted.value = true
 
-    // 🔥 保存当前题目index，用于API返回后验证
+    //  保存当前题目index，用于API返回后验证
     const currentIndex = room.value?.currentIndex
 
     let defaultChoice
@@ -112,22 +112,22 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     }
 
     try {
-      // 🔥 修复：先调用API，成功后再设置localStorage
+      ��先调用API，成功后再设置localStorage
       const response = await submitAnswer(roomCode.value, playerStore.playerId, defaultChoice.toString(), true)
 
-      // 🔥 API成功后，使用API返回的currentIndex判断题目是否已推进
+      //  API成功后，使用API返回的currentIndex判断题目是否已推进
       // timeout触发fillDefaultAnswers后可能立即推进题目
       const returnedIndex = response.data?.currentIndex
       if (returnedIndex === currentIndex) {
         const submissionKey = getSubmissionKey()
         localStorage.setItem(submissionKey, 'true')
       } else {
-        // 🔥 修复：题目已推进，重置hasSubmitted
+        ��题目已推进，重置hasSubmitted
         hasSubmitted.value = false
-        logger.info('⚠️ 自动提交时题目已推进，重置提交状态', { currentIndex, returnedIndex })
+        logger.info(' 自动提交时题目已推进，重置提交状态', { currentIndex, returnedIndex })
       }
 
-      // 🔥 房间状态更新会通过WebSocket自动推送
+      //  房间状态更新会通过WebSocket自动推送
 
       toast.add({
         severity: 'info',
@@ -136,8 +136,8 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
         life: 3000
       })
     } catch (error) {
-      logger.error('❌ 自动提交失败:', error)
-      // 🔥 API失败，重置提交状态
+      logger.error(' 自动提交失败:', error)
+      //  API失败，重置提交状态
       hasSubmitted.value = false
     }
   }
@@ -160,7 +160,7 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   /**
-   * 🔥 P1-1: 验证提交状态（对比 localStorage 和后端状态）
+   *  P1-1: 验证提交状态（对比 localStorage 和后端状态）
    * 如果 localStorage 说已提交但后端没有记录，则清除 localStorage 并重置状态
    * @param {Array<string>} submittedPlayerIds - 后端返回的已提交玩家ID列表
    */
@@ -168,12 +168,12 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       return
     }
 
-    // 🔥 修复：确保 room 数据有效，避免在初始化或题目切换过程中误判
+    ��确保 room 数据有效，避免在初始化或题目切换过程中误判
     if (!room.value || room.value.currentIndex === undefined || room.value.currentIndex < 0) {
       return
     }
 
-    // 🔥 修复：页面刚加载时跳过验证（2秒内），避免刷新导致的状态不一致
+    ��页面刚加载时跳过验证（2秒内），避免刷新导致的状态不一致
     if (!window._gameViewLoadTime) {
       window._gameViewLoadTime = Date.now()
     }
@@ -187,9 +187,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     const localStorageSaysSubmitted = localStorage.getItem(submissionKey) === 'true'
     const backendSaysSubmitted = submittedPlayerIds && submittedPlayerIds.includes(playerStore.playerId)
 
-    // 🔥 检测不一致：localStorage说已提交，但后端没有记录
+    //  检测不一致：localStorage说已提交，但后端没有记录
     if (localStorageSaysSubmitted && !backendSaysSubmitted) {
-      logger.warn('⚠️ 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态', {
+      logger.warn(' 提交状态不一致：localStorage说已提交但后端无记录，清除本地状态', {
         submissionKey,
         currentIndex: room.value?.currentIndex,
         submittedPlayerIds
@@ -197,9 +197,9 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
       localStorage.removeItem(submissionKey)
       hasSubmitted.value = false
     }
-    // 🔥 检测不一致：localStorage说未提交，但后端有记录
+    //  检测不一致：localStorage说未提交，但后端有记录
     else if (!localStorageSaysSubmitted && backendSaysSubmitted) {
-      logger.info('✅ 提交状态不一致：后端有记录但localStorage无记录，同步状态', {
+      logger.info(' 提交状态不一致：后端有记录但localStorage无记录，同步状态', {
         submissionKey,
         currentIndex: room.value?.currentIndex
       })
@@ -216,6 +216,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
     restoreSubmitState,
     cleanupSubmission,
     getSubmissionKey,
-    verifySubmissionState  // 🔥 P1-1: 新增验证函数
+    verifySubmissionState  //  P1-1: 新增验证函数
   }
 }

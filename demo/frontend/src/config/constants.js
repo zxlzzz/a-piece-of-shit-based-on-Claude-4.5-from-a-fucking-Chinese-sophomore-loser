@@ -30,7 +30,7 @@ export const WS_RECONNECT_DELAY = 3000 // WebSocket自动重连延迟（毫秒�
 export const WS_CONNECT_TIMEOUT = 15000 // WebSocket连接超时时间（毫秒）
 export const WS_CONNECT_PROMISE_TIMEOUT = 20000 // WebSocket连接Promise超时（毫秒，必须大于CONNECT_TIMEOUT）
 
-// 🔥 修复P1-5：定义WebSocket主题路径常量，确保前后端路径一致
-// 🔥 P0-3修复：私聊使用user queue确保隐私安全
+��定义WebSocket主题路径常量，确保前后端路径一致
+//  P0-3��私聊使用user queue确保隐私安全
 export const WS_TOPIC_PRIVATE_MESSAGE = '/user/queue/private' // 私聊消息主题（user queue）
 export const WS_TOPIC_ROOM_CHAT = (roomCode) => `/topic/room/${roomCode}/chat` // 房间聊天主题

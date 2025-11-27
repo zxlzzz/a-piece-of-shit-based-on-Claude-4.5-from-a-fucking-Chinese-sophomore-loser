@@ -29,7 +29,7 @@ const onSubmit = () => {
   emit('choose', choice.value)
 }
 
-// 🔥 监听全局选择事件（从 GameView 触发）
+//  监听全局选择事件（从 GameView 触发）
 const handleSelectOption = (e) => {
   if (props.disabled || props.question?.type !== 'CHOICE') return
   
@@ -40,7 +40,7 @@ const handleSelectOption = (e) => {
   }
 }
 
-// 🔥 监听全局提交事件（从 GameView 触发）
+//  监听全局提交事件（从 GameView 触发）
 const handleSubmitAnswer = () => {
   if (!props.disabled) {
     onSubmit()
@@ -76,7 +76,7 @@ onUnmounted(() => {
       </h2>
     </div>
 
-    <!-- 🔥 计分规则（如果有） -->
+    <!--  计分规则（如果有） -->
     <div v-if="question.calculateRule" class="mb-8">
       <div class="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20
                   rounded-xl p-4 border-l-4 border-purple-500">

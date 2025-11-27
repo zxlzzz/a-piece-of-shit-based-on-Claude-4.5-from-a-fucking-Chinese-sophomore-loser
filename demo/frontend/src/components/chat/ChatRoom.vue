@@ -24,21 +24,21 @@ const chatStore = useChatStore()
 const playerStore = usePlayerStore()
 const inputMessage = ref('')
 const chatContainer = ref(null)
-const showPlayerList = ref(false)  // 🔥 控制玩家列表显示
+const showPlayerList = ref(false)  //  控制玩家列表显示
 
 // 从chatStore获取消息
 const messages = computed(() => chatStore.messages)
 
-// 🔥 获取玩家列表（排除自己）
+//  获取玩家列表（排除自己）
 const otherPlayers = computed(() => {
   if (!playerStore.currentRoom || !playerStore.currentRoom.players) return []
   return playerStore.currentRoom.players.filter(p => p.playerId !== props.playerId)
 })
 
-// 🔥 选中的收件人
+//  选中的收件人
 const selectedRecipients = computed(() => chatStore.selectedRecipients)
 
-// 🔥 是否启用私聊功能
+//  是否启用私聊功能
 const privateChatEnabled = computed(() => playerStore.currentRoom?.privateChatEnabled ?? true)
 
 // 消息类型样式映射
@@ -83,7 +83,7 @@ const handleKeyPress = (event) => {
   }
 }
 
-// 🔥 双击玩家头像选择收件人
+//  双击玩家头像选择收件人
 const selectPlayer = (player) => {
   chatStore.addRecipient({
     id: player.playerId,
@@ -92,12 +92,12 @@ const selectPlayer = (player) => {
   showPlayerList.value = false  // 选择后关闭玩家列表
 }
 
-// 🔥 移除收件人
+//  移除收件人
 const removeRecipient = (recipientId) => {
   chatStore.removeRecipient(recipientId)
 }
 
-// 🔥 点击外部关闭玩家列表
+//  点击外部关闭玩家列表
 const closePlayerListOnClickOutside = (event) => {
   // 如果点击的不是玩家列表按钮或下拉菜单内部，关闭列表
   const playerListButton = event.target.closest('.player-list-trigger')
@@ -122,7 +122,7 @@ onUnmounted(() => {
   document.removeEventListener('click', closePlayerListOnClickOutside)
 })
 
-// 🔥 判断消息是否显示收件人（私聊消息）
+//  判断消息是否显示收件人（私聊消息）
 const getRecipientNames = (message) => {
   if (!message.isPrivate || !message.recipientIds || message.recipientIds.length === 0) {
     return null
@@ -153,7 +153,7 @@ const getRecipientNames = (message) => {
           聊天
         </h3>
         <div class="flex items-center gap-2">
-          <!-- 🔥 玩家列表按钮 - 只在启用私聊时显示 -->
+          <!--  玩家列表按钮 - 只在启用私聊时显示 -->
           <div v-if="privateChatEnabled" class="relative">
             <button
               @click.stop="showPlayerList = !showPlayerList"
@@ -204,7 +204,7 @@ const getRecipientNames = (message) => {
         </div>
       </div>
 
-      <!-- 🔥 收件人chips - 只在启用私聊时显示 -->
+      <!--  收件人chips - 只在启用私聊时显示 -->
       <transition name="fade">
         <div v-if="privateChatEnabled && selectedRecipients.length > 0"
              class="mt-3 flex flex-wrap gap-2">
@@ -243,7 +243,7 @@ const getRecipientNames = (message) => {
           <!-- 聊天消息 -->
           <div v-if="msg.type === 'CHAT'"
                :class="['flex flex-col', isOwnMessage(msg) ? 'items-end' : 'items-start']">
-            <!-- 🔥 私聊标识 -->
+            <!--  私聊标识 -->
             <div v-if="msg.isPrivate" class="text-xs text-purple-600 dark:text-purple-400 mb-1 flex items-center gap-1">
               <i class="pi pi-lock text-xs"></i>
               <span>私聊给: {{ getRecipientNames(msg) }}</span>

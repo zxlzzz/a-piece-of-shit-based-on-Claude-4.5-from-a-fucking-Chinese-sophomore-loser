@@ -22,7 +22,7 @@ const breakpoints = useBreakpoints({
 })
 const isDesktop = breakpoints.greaterOrEqual('desktop')
 
-// 🔥 Toast 去重：记录最近显示的消息（key: message, value: timestamp）
+//  Toast 去重：记录最近显示的消息（key: message, value: timestamp）
 const recentToasts = ref(new Map())
 
 // 通用 Toast 显示函数（带去重）
@@ -89,7 +89,7 @@ const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
 
-// 🔥 全局 WebSocket 连接管理（仅在需要的页面连接）
+//  全局 WebSocket 连接管理（仅在需要的页面连接）
 // const connectGlobalWebSocket = async () => {
 //   // 只有在有 playerId 时才连接
 //   if (!playerStore.playerId) {
@@ -111,7 +111,7 @@ const handleVueError = (event) => {
 //   }
 // }
 
-// 🔥 修复：不再全局连接，由各个页面按需连接
+��不再全局连接，由各个页面按需连接
 // 监听 playerId 变化（保留，用于其他用途）
 // watch(() => playerStore.playerId, (newId, oldId) => {
 //   if (newId && newId !== oldId) {
@@ -127,7 +127,7 @@ onMounted(() => {
   window.addEventListener('websocket-welcome', handleWelcome)
   window.addEventListener('vue-error', handleVueError)
 
-  // 🔥 清理过期数据
+  //  清理过期数据
   try {
     const savedRoom = localStorage.getItem('currentRoom')
     if (savedRoom) {
@@ -135,7 +135,7 @@ onMounted(() => {
       const now = Date.now()
       const savedAt = roomData._savedAt || 0
 
-      // 🔥 修复：如果房间已结束，使用更短的过期时间（15秒）
+      ��如果房间已结束，使用更短的过期时间（15秒）
       if (roomData.finished || roomData.status === 'FINISHED') {
         if (now - savedAt > 15000) {  // 15秒
           logger.info('🧹 已结束的房间缓存已过期，自动清理')
@@ -153,7 +153,7 @@ onMounted(() => {
     localStorage.removeItem('currentRoom')
   }
 
-  // 🔥 建立全局 WebSocket 连接（已禁用，由各页面按需连接）
+  //  建立全局 WebSocket 连接（已禁用，由各页面按需连接）
   // connectGlobalWebSocket()
 })
 
@@ -164,7 +164,7 @@ onUnmounted(() => {
   window.removeEventListener('websocket-welcome', handleWelcome)
   window.removeEventListener('vue-error', handleVueError)
 
-  // 🔥 应用卸载时断开连接
+  //  应用卸载时断开连接
   disconnect()
 })
 </script>
@@ -175,7 +175,7 @@ onUnmounted(() => {
 
   <router-view />
 
-  <!-- 🔥 全局ChatRoom - 桌面端固定在右侧 -->
+  <!--  全局ChatRoom - 桌面端固定在右侧 -->
   <teleport to="body">
     <transition name="slide-left">
       <div v-show="chatStore.visible && chatStore.roomCode && isDesktop"
@@ -191,7 +191,7 @@ onUnmounted(() => {
     </transition>
   </teleport>
 
-  <!-- 🔥 全局ChatRoom - 移动端抽屉 -->
+  <!--  全局ChatRoom - 移动端抽屉 -->
   <MobileChatDrawer
     v-if="chatStore.roomCode"
     :show="chatStore.visible && !isDesktop"

@@ -10,7 +10,7 @@ import RoomCard from '@/components/room/RoomCard.vue'
 import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
 
 const router = useRouter()
-const route = useRoute() // 🔥 新增：用于访问路由参数
+const route = useRoute() //  新增：用于访问路由参数
 const toast = useToast()
 
 const playerStore = usePlayerStore()
@@ -18,13 +18,13 @@ const currentRoom = ref(null)
 const loading = ref(false)
 const activeRooms = ref([])
 const refreshing = ref(false)
-const searchQuery = ref('') // 🔥 房间搜索关键词
+const searchQuery = ref('') //  房间搜索关键词
 
-// 🔥 自动刷新（修复问题6：缩短轮询间隔，减少房间删除延迟）
+//  自动刷新（��缩短轮询间隔，减少房间删除延迟）
 const REFRESH_INTERVAL = 5000 // 5秒刷新一次（从10秒优化）
 let refreshTimer = null
 
-// 🔥 过滤后的房间列表（支持前缀匹配）
+//  过滤后的房间列表（支持前缀匹配）
 const filteredRooms = computed(() => {
   if (!searchQuery.value.trim()) {
     return activeRooms.value
@@ -53,10 +53,10 @@ const stopAutoRefresh = () => {
 
 // 初始化
 onMounted(async () => {
-  // 🔥 P1-8修复：移除登录检查，允许游客浏览房间列表
+  //  P1-8��移除登录检查，允许游客浏览房间列表
   // 创建/加入房间时再检查登录状态
 
-  // 🔥 新增：检查路由错误参数并显示提示
+  //  新增：检查路由错误参数并显示提示
   const error = route.query.error
   if (error === 'room_not_found') {
     toast.add({
@@ -72,7 +72,7 @@ onMounted(async () => {
   await loadActiveRooms()
   startAutoRefresh() // 启动自动刷新
 
-  // 🔥 改进：尝试恢复房间，失败则自动清理
+  //  改进：尝试恢复房间，失败则自动清理
   const savedRoom = playerStore.loadRoom()
   if (savedRoom) {
     try {
@@ -80,7 +80,7 @@ onMounted(async () => {
       currentRoom.value = response.data
       playerStore.setRoom(response.data)
     } catch (error) {
-      // 🔥 静默处理404错误，不显示弹窗
+      //  静默处理404错误，不显示弹窗
       if (error.response?.status === 404) {
       } else {
         // 其他错误才提示
@@ -108,7 +108,7 @@ const loadActiveRooms = async () => {
     })
   } catch (error) {
     logger.error('加载房间列表失败:', error)
-    // 🔥 网络错误才显示提示（用户可以重试）
+    //  网络错误才显示提示（用户可以重试）
     if (!error.response || error.code === 'ECONNABORTED') {
       toast.add({
         severity: 'error',
@@ -123,7 +123,7 @@ const loadActiveRooms = async () => {
 }
 
 const handleCreate = async ({ questionCount, maxPlayers, password, questionTagIds }) => {
-  // 🔥 P1-8: 创建房间时检查登录状态
+  //  P1-8: 创建房间时检查登录状态
   if (!playerStore.isLoggedIn) {
     toast.add({
       severity: 'warn',
@@ -136,14 +136,14 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
   }
 
   loading.value = true
-  let createdRoomCode = null  // 🔥 修复问题1.1: 记录创建的房间代码，用于清理
+  let createdRoomCode = null   记录创建的房间代码，用于清理
 
   try {
     const createResponse = await createRoom(maxPlayers, questionCount, 30, password, questionTagIds)
     const roomData = createResponse.data
-    createdRoomCode = roomData.roomCode  // 🔥 保存房间代码
+    createdRoomCode = roomData.roomCode  //  保存房间代码
 
-    // 🔥 修复问题1.1: 尝试加入房间，失败时清理
+     尝试加入房间，失败时清理
     try {
       const joinResponse = await joinRoom(
         roomData.roomCode,
@@ -166,11 +166,11 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
 
       router.push(`/wait/${roomData.roomCode}`)
     } catch (joinError) {
-      // 🔥 修复问题1.1: 加入失败，清理已创建的"幽灵房间"
+       加入失败，清理已创建的"幽灵房间"
       logger.error("加入房间失败，尝试清理幽灵房间:", joinError)
       try {
         await deleteRoom(createdRoomCode)
-        logger.info(`✅ 已清理幽灵房间: ${createdRoomCode}`)
+        logger.info(` 已清理幽灵房间: ${createdRoomCode}`)
       } catch (deleteError) {
         logger.error("清理幽灵房间失败:", deleteError)
       }
@@ -208,7 +208,7 @@ const handleEnterRoom = () => {
 }
 
 const handleJoinRoom = async (roomCode, hasPassword) => {
-  // 🔥 P1-8: 加入房间时检查登录状态
+  //  P1-8: 加入房间时检查登录状态
   if (!playerStore.isLoggedIn) {
     toast.add({
       severity: 'warn',
@@ -233,14 +233,14 @@ const handleJoinRoom = async (roomCode, hasPassword) => {
 
   loading.value = true
   try {
-    // 🔥 改用 playerStore
+    //  改用 playerStore
     const response = await joinRoom(
       roomCode,
       playerStore.playerId,
       playerStore.playerName,      password
     )
     currentRoom.value = response.data
-    // 🔥 统一用 playerStore 存储
+    //  统一用 playerStore 存储
     playerStore.setRoom(response.data)
     toast.add({
       severity: 'success',
@@ -265,7 +265,7 @@ const handleJoinRoom = async (roomCode, hasPassword) => {
 
 const handleLeaveRoom = () => {
   currentRoom.value = null
-  // 🔥 统一用 playerStore 清除
+  //  统一用 playerStore 清除
   playerStore.clearRoom()
   
   toast.add({
@@ -277,7 +277,7 @@ const handleLeaveRoom = () => {
 }
 
 const handleLogout = () => {
-  // 🔥 用 Pinia 清除（会自动清除房间）
+  //  用 Pinia 清除（会自动清除房间）
   playerStore.clearPlayer()
   router.push('/login')
 }
@@ -370,7 +370,7 @@ const handleLogout = () => {
               </button>
             </div>
 
-            <!-- 🔥 搜索框 -->
+            <!--  搜索框 -->
             <div class="mb-4">
               <div class="relative">
                 <input

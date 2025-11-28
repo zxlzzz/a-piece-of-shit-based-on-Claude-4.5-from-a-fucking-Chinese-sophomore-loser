@@ -33,9 +33,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-/**
- * 游戏流程控制服务实现
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -56,9 +53,6 @@ public class GameFlowService {
     private final TaskScheduler taskScheduler;
     private final ObjectMapper objectMapper;
 
-    /**
-     * 推进锁（防止并发推进）
-     */
     private final Map<String, AtomicBoolean> advancing = new java.util.concurrent.ConcurrentHashMap<>();
 
     private final long defaultQuestionTimeoutSeconds = 30L;

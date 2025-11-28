@@ -23,9 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * 游戏持久化服务实现
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -98,7 +95,6 @@ public class GamePersistenceService {
         }
     }
 
-    // ==================== 私有方法 ====================
 
     private List<QuestionDetailDTO> buildQuestionDetails(GameRoom gameRoom) {
         List<QuestionDetailDTO> details = new ArrayList<>();
@@ -163,17 +159,17 @@ public class GamePersistenceService {
             return "题目数据错误";
         }
 
- 使用枚举比较,而不是字符串
+
         if (question.getType() == QuestionType.BID) {
- 使用正确的 Repository 方法
+
             return bidConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
                     .orElse("自由出价");
         }
 
- 使用枚举比较
+
         if (question.getType() == QuestionType.CHOICE) {
- 使用正确的 Repository 方法
+
             return choiceConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> {
                         try {

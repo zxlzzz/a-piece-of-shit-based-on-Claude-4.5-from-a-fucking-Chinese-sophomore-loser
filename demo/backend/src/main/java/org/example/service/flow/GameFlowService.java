@@ -156,11 +156,18 @@ public class GameFlowService {
                     return;
                 }
 
-                for (Map.Entry<String, Integer> entry : result.getDeltaScores().entrySet()) {
+                for (Map.Entry<String, Integer> entry : result.getFinalScores().entrySet()) {
                     String playerId = entry.getKey();
-                    int delta = entry.getValue();
-                    gameRoom.getScores().merge(playerId, delta, Integer::sum);
+                    int score = entry.getValue();
+                    gameRoom.getScores().merge(playerId, score, Integer::sum);
                 }
+
+                Map<Integer, Map<String, GameRoom.QuestionScoreDetail>> questionScores = gameRoom.getQuestionScores();
+                if (questionScores == null) {
+                    questionScores = new java.util.concurrent.ConcurrentHashMap<>();
+                    gameRoom.setQuestionScores(questionScores);
+                }
+                questionScores.put(gameRoom.getCurrentIndex(), result.getScoreDetails());
 
                 boolean isLastQuestion = gameRoom.getCurrentIndex() >= gameRoom.getQuestions().size() - 1;
 
@@ -177,7 +184,6 @@ public class GameFlowService {
                     roomCache.put(roomCode, gameRoom);
                 }
 
-                broadcaster.sendQuestionResult(roomCode, result.getDetailDTO());
                 broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             }
         } finally {
@@ -189,7 +195,6 @@ public class GameFlowService {
     private void finishGame(GameRoom gameRoom) {
         try {
             gameRoom.setFinished(true);
-            gameRoom.setCurrentQuestion(null);
 
             RoomEntity room = roomRepository.findByRoomCode(gameRoom.getRoomCode()).orElse(null);
             if (room != null) {

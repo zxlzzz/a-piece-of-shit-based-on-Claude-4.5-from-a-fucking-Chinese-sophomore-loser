@@ -89,10 +89,6 @@ public class GameFlowService {
             gameRoom.setGameId(savedGame.getId());
 
             for (PlayerDTO playerDTO : gameRoom.getPlayers()) {
-                if (Boolean.TRUE.equals(playerDTO.getSpectator())) {
-                    continue;
-                }
-
                 if (playerDTO.getPlayerId().startsWith("BOT_")) {
                     continue;
                 }
@@ -108,9 +104,7 @@ public class GameFlowService {
                 playerGameRepository.save(playerGame);
             }
 
-            int nonSpectatorCount = (int) gameRoom.getPlayers().stream()
-                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
-                    .count();
+            int playerCount = gameRoom.getPlayers().size();
 
             List<Long> questionTagIds = null;
             if (room.getQuestionTagIdsJson() != null && !room.getQuestionTagIdsJson().isEmpty()) {
@@ -126,7 +120,7 @@ public class GameFlowService {
 
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
-                    nonSpectatorCount,
+                    playerCount,
                     questionTagIds
             );
 
@@ -243,16 +237,6 @@ public class GameFlowService {
 
                 for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
                     String playerId = entry.getKey();
-
-                    boolean isSpectator = gameRoom.getPlayers().stream()
-                            .filter(p -> p.getPlayerId().equals(playerId))
-                            .findFirst()
-                            .map(PlayerDTO::getSpectator)
-                            .orElse(false);
-
-                    if (isSpectator) {
-                        continue;
-                    }
 
                     if (playerId.startsWith("BOT_")) {
                         continue;

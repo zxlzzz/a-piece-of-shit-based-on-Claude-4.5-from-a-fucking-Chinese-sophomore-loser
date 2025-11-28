@@ -17,9 +17,6 @@ import java.util.stream.Collectors;
 @Component
 public class Q013SheepWolfBoarStrategy extends BaseQuestionStrategy {
 
-    public Q013SheepWolfBoarStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

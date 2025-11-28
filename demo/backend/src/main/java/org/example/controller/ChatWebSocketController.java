@@ -37,25 +37,13 @@ public class ChatWebSocketController {
             message.setTimestamp(LocalDateTime.now());
             message.setRoomCode(roomCode);
 
-            // 检查发送者是否为观战者
-            GameRoom gameRoom = roomCache.get(roomCode);
-            if (gameRoom != null) {
-                boolean isSpectator = gameRoom.getPlayers().stream()
-                        .filter(p -> p.getPlayerId().equals(message.getSenderId()))
-                        .findFirst()
-                        .map(p -> Boolean.TRUE.equals(p.getSpectator()))
-                        .orElse(false);
-                message.setIsSpectator(isSpectator);
-            }
-
-            // 记录聊天室活动
 
             // 判断是否私聊消息
             if (message.getRecipientIds() != null && !message.getRecipientIds().isEmpty()) {
                 // 私聊消息：点对点发送
                 message.setIsPrivate(true);
 
-                // ��使用user queue确保隐私，而非topic
+                // ��使用user queue确保隐私，而非topic
                 // 发送给所有收件人
                 for (String recipientId : message.getRecipientIds()) {
                     messagingTemplate.convertAndSendToUser(
@@ -80,7 +68,7 @@ public class ChatWebSocketController {
             log.error(" 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
             // 发送错误通知给发送者
             try {
-                // ��错误通知也使用user queue
+                // ��错误通知也使用user queue
                 ChatMessage errorMsg = ChatMessage.system(roomCode, "消息发送失败，请重试");
                 messagingTemplate.convertAndSendToUser(
                     message.getSenderId(),

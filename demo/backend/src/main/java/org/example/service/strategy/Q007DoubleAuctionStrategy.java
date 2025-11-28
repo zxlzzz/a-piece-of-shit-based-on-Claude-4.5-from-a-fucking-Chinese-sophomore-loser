@@ -12,9 +12,6 @@ import java.util.Map;
 @Component
 public class Q007DoubleAuctionStrategy extends BaseQuestionStrategy {
 
-    public Q007DoubleAuctionStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

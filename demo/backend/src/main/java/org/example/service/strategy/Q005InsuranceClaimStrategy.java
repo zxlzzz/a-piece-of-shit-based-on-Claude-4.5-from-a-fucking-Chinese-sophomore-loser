@@ -12,9 +12,6 @@ import java.util.Map;
 @Component
 public class Q005InsuranceClaimStrategy extends BaseQuestionStrategy {
 
-    public Q005InsuranceClaimStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

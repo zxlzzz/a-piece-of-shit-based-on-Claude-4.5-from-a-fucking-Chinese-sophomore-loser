@@ -13,11 +13,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
-@RequiredArgsConstructor
 @Slf4j
 public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
-
-    protected final BuffApplier buffApplier;
 
     /**
      * 子类实现：计算基础分数
@@ -28,16 +25,9 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
     public QuestionDetailDTO calculateResult(GameContext context) {
         Map<String, String> submissions = context.getCurrentSubmissions();
 
-        // 1. 计算基础分数
         Map<String, Integer> baseScores = calculateBaseScores(submissions);
+        Map<String, Integer> finalScores = baseScores;
 
-        // 2. 应用 Buff
-        Map<String, Integer> finalScores = applyBuffs(context, baseScores);
-
-        // 3. 减少 Buff 持续时间
-        decreaseBuffDuration(context);
-
-        // 4. 构建玩家提交列表
         List<PlayerSubmissionDTO> playerSubmissions = buildPlayerSubmissions(
                 context, submissions, baseScores, finalScores
         );
@@ -57,52 +47,6 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
                 .playerSubmissions(playerSubmissions)
                 .choiceCounts(choiceCounts)
                 .build();
-    }
-
-    /**
-     * 应用 Buff
-     */
-    protected Map<String, Integer> applyBuffs(
-            GameContext context,
-            Map<String, Integer> baseScores
-    ) {
-        Map<String, Integer> finalScores = new HashMap<>();
-
-        for (Map.Entry<String, Integer> entry : baseScores.entrySet()) {
-            String playerId = entry.getKey();
-            int score = entry.getValue();
-
-            PlayerGameState state = context.getPlayerStates().get(playerId);
-            if (state != null && state.getActiveBuffs() != null) {
-                for (Buff buff : state.getActiveBuffs()) {
-                    if (buff.getDuration() == 0) {
-                        int[] result = buffApplier.applyBuff(buff, score, playerId);
-                        score = result[0];
-                    }
-                }
-            }
-            finalScores.put(playerId, score);
-        }
-
-        return finalScores;
-    }
-
-    /**
-     * 减少 Buff 持续时间
-     */
-    protected void decreaseBuffDuration(GameContext context) {
-        for (PlayerGameState state : context.getPlayerStates().values()) {
-            if (state.getActiveBuffs() == null) continue;
-
-            Iterator<Buff> iterator = state.getActiveBuffs().iterator();
-            while (iterator.hasNext()) {
-                Buff buff = iterator.next();
-                buff.setDuration(buff.getDuration() - 1);
-                if (buff.getDuration() < 0) {
-                    iterator.remove();
-                }
-            }
-        }
     }
 
     /**

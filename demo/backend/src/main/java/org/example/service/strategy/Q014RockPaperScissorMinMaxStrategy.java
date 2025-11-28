@@ -13,9 +13,6 @@ import java.util.stream.Collectors;
  */
 @Service
 public class Q014RockPaperScissorMinMaxStrategy extends BaseQuestionStrategy {
-    public Q014RockPaperScissorMinMaxStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

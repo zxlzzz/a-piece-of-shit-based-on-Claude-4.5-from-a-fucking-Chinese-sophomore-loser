@@ -20,9 +20,6 @@ import java.util.stream.Collectors;
 @Component
 public class Q003YogurtMicrobeStrategy extends BaseQuestionStrategy {
 
-    public Q003YogurtMicrobeStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

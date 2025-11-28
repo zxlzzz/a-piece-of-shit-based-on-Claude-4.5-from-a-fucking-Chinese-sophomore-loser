@@ -23,9 +23,6 @@ public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy {
         "C", 3   // 普通侍卫
     );
 
-    public Q002PerformanceCostumeStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

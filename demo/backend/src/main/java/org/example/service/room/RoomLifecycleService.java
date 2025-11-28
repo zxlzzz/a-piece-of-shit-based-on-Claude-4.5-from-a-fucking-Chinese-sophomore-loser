@@ -101,14 +101,8 @@ public class RoomLifecycleService {
                 return; // 跳过后续加入逻辑
             }
 
-            // 检查房间是否已满（观战者不计入人数）
-            if (true) {  // 检查容量
-                long nonSpectatorCount = gameRoom.getPlayers().stream()
-                        .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
-                        .count();
-                if (nonSpectatorCount >= room.getMaxPlayers()) {
-                    throw new BusinessException("房间已满");
-                }
+            if (gameRoom.getPlayers().size() >= room.getMaxPlayers()) {
+                throw new BusinessException("房间已满");
             }
 
             // 检查玩家是否已在房间内
@@ -326,12 +320,8 @@ public class RoomLifecycleService {
         // 同步到 Redis
         roomCache.put(roomCode, gameRoom);
 
-        // 检查是否所有玩家都准备好了
-        long totalPlayers = gameRoom.getPlayers().stream()
-            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
-            .count();
+        long totalPlayers = gameRoom.getPlayers().size();
         long readyPlayers = gameRoom.getPlayers().stream()
-            .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
             .filter(PlayerDTO::getReady)
             .count();
     }
@@ -361,14 +351,12 @@ public class RoomLifecycleService {
                     .orElse("未知玩家");
 
 
-            // 如果游戏进行中且所有非观战玩家都断线，自动推进
             if (gameRoom.isStarted() && gameRoom.getCurrentQuestion() != null) {
                 boolean allDisconnected = gameRoom.getPlayers().stream()
-                        .filter(p -> !Boolean.TRUE.equals(p.getSpectator())) // 排除观战者
+                        .allMatch(PlayerDTO::getDisconnected);
 
                 if (allDisconnected) {
-                    log.warn(" 房间 {} 所有非观战玩家都断开连接", roomCode);
- 取消定时器，避免幽灵定时器在无人状态下触发
+                    log.warn(" 房间 {} 所有玩家都断开连接", roomCode);
                     timerService.cancelTimeout(roomCode);
                 }
             }
@@ -453,10 +441,7 @@ public class RoomLifecycleService {
             }
         }
 
-        // 计算非观战者人数
-        int currentNonSpectators = (int) gameRoom.getPlayers().stream()
-                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
-                .count();
+        int currentPlayers = gameRoom.getPlayers().size();
 
  获取当前题目的已提交玩家ID列表（用于前端验证）
         java.util.List<String> submittedPlayerIds = new ArrayList<>();
@@ -471,7 +456,7 @@ public class RoomLifecycleService {
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
                         (roomEntity != null ? roomEntity.getMaxPlayers() : gameRoom.getPlayers().size()))
-                .currentPlayers(currentNonSpectators)
+                .currentPlayers(currentPlayers)
                 .status(status)
                 .finished(gameRoom.isFinished())
                 .players(new ArrayList<>(gameRoom.getPlayers()))

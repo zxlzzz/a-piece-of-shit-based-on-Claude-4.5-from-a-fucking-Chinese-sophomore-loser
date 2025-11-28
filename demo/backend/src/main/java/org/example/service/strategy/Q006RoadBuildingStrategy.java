@@ -12,9 +12,6 @@ import java.util.Map;
 @Component
 public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
 
-    public Q006RoadBuildingStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

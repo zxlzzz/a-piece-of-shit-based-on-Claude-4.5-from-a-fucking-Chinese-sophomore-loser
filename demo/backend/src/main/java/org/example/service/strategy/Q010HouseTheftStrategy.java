@@ -47,9 +47,6 @@ public class Q010HouseTheftStrategy extends BaseQuestionStrategy {
     // 房子价值（下标0不用，1-7号房对应下标1-7）
     private static final int[] HOUSE_VALUES = {0, 6, 5, 5, 4, 4, 4, 3};
 
-    public Q010HouseTheftStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

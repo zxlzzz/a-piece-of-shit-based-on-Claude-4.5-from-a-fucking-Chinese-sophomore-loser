@@ -13,9 +13,6 @@ import java.util.stream.Collectors;
 public class Q001NumberGroupStrategy extends BaseQuestionStrategy {
     private static final Set<Integer> GROUP_A = Set.of(1, 2, 3);
 
-    public Q001NumberGroupStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

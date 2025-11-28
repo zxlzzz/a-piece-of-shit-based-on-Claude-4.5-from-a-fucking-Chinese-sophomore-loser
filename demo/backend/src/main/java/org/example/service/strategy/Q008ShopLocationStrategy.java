@@ -16,9 +16,6 @@ import java.util.stream.Collectors;
  */
 @Component
 public class Q008ShopLocationStrategy extends BaseQuestionStrategy {
-    public Q008ShopLocationStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

@@ -90,9 +90,7 @@ public class ScoringService {
         }
 
         Map<String, PlayerGameState> playerStates = new HashMap<>();
-        gameRoom.getPlayers().stream()
-                .filter(player -> !Boolean.TRUE.equals(player.getSpectator()))
-                .forEach(player -> {
+        gameRoom.getPlayers().forEach(player -> {
                     int currentScore = gameRoom.getScores().getOrDefault(player.getPlayerId(), 0);
                     PlayerGameState state = gameRoom.getOrCreatePlayerState(
                             player.getPlayerId(),

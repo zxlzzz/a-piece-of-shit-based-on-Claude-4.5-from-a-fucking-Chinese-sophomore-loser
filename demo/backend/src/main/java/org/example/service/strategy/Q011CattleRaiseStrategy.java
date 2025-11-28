@@ -12,9 +12,6 @@ import java.util.stream.Collectors;
 @Component
 public class Q011CattleRaiseStrategy extends BaseQuestionStrategy {
 
-    public Q011CattleRaiseStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

@@ -117,18 +117,7 @@ public class ScoringService {
         int currentRound = 0;
         int totalRounds = 0;
 
-        if (strategy instanceof RepeatableQuestionStrategy repeatStrategy) {
-            isRepeatable = true;
-            currentRound = getCurrentRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
-            totalRounds = repeatStrategy.getTotalRounds();
-
-
-            detailDTO = repeatStrategy.calculateRoundResult(context, currentRound);
-            incrementRound(gameRoom.getRoomCode(), currentQuestion.getStrategyId());
-
-        } else {
-            detailDTO = strategy.calculateResult(context);
-        }
+        detailDTO = strategy.calculateResult(context);
 
 
         Map<String, Integer> baseScores = detailDTO.getPlayerSubmissions().stream()

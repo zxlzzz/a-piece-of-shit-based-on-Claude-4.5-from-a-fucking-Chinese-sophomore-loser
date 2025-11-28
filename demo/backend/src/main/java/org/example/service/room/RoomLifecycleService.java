@@ -196,7 +196,7 @@ public class RoomLifecycleService {
     }
 
     private RoomDTO toRoomDTO(RoomEntity roomEntity, GameRoom gameRoom) {
-        String status = roomEntity.getStatus().name();
+        RoomStatus status = roomEntity.getStatus();
 
         QuestionDTO currentQuestionDTO = gameRoom.getCurrentQuestion();
 
@@ -239,7 +239,7 @@ public class RoomLifecycleService {
     }
 
     @Transactional
-    private void deleteRoom(String roomCode, GameRoom gameRoom) {
+    protected void deleteRoom(String roomCode, GameRoom gameRoom) {
         try {
             RoomEntity room = roomRepository.findByRoomCode(roomCode).orElse(null);
             if (room != null) {

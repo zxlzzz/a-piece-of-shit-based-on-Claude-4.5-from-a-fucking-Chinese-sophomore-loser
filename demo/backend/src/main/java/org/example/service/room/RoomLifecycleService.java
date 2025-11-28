@@ -84,10 +84,7 @@ public class RoomLifecycleService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        // ��使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
-            // 检查房间密码（观战者不需要密码）
-            // 修复：trim()避免空格绕过，检查空字符串            //  ��检查房间状态（允许已在房间的玩家刷新/重连）
             if (room.getStatus() != RoomStatus.WAITING) {
                 // 检查玩家是否已在房间内（允许重连）
                 boolean playerInRoom = gameRoom.getPlayers().stream()
@@ -146,12 +143,9 @@ public class RoomLifecycleService {
 
                 gameRoom.getScores().put(playerId, 0);
 
-                // 同步到 Redis
                 roomCache.put(roomCode, gameRoom);
             } else {
-                // ��玩家已存在，检查是否在断线列表中
-                    roomCache.put(roomCode, gameRoom);
-
+                roomCache.put(roomCode, gameRoom);
             }
         }
     }
@@ -163,9 +157,7 @@ public class RoomLifecycleService {
 
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        // ��使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
-
             PlayerDTO leavingPlayer = gameRoom.getPlayers().stream()
                     .filter(p -> p.getPlayerId().equals(playerId))
                     .findFirst()
@@ -208,10 +200,8 @@ public class RoomLifecycleService {
                     // 改：游戏进行中时不立即删除，给重连时间
                     if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                         log.warn(" 房间 {} 所有玩家断线，但游戏进行中，保留房间等待重连", roomCode);
-                        // ��同步状态到Redis，以便返回最新状态并广播
                         roomCache.put(roomCode, gameRoom);
-                        // 不删除房间，保留5分钟
-                        return true; // 房间仍存在
+                        return true;
                     } else {
                         // 游戏未开始或已结束，使用原子删除方法
                         deleteRoomAtomically(roomCode, gameRoom);
@@ -292,10 +282,7 @@ public class RoomLifecycleService {
             }
             room.setQuestionTagIdsJson(questionTagIdsJson);
 
-            // 保存到数据库
             RoomEntity savedRoom = roomRepository.save(room);
-
-            // ��更新缓存的 RoomEntity
             gameRoom.setRoomEntity(savedRoom);
 
         }
@@ -352,10 +339,8 @@ public class RoomLifecycleService {
     public RoomDTO toRoomDTO(String roomCode) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
-        // ��优先使用 GameRoom 中缓存的 RoomEntity，避免频繁数据库查询
         RoomEntity roomEntity = gameRoom.getRoomEntity();
         if (roomEntity == null) {
-            // 缓存失效或首次访问，从数据库查询并缓存
             roomEntity = roomRepository.findByRoomCode(roomCode)
                     .orElseThrow(() -> new BusinessException("房间不存在"));
             gameRoom.setRoomEntity(roomEntity);
@@ -368,10 +353,7 @@ public class RoomLifecycleService {
             return;
         }
 
-        // ��使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
-            // 标记断线时间
-
             String playerName = gameRoom.getPlayers().stream()
                     .filter(p -> p.getPlayerId().equals(playerId))
                     .map(PlayerDTO::getName)
@@ -397,9 +379,7 @@ public class RoomLifecycleService {
             return;
         }
 
-        // ��使用统一的RoomLock
         synchronized (RoomLock.getLock(roomCode)) {
-            // 添加：如果游戏进行中，不移除玩家，只保持断线状态
             if (gameRoom.isStarted() && !gameRoom.isFinished()) {
                 return;
             }
@@ -448,7 +428,7 @@ public class RoomLifecycleService {
             status = RoomStatus.PLAYING;
         }
 
-        // 直接使用 DTO（无需转换）
+        
         QuestionDTO currentQuestionDTO = gameRoom.getCurrentQuestion();
 
         Integer questionCount = null;
@@ -491,23 +471,23 @@ public class RoomLifecycleService {
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
                         (roomEntity != null ? roomEntity.getMaxPlayers() : gameRoom.getPlayers().size()))
-                .currentPlayers(currentNonSpectators)  //  只计算非观战者
+                .currentPlayers(currentNonSpectators)
                 .status(status)
-                .finished(gameRoom.isFinished())  //  添加 finished 字段
+                .finished(gameRoom.isFinished())
                 .players(new ArrayList<>(gameRoom.getPlayers()))
                 .questionStartTime(gameRoom.getQuestionStartTime())
                 .timeLimit(gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() :
                         (roomEntity != null && roomEntity.getTimeLimit() != null ? roomEntity.getTimeLimit() : 30))
                 .currentIndex(gameRoom.getCurrentIndex())
-                .currentQuestion(currentQuestionDTO)  //  直接使用
+                .currentQuestion(currentQuestionDTO)
                 .questionCount(questionCount)
                 .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
-                .submittedPlayerIds(submittedPlayerIds) 已提交玩家列表
+                .submittedPlayerIds(submittedPlayerIds)
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)
                 .chatEnabled(roomEntity != null ? roomEntity.getChatEnabled() : true)
-                .privateChatEnabled(roomEntity != null ? roomEntity.getPrivateChatEnabled() : true)  //  是否启用私聊
+                .privateChatEnabled(roomEntity != null ? roomEntity.getPrivateChatEnabled() : true)
                 .build();
     }
 
@@ -520,14 +500,7 @@ public class RoomLifecycleService {
     // ==================== 私有方法 ====================
 
     /**
-     *  原子删除房间（/2/3/4/5/7 + ��
-     * - 问题1: 真正删除数据库记录，而不是只标记FINISHED
-     * - 问题2: 清理所有关联的玩家记录
-     * - 问题3: 主动清理聊天室，不等待5分钟定时任务
-     * - 问题4: 统一删除方法，确保通知只发送一次
-     * - 问题5: 使用带重试的缓存删除
-     * - 问题7: 原子操作，防止并发竞态条件
-     * - ，防止锁对象泄漏
+     * 原子删除房间
      *
      * @param roomCode 房间代码
      * @param gameRoom 内存中的房间对象（可选，如果已经获取）

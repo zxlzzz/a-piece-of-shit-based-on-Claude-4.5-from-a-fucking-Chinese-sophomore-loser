@@ -48,7 +48,7 @@ public class GameHistoryService {
             return List.of();
         }
 
-        // 转换为摘要DTO
+        
         List<GameHistorySummaryDTO> summaries = results.stream()
                 .map(result -> convertToSummary(result, playerId))
                 .filter(Objects::nonNull)
@@ -68,7 +68,7 @@ public class GameHistoryService {
             GameResultEntity result = gameResultRepository.findByGameIdWithDetails(gameId)
                     .orElseThrow(() -> new BusinessException("游戏结果不存在"));
 
-            // 解析JSON并构建DTO
+            
             return parseGameResultEntity(result);
 
         } catch (BusinessException e) {

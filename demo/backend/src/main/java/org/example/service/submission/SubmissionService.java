@@ -33,10 +33,10 @@ public class SubmissionService {
     private final SubmissionRepository submissionRepository;
     private final QuestionRepository questionRepository;
 
-    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)
     public void submitAnswer(String roomCode, String playerId, String choice) {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();  //  DTO
+        QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
 
         if (currentQuestion == null) {
             throw new BusinessException("当前没有有效题目");
@@ -101,15 +101,13 @@ public class SubmissionService {
                 gameRoom.getRoomCode(), playerId, choice, gameRoom.getCurrentIndex(), isBot);
     }
 
-    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)
     public void fillDefaultAnswers(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
-            log.warn(" 当前题目为空，无法填充默认答案");
+            log.warn("当前题目为空，无法填充默认答案");
             return;
         }
-
-        // 查询 Entity
         QuestionEntity questionEntity = questionRepository.findById(currentQuestion.getId())
                 .orElseThrow(() -> new BusinessException("题目不存在: " + currentQuestion.getId()));
 
@@ -182,7 +180,7 @@ public class SubmissionService {
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
 
-        log.info("📊 allSubmitted={}: roomCode={}, currentIndex={}, submitted={}/{}, submissions={}",
+        log.info("allSubmitted={}: roomCode={}, currentIndex={}, submitted={}/{}, submissions={}",
                 result, gameRoom.getRoomCode(), gameRoom.getCurrentIndex(),
                 submittedCount, totalPlayers, currentRoundSubmissions.keySet());
 
@@ -195,7 +193,7 @@ public class SubmissionService {
     public void autoSubmitBots(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
-            log.warn(" autoSubmitBots: 当前题目为空，跳过Bot自动提交");
+            log.warn("autoSubmitBots: 当前题目为空，跳过Bot自动提交");
             return;
         }
 
@@ -207,7 +205,7 @@ public class SubmissionService {
         long botCount = gameRoom.getPlayers().stream()
                 .filter(player -> player.getPlayerId().startsWith("BOT_"))
                 .count();
-        log.info("🤖 开始Bot自动提交: roomCode={}, currentIndex={}, botCount={}",
+        log.info("开始Bot自动提交: roomCode={}, currentIndex={}, botCount={}",
                 gameRoom.getRoomCode(), currentIndex, botCount);
 
         // 为所有Bot提交答案

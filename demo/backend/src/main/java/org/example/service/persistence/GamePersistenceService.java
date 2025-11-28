@@ -39,7 +39,7 @@ public class GamePersistenceService {
     private final ChoiceQuestionConfigRepository choiceConfigRepository;
     private final BidQuestionConfigRepository bidConfigRepository;
 
-    @Transactional(timeout = 10)  //  ��添加10秒超时，防止长时间占用连接
+    @Transactional(timeout = 10)
     public void saveGameResult(GameRoom gameRoom) {
         if (gameRoom == null) {
             log.warn(" GameRoom对象为null，跳过保存");

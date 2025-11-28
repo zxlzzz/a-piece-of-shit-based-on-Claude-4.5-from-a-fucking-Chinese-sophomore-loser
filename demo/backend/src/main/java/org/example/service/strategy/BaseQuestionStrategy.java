@@ -48,7 +48,7 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         // 6. 获取选项文本
         String optionText = getOptionText(context.getCurrentQuestion());
 
-        // 7. 返回 DTO
+        
         return QuestionDetailDTO.builder()
                 .questionIndex(context.getCurrentQuestionIndex())
                 .questionText(context.getCurrentQuestion().getText())

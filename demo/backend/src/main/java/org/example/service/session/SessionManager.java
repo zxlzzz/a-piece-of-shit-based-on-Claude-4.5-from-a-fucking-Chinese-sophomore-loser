@@ -36,8 +36,7 @@ public class SessionManager {
     private final Map<String, String> sessionToPlayer = new ConcurrentHashMap<>();
 
     /**
-     *  ��立即注册会话ID映射（在异步查询DB之前）
-     * 确保后续消息能通过sessionId找到playerId，避免状态不一致
+     * 立即注册会话ID映射
      *
      * @param sessionId WebSocket会话ID
      * @param playerId 玩家ID
@@ -197,10 +196,7 @@ public class SessionManager {
     }
 
     /**
-     *  定时清理过期会话（防止内存泄漏）
-     *  ��每5分钟执行一次，清理超过60分钟未活动的会话
-     * 使用lastHeartbeat（最后活动时间）而非loginTime
-     * 60分钟阈值确保长时间游戏的用户不会被误清理
+     * 定时清理过期会话
      */
     @Scheduled(fixedDelay = 300000) // 5分钟
     public void cleanupStaleSessions() {
@@ -208,9 +204,7 @@ public class SessionManager {
             LocalDateTime threshold = LocalDateTime.now().minusMinutes(60);
             List<String> toRemove = new ArrayList<>();
 
-            // 找出所有过期的会话
             activeSessions.forEach((playerId, session) -> {
-                // ��使用lastHeartbeat（最后活动时间）判断
                 if (session.getLastHeartbeat().isBefore(threshold)) {
                     toRemove.add(playerId);
                 }

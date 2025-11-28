@@ -53,7 +53,7 @@ public class QuestionSelectorService {
                 .limit(totalCount)
                 .collect(Collectors.toList());
 
-        // 转换成 DTO
+        
         List<QuestionDTO> selectedDTOs = selected.stream()
                 .map(dtoConverter::toQuestionDTOWithConfig)
                 .collect(Collectors.toList());

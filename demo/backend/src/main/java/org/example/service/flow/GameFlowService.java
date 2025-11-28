@@ -21,13 +21,9 @@ import org.example.service.scoring.ScoringService;
 import org.example.service.submission.SubmissionService;
 import org.example.service.timer.QuestionTimerService;
 import org.example.utils.RoomLock;
-import java.time.Duration;
-
-import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -50,12 +46,9 @@ public class GameFlowService {
     private final RoomStateBroadcaster broadcaster;
     private final RoomLifecycleService roomLifecycleService;
     private final GamePersistenceService gamePersistenceService;
-    private final TaskScheduler taskScheduler;
     private final ObjectMapper objectMapper;
 
     private final Map<String, AtomicBoolean> advancing = new java.util.concurrent.ConcurrentHashMap<>();
-
-    private final long defaultQuestionTimeoutSeconds = 30L;
 
     @Transactional(timeout = 10)
     public void startGame(String roomCode) {
@@ -63,12 +56,11 @@ public class GameFlowService {
 
         synchronized (RoomLock.getLock(roomCode)) {
             if (gameRoom.isStarted()) {
-                log.warn("房间 {} 已经开始游戏", roomCode);
                 return;
             }
 
             RoomEntity room = roomRepository.findByRoomCode(roomCode)
-                    .orElseThrow(() -> new BusinessException("房间不存在"));
+                    .orElseThrow(() -> new BusinessException("Room not found"));
             room.setStatus(RoomStatus.PLAYING);
             roomRepository.save(room);
 
@@ -88,7 +80,7 @@ public class GameFlowService {
                 }
 
                 PlayerEntity player = playerRepository.findByPlayerId(playerDTO.getPlayerId())
-                        .orElseThrow(() -> new BusinessException("玩家不存在: " + playerDTO.getPlayerId()));
+                        .orElseThrow(() -> new BusinessException("Player not found: " + playerDTO.getPlayerId()));
 
                 PlayerGameEntity playerGame = PlayerGameEntity.builder()
                         .player(player)
@@ -108,7 +100,7 @@ public class GameFlowService {
                             new TypeReference<List<Long>>() {}
                     );
                 } catch (Exception e) {
-                    log.error("解析questionTagIds失败", e);
+                    log.error("Failed to parse question tag IDs", e);
                 }
             }
 
@@ -119,11 +111,9 @@ public class GameFlowService {
             );
 
             if (questions == null || questions.isEmpty()) {
-                log.error("题目加载失败：questionCount={}, 标签={}", room.getQuestionCount(), questionTagIds);
                 room.setStatus(RoomStatus.WAITING);
                 roomRepository.save(room);
-                gameRoom.setRoomEntity(room);
-                throw new BusinessException("题目加载失败，请检查题库或标签设置");
+                throw new BusinessException("Failed to load questions");
             }
 
             gameRoom.setQuestions(questions);
@@ -147,155 +137,99 @@ public class GameFlowService {
     public void advanceQuestion(String roomCode, String reason, boolean fillDefaults) {
         AtomicBoolean isAdvancing = advancing.computeIfAbsent(roomCode, k -> new AtomicBoolean(false));
         if (!isAdvancing.compareAndSet(false, true)) {
-            log.warn("房间 {} 正在推进中，跳过（原因: {}）", roomCode, reason);
             return;
         }
 
         try {
-            GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-
             synchronized (RoomLock.getLock(roomCode)) {
+                GameRoom gameRoom = roomCache.get(roomCode);
+                if (gameRoom == null || !gameRoom.isStarted()) {
+                    return;
+                }
+
                 if (fillDefaults) {
                     submissionService.fillDefaultAnswers(gameRoom);
                 }
 
                 ScoringResult result = scoringService.calculateScores(gameRoom);
-
-                applyScoresToGameRoom(gameRoom, result);
-
-                gameRoom.getPlayers().forEach(p -> p.setReady(false));
-
-                boolean shouldRepeat = scoringService.shouldContinueRepeating(gameRoom, result);
-
-                if (shouldRepeat) {
-                    if (gameRoom.nextQuestion()) {
-                        gameRoom.setQuestionStartTime(LocalDateTime.now());
-                        Integer questionTimeout = gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() : 30;
-                        timerService.scheduleTimeout(roomCode, questionTimeout,
-                                () -> advanceQuestion(roomCode, "timeout", true));
-
-                        roomCache.put(roomCode, gameRoom);
-
-                        broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
-                    } else {
-                        log.error("房间 {} 重复题轮次未完成但无法推进 currentIndex", roomCode);
-                        finishGame(roomCode);
-                    }
-
-                } else {
-                    if (result.isRepeatableQuestion()) {
-                        scoringService.clearRounds(roomCode);
-                    }
-
-                    if (gameRoom.nextQuestion()) {
-                        gameRoom.setQuestionStartTime(LocalDateTime.now());
-                        Integer questionTimeout = gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() : 30;
-                        timerService.scheduleTimeout(roomCode, questionTimeout,
-                                () -> advanceQuestion(roomCode, "timeout", true));
-
-                        roomCache.put(roomCode, gameRoom);
-
-                        broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
-                    } else {
-                        finishGame(roomCode);
-                    }
+                if (result == null) {
+                    return;
                 }
+
+                for (Map.Entry<String, Integer> entry : result.getDeltaScores().entrySet()) {
+                    String playerId = entry.getKey();
+                    int delta = entry.getValue();
+                    gameRoom.getScores().merge(playerId, delta, Integer::sum);
+                }
+
+                boolean isLastQuestion = gameRoom.getCurrentIndex() >= gameRoom.getQuestions().size() - 1;
+
+                if (isLastQuestion) {
+                    finishGame(gameRoom);
+                } else {
+                    gameRoom.setCurrentIndex(gameRoom.getCurrentIndex() + 1);
+                    gameRoom.setQuestionStartTime(LocalDateTime.now());
+
+                    Integer timeLimit = gameRoom.getTimeLimit() != null ? gameRoom.getTimeLimit() : 30;
+                    timerService.scheduleTimeout(roomCode, timeLimit,
+                            () -> advanceQuestion(roomCode, "timeout", true));
+
+                    roomCache.put(roomCode, gameRoom);
+                }
+
+                broadcaster.sendQuestionResult(roomCode, result.getDetailDTO());
+                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             }
         } finally {
             isAdvancing.set(false);
         }
     }
 
-    @Transactional(timeout = 10)
-    public void finishGame(String roomCode) {
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-
-        synchronized (RoomLock.getLock(roomCode)) {
-            if (gameRoom.isFinished()) {
-                log.warn("房间 {} 已经结束，跳过重复调用", roomCode);
-                return;
-            }
-
+    @Transactional
+    private void finishGame(GameRoom gameRoom) {
+        try {
             gameRoom.setFinished(true);
+            gameRoom.setCurrentQuestion(null);
 
-            try {
-                RoomEntity room = roomRepository.findByRoomCode(roomCode)
-                        .orElseThrow(() -> new BusinessException("房间不存在"));
+            RoomEntity room = roomRepository.findByRoomCode(gameRoom.getRoomCode()).orElse(null);
+            if (room != null) {
                 room.setStatus(RoomStatus.FINISHED);
                 roomRepository.save(room);
-
-                GameEntity game = gameRepository.findByRoom(room)
-                        .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-                game.setEndTime(LocalDateTime.now());
-                gameRepository.save(game);
-
-                for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
-                    String playerId = entry.getKey();
-
-                    if (playerId.startsWith("BOT_")) {
-                        continue;
-                    }
-
-                    PlayerEntity player = playerRepository.findByPlayerId(playerId)
-                            .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
-
-                    PlayerGameEntity playerGame = playerGameRepository
-                            .findByPlayerAndGame(player, game)
-                            .orElseThrow(() -> new BusinessException("游戏记录不存在"));
-
-                    playerGame.setScore(entry.getValue());
-                    playerGameRepository.save(playerGame);
-                }
-
-                scoringService.clearRounds(roomCode);
-
-                timerService.cancelTimeout(roomCode);
-
-                gamePersistenceService.saveGameResult(gameRoom);
-
-            } catch (Exception e) {
-                log.error("游戏结束流程失败: roomCode={}", roomCode, e);
-                gameRoom.setFinished(false);
-                roomCache.put(roomCode, gameRoom);
-                throw e;
-            } finally {
-                gameRoom.clearPlayerStates();
-
-                advancing.remove(roomCode);
-
-                roomCache.put(roomCode, gameRoom);
-
-                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
-
-                taskScheduler.schedule(() -> {
-                    try {
-                        roomLifecycleService.deleteRoom(roomCode);
-                        broadcaster.sendRoomDeleted(roomCode);
-                    } catch (Exception e) {
-                        log.error("自动删除房间失败: roomCode={}", roomCode, e);
-                    }
-                }, Instant.now().plus(Duration.ofSeconds(10)));
+                gameRoom.setRoomEntity(room);
             }
+
+            if (gameRoom.getGameId() != null) {
+                GameEntity game = gameRepository.findById(gameRoom.getGameId()).orElse(null);
+                if (game != null) {
+                    game.setEndTime(LocalDateTime.now());
+                    gameRepository.save(game);
+
+                    for (Map.Entry<String, Integer> entry : gameRoom.getScores().entrySet()) {
+                        String playerId = entry.getKey();
+
+                        if (playerId.startsWith("BOT_")) {
+                            continue;
+                        }
+
+                        PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                                .orElseThrow(() -> new BusinessException("Player not found: " + playerId));
+
+                        PlayerGameEntity playerGame = playerGameRepository
+                                .findByPlayerAndGame(player, game)
+                                .orElseThrow(() -> new BusinessException("Game record not found"));
+
+                        playerGame.setScore(entry.getValue());
+                        playerGameRepository.save(playerGame);
+                    }
+                }
+            }
+
+            gamePersistenceService.saveGameResult(gameRoom);
+
+            roomCache.put(gameRoom.getRoomCode(), gameRoom);
+
+        } catch (Exception e) {
+            log.error("Error finishing game for room {}: {}", gameRoom.getRoomCode(), e.getMessage(), e);
         }
-    }
-
-    private void applyScoresToGameRoom(GameRoom gameRoom, ScoringResult result) {
-        int currentIndex = gameRoom.getCurrentIndex();
-
-        for (Map.Entry<String, Integer> entry : result.getFinalScores().entrySet()) {
-            String playerId = entry.getKey();
-            Integer finalScore = entry.getValue();
-
-            gameRoom.addScore(playerId, finalScore);
-
-            gameRoom.updatePlayerStateTotalScore(playerId, gameRoom.getScores().get(playerId));
-
-            gameRoom.getPlayers().stream()
-                    .filter(p -> p.getPlayerId().equals(playerId))
-                    .findFirst()
-                    .ifPresent(p -> p.setScore(gameRoom.getScores().get(playerId)));
-        }
-
-        gameRoom.getQuestionScores().put(currentIndex, result.getScoreDetails());
     }
 }

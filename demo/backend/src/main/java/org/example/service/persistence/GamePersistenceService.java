@@ -38,41 +38,19 @@ public class GamePersistenceService {
 
     @Transactional(timeout = 10)
     public void saveGameResult(GameRoom gameRoom) {
-        if (gameRoom == null) {
-            log.warn(" GameRoom对象为null，跳过保存");
-            return;
-        }
-
-        String roomCode = gameRoom.getRoomCode();
-        log.info("📝 开始保存游戏结果: roomCode={}, finished={}", roomCode, gameRoom.isFinished());
-
-        if (!gameRoom.isFinished()) {
-            log.warn(" 房间 {} 未结束(finished=false)，跳过保存", roomCode);
+        if (gameRoom == null || !gameRoom.isFinished()) {
             return;
         }
 
         try {
-            log.info("📝 正在查找游戏实体: gameId={}, roomCode={}, isTestRoom={}",
-                    gameRoom.getGameId(), roomCode, gameRoom.isTestRoom());
-
             GameEntity game = gameRepository.findById(gameRoom.getGameId())
-                    .orElseThrow(() -> new BusinessException("游戏不存在: gameId=" + gameRoom.getGameId()));
+                    .orElseThrow(() -> new BusinessException("Game not found: " + gameRoom.getGameId()));
 
-            log.info("📝 游戏实体找到: gameId={}, isTest={}", game.getId(), game.getIsTest());
-
-            log.info("📝 正在构建排行榜数据: playerCount={}", gameRoom.getPlayers().size());
             List<PlayerRankDTO> leaderboard = leaderboardService.buildLeaderboard(gameRoom);
-            log.info("📝 排行榜构建完成: leaderboardSize={}", leaderboard.size());
-
-            log.info("📝 正在构建题目详情: questionCount={}", gameRoom.getQuestions().size());
             List<QuestionDetailDTO> questionDetails = buildQuestionDetails(gameRoom);
-            log.info("📝 题目详情构建完成: detailsSize={}", questionDetails.size());
 
             String leaderboardJson = objectMapper.writeValueAsString(leaderboard);
             String questionDetailsJson = objectMapper.writeValueAsString(questionDetails);
-
-            log.info("📝 JSON序列化完成: leaderboardLength={}, questionDetailsLength={}",
-                    leaderboardJson.length(), questionDetailsJson.length());
 
             GameResultEntity entity = GameResultEntity.builder()
                     .game(game)
@@ -83,18 +61,13 @@ public class GamePersistenceService {
                     .questionDetailsJson(questionDetailsJson)
                     .build();
 
-            log.info("📝 正在保存GameResultEntity到数据库...");
-            GameResultEntity saved = gameResultRepository.save(entity);
-            log.info(" 游戏结果保存成功: roomCode={}, resultId={}, gameId={}, isTest={}",
-                    roomCode, saved.getId(), game.getId(), game.getIsTest());
+            gameResultRepository.save(entity);
 
         } catch (Exception e) {
-            log.error(" 保存游戏结果失败: roomCode={}, gameId={}, error={}",
-                    roomCode, gameRoom.getGameId(), e.getMessage(), e);
-            throw new RuntimeException("保存游戏结果失败", e);
+            log.error("Failed to save game result for room {}: {}", gameRoom.getRoomCode(), e.getMessage(), e);
+            throw new RuntimeException("Failed to save game result", e);
         }
     }
-
 
     private List<QuestionDetailDTO> buildQuestionDetails(GameRoom gameRoom) {
         List<QuestionDetailDTO> details = new ArrayList<>();
@@ -156,20 +129,16 @@ public class GamePersistenceService {
 
     private String formatOptions(QuestionDTO question) {
         if (question == null) {
-            return "题目数据错误";
+            return "Invalid question";
         }
-
 
         if (question.getType() == QuestionType.BID) {
-
             return bidConfigRepository.findByQuestion_Id(question.getId())
-                    .map(config -> "出价范围: " + config.getMinValue() + "-" + config.getMaxValue())
-                    .orElse("自由出价");
+                    .map(config -> "Bid range: " + config.getMinValue() + "-" + config.getMaxValue())
+                    .orElse("Free bid");
         }
 
-
         if (question.getType() == QuestionType.CHOICE) {
-
             return choiceConfigRepository.findByQuestion_Id(question.getId())
                     .map(config -> {
                         try {
@@ -184,14 +153,14 @@ public class GamePersistenceService {
                                     .collect(Collectors.joining(" | "));
 
                         } catch (Exception e) {
-                            log.error("解析选项 JSON 失败: questionId={}, error={}",
+                            log.error("Failed to parse options JSON for question {}: {}", 
                                     question.getId(), e.getMessage());
-                            return "选项格式错误";
+                            return "Invalid options format";
                         }
                     })
-                    .orElse("无选项");
+                    .orElse("No options");
         }
 
-        return "未知题型";
+        return "Unknown question type";
     }
 }

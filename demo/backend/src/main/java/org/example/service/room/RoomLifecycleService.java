@@ -246,10 +246,9 @@ public class RoomLifecycleService {
                 roomRepository.delete(room);
             }
 
-            chatRoomManager.deleteRoom(roomCode);
             timerService.cancelTimeout(roomCode);
             RoomLock.removeLock(roomCode);
-            
+
         } catch (Exception e) {
             log.error("Error deleting room {}: {}", roomCode, e.getMessage());
         }

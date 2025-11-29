@@ -3,7 +3,6 @@ package org.example.service.auth;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.AuthResponseDTO;
-import org.example.dto.GuestLoginRequestDTO;
 import org.example.dto.LoginRequestDTO;
 import org.example.dto.RegisterRequestDTO;
 import org.example.entity.PlayerEntity;

@@ -161,7 +161,6 @@ public class GameRoom implements Serializable {
                         .playerId(id)
                         .name(playerName)
                         .totalScore(currentScore)
-                        .activeBuffs(new ArrayList<>())
                         .customData(new HashMap<>())
                         .build()
         );

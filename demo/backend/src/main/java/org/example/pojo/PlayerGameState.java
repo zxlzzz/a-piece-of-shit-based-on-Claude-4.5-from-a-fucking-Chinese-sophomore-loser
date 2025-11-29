@@ -18,6 +18,5 @@ public class PlayerGameState implements Serializable {
     private String playerId;
     private String name;
     private Integer totalScore;
-    private List<Buff> activeBuffs;
     private Map<String, Object> customData;
 }

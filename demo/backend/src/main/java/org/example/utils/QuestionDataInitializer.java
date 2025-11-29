@@ -87,11 +87,6 @@ public class QuestionDataInitializer {
         } else if (dto.getType() == QuestionType.BID) {
             saveBidConfig(savedEntity, dto);
         }
-
-        // 3. 保存元数据(如果有)
-        if (needsMetadata(dto)) {
-            saveMetadata(savedEntity, dto);
-        }
     }
 
     private void saveChoiceConfig(QuestionEntity entity, QuestionDTO dto) throws IOException {

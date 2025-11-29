@@ -22,7 +22,6 @@ const breakpoints = useBreakpoints({
 })
 const isDesktop = breakpoints.greaterOrEqual('desktop')
 
-// 🔥 Toast 去重：记录最近显示的消息（key: message, value: timestamp）
 const recentToasts = ref(new Map())
 
 // 通用 Toast 显示函数（带去重）
@@ -72,52 +71,19 @@ const handleWebSocketError = (event) => {
   }
 }
 
-// 监听房间删除（ws.js 触发的）
 const handleRoomDeleted = (event) => {
   showToast('warn', '房间已关闭', '房主已关闭房间', 4000)
 }
 
-// 监听欢迎消息（ws.js 触发的）
 const handleWelcome = (event) => {
   if (event.detail?.message) {
     showToast('info', '欢迎', event.detail.message, 2000)
   }
 }
 
-// 监听 Vue 运行时错误（main.js 触发的）
 const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
-
-// 🔥 全局 WebSocket 连接管理（仅在需要的页面连接）
-// const connectGlobalWebSocket = async () => {
-//   // 只有在有 playerId 时才连接
-//   if (!playerStore.playerId) {
-//     logger.debug('App: 没有 playerId，跳过 WebSocket 连接')
-//     return
-//   }
-//
-//   // 如果已经连接，不重复连接
-//   if (isConnected()) {
-//     logger.debug('App: WebSocket 已连接')
-//     return
-//   }
-//
-//   try {
-//     await connect(playerStore.playerId)
-//     logger.debug('App: 全局 WebSocket 连接成功')
-//   } catch (err) {
-//     logger.error('App: 全局 WebSocket 连接失败', err)
-//   }
-// }
-
-// 🔥 修复：不再全局连接，由各个页面按需连接
-// 监听 playerId 变化（保留，用于其他用途）
-// watch(() => playerStore.playerId, (newId, oldId) => {
-//   if (newId && newId !== oldId) {
-//     logger.debug('App: playerId 变化')
-//   }
-// }, { immediate: true })
 
 onMounted(() => {
   // 注册全局事件监听

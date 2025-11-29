@@ -93,7 +93,7 @@ const handleVueError = (event) => {
 //   }
 // }
 
-��不再全局连接，由各个页面按需连接
+// 不再全局连接，由各个页面按需连接
 //   }
 // }, { immediate: true })
 
@@ -111,7 +111,7 @@ onMounted(() => {
       const now = Date.now()
       const savedAt = roomData._savedAt || 0
 
-      ��如果房间已结束，使用更短的过期时间（15秒）
+      // 如果房间已结束，使用更短的过期时间（15秒）
       if (roomData.finished || roomData.status === 'FINISHED') {
         if (now - savedAt > 15000) {  // 15秒
           logger.info('🧹 已结束的房间缓存已过期，自动清理')

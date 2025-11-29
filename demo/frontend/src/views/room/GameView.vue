@@ -104,7 +104,7 @@ onMounted(() => {
 
   const savedRoom = playerStore.loadRoom()
 
-  ��只清理旧题目的submission记录，保留当前题目的
+  // 只清理旧题目的submission记录，保留当前题目的
   if (savedRoom && savedRoom.currentIndex !== undefined && savedRoom.currentIndex >= 0) {
     const currentSubmissionKey = `submission_${roomCode.value}_${savedRoom.currentIndex}`
     const submissionPrefix = `submission_${roomCode.value}_`
@@ -141,7 +141,7 @@ onMounted(() => {
       return
     }
 
-    ��恢复当前题目的提交状态
+    // 恢复当前题目的提交状态
     if (question.value && savedRoom.currentIndex >= 0) {
       restoreSubmitState()
       logger.info(' 页面加载时恢复提交状态:', {

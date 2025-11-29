@@ -14,15 +14,15 @@ let stompClient = null;
 let connected = false;
 let currentPlayerId = null;
 let connectPromise = null;
-let connectTimeoutId = null; ��存储连接超时ID，避免泄漏
+let connectTimeoutId = null; // 存储连接超时ID，避免泄漏
 let reconnectAttempts = 0;
 let reconnectTimer = null;
 let isReconnecting = false; //  标记是否正在重连
 let manualDisconnect = false; //  标记是否手动断开（手动断开不自动重连）
-let isResettingConnection = false; ��防止并发重置连接导致的竞态条件
-let subscriptionCallbacks = new Set(); ��使用Set避免重复，提升线程安全
-let personalSubscriptions = []; ��存储个人消息订阅，避免内存泄漏
-let activeRoomSubscriptions = new Map(); ��全局跟踪活动的房间订阅，防止重复订阅
+let isResettingConnection = false; // 防止并发重置连接导致的竞态条件
+let subscriptionCallbacks = new Set(); // 使用Set避免重复，提升线程安全
+let personalSubscriptions = []; // 存储个人消息订阅，避免内存泄漏
+let activeRoomSubscriptions = new Map(); // 全局跟踪活动的房间订阅，防止重复订阅
 
 /**
  * 建立 STOMP 连接（单例模式）
@@ -38,8 +38,8 @@ export function connect(playerId, onConnect, onError) {
     return Promise.resolve(stompClient);
   }
 
-  ��如果正在连接中，检查是否超时
-  ��使用flag防止并发重置导致的竞态条件
+  // 如果正在连接中，检查是否超时
+  // 使用flag防止并发重置导致的竞态条件
   if (connectPromise) {
     const now = Date.now();
     
@@ -51,7 +51,7 @@ export function connect(playerId, onConnect, onError) {
         isResettingConnection = true;
         logger.error('连接超时，强制重置');
 
-        ��清除超时处理器，避免资源泄漏
+        // 清除超时处理器，避免资源泄漏
         if (connectTimeoutId) {
           clearTimeout(connectTimeoutId);
           connectTimeoutId = null;
@@ -88,7 +88,7 @@ export function connect(playerId, onConnect, onError) {
   currentPlayerId = playerId;
 
   connectPromise = new Promise((resolve, reject) => {
-    ��使用全局变量存储超时ID，避免泄漏
+    // 使用全局变量存储超时ID，避免泄漏
     connectTimeoutId = setTimeout(() => {
       logger.error(`连接超时（${WS_CONNECT_TIMEOUT / 1000}秒）`);
       connectTimeoutId = null;
@@ -111,7 +111,7 @@ export function connect(playerId, onConnect, onError) {
       heartbeatOutgoing: 0,
 
       onConnect: (frame) => {
-        ��清除超时处理器
+        // 清除超时处理器
         if (connectTimeoutId) {
           clearTimeout(connectTimeoutId);
           connectTimeoutId = null;
@@ -240,7 +240,7 @@ export function connect(playerId, onConnect, onError) {
 
 /**
  * 订阅个人消息（错误通知、欢迎消息等）
- *  ��存储订阅对象，避免内存泄漏
+ *  // 存储订阅对象，避免内存泄漏
  */
 function subscribeToPersonalMessages(playerId) {
   if (!ensureConnected("subscribeToPersonalMessages")) return;
@@ -259,7 +259,7 @@ function subscribeToPersonalMessages(playerId) {
     window.dispatchEvent(new CustomEvent('websocket-welcome', { detail: data }));
   });
 
-  ��存储订阅以便后续清理
+  // 存储订阅以便后续清理
   if (errorSub) personalSubscriptions.push(errorSub);
   if (welcomeSub) personalSubscriptions.push(welcomeSub);
 
@@ -268,7 +268,7 @@ function subscribeToPersonalMessages(playerId) {
 
 /**
  * 清理个人消息订阅
- *  ��防止内存泄漏
+ *  // 防止内存泄漏
  */
 function cleanupPersonalSubscriptions() {
   personalSubscriptions.forEach(sub => {
@@ -283,7 +283,7 @@ function cleanupPersonalSubscriptions() {
 
 /**
  * 恢复重连后的订阅
- *  ��使用快照避免遍历时导致的问题
+ *  // 使用快照避免遍历时导致的问题
  */
 function restoreSubscriptions() {
   const callbacks = Array.from(subscriptionCallbacks);
@@ -298,7 +298,7 @@ function restoreSubscriptions() {
 
 /**
  * 注册订阅回调（用于重连后恢复）
- *  ��使用Set自动去重
+ *  // 使用Set自动去重
  */
 export function registerSubscriptionCallback(callback) {
   if (typeof callback === 'function') {
@@ -308,7 +308,7 @@ export function registerSubscriptionCallback(callback) {
 
 /**
  * 移除订阅回调
- *  ��使用Set的delete方法
+ *  // 使用Set的delete方法
  */
 export function unregisterSubscriptionCallback(callback) {
   subscriptionCallbacks.delete(callback);
@@ -328,13 +328,13 @@ export function disconnect(force = false) {
     reconnectTimer = null;
   }
 
-  ��清理连接超时处理器
+  // 清理连接超时处理器
   if (connectTimeoutId) {
     clearTimeout(connectTimeoutId);
     connectTimeoutId = null;
   }
 
-  ��清理个人消息订阅，避免内存泄漏
+  // 清理个人消息订阅，避免内存泄漏
   cleanupPersonalSubscriptions();
 
   if (stompClient) {
@@ -350,10 +350,10 @@ export function disconnect(force = false) {
   currentPlayerId = null;
   connectPromise = null;
 
-  ��总是清理订阅回调，避免内存泄漏
+  // 总是清理订阅回调，避免内存泄漏
   subscriptionCallbacks = new Set();
 
-  ��清理活动房间订阅记录
+  // 清理活动房间订阅记录
   activeRoomSubscriptions.clear();
 }
 
@@ -399,7 +399,7 @@ export function waitForConnection(maxWait = 10000) {
 }
 
 /**
- * 通用订阅（��增加错误处理）
+ * 通用订阅（// 增加错误处理）
  */
 export function safeSubscribe(destination, onMessage) {
   if (!ensureConnected("subscribe " + destination)) {
@@ -427,14 +427,14 @@ export function safeSubscribe(destination, onMessage) {
 
 /**
  * 房间统一订阅
- *  ��添加重复订阅检测，防止快速刷新时订阅竞态条件
+ *  // 添加重复订阅检测，防止快速刷新时订阅竞态条件
  * @param {string} roomCode - 房间码
  * @param {function} onRoomUpdate - 房间更新回调
  * @param {function} onRoomError - 房间错误回调
  * @param {string} playerId - 玩家ID（可选，用于订阅被踢事件）
  */
 export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = null) {
-  ��检查是否已有该房间的活动订阅
+  // 检查是否已有该房间的活动订阅
   if (activeRoomSubscriptions.has(roomCode)) {
     logger.warn(` 房间 ${roomCode} 已存在订阅，先取消旧订阅`);
     const oldSubs = activeRoomSubscriptions.get(roomCode);
@@ -473,7 +473,7 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
   if (roomDeletedSub) subscriptions.push(roomDeletedSub);
   if (kickedSub) subscriptions.push(kickedSub);
 
-  ��记录活动订阅
+  // 记录活动订阅
   activeRoomSubscriptions.set(roomCode, subscriptions);
   logger.debug(` 房间 ${roomCode} 订阅成功，订阅数: ${subscriptions.length}`);
 
@@ -481,7 +481,7 @@ export function subscribeRoom(roomCode, onRoomUpdate, onRoomError, playerId = nu
 }
 
 /**
- * 取消订阅（��增加错误处理）
+ * 取消订阅（// 增加错误处理）
  */
 export function unsubscribe(subscription) {
   if (subscription && typeof subscription.unsubscribe === 'function') {
@@ -503,7 +503,7 @@ export function unsubscribeAll(subscriptions) {
 }
 
 /**
- *  ��取消房间订阅并从活动订阅Map中移除
+ *  // 取消房间订阅并从活动订阅Map中移除
  * @param {string} roomCode - 房间码
  */
 export function unsubscribeRoom(roomCode) {
@@ -624,7 +624,7 @@ export function getCurrentPlayerId() {
 }
 
 /**
- * 重新连接（��返回 Promise）
+ * 重新连接（// 返回 Promise）
  */
 export function reconnect() {
   if (currentPlayerId) {

@@ -14,8 +14,8 @@ export const usePlayerStore = defineStore('player', () => {
   const currentRoom = ref(null)
 
   const isLoggedIn = computed(() => !!token.value && !!playerId.value)
-  
-  ��登录时保存完整信息（包括 token 和 username）
+
+  // 登录时保存完整信息（包括 token 和 username）
   function setPlayer(authData) {
     token.value = authData.token
     playerId.value = authData.playerId  // UUID（用于API调用）

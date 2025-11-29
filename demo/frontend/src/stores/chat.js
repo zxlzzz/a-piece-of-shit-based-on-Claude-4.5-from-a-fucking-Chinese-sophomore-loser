@@ -17,7 +17,7 @@ export const useChatStore = defineStore('chat', () => {
   const selectedRecipients = ref([])  // 选中的收件人 [{id, name}, ...]
   const unreadPrivateCount = ref(0)   // 未读私聊消息数
 
-  ��只在没有活跃订阅时才恢复，避免重复订阅
+  // 只在没有活跃订阅时才恢复，避免重复订阅
   const restoreChatSubscriptions = () => {
     if (roomCode.value && !chatSubscription) {
       logger.info('🔄 ChatStore: WebSocket重连，恢复聊天订阅', roomCode.value)
@@ -88,7 +88,7 @@ export const useChatStore = defineStore('chat', () => {
       const client = getStompClient()
       const playerStore = usePlayerStore()
 
-      ��使用常量确保路径一致性
+      // 使用常量确保路径一致性
       chatSubscription = client.subscribe(WS_TOPIC_ROOM_CHAT(code), (message) => {
         try {
           const chatMessage = JSON.parse(message.body)

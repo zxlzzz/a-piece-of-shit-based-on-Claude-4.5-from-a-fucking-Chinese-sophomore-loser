@@ -74,7 +74,7 @@ export function useGameWebSocket(
       question.value = updatedRoom.currentQuestion
       playerStore.setRoom(updatedRoom)
 
-      ��重连时恢复提交状态
+      // 重连时恢复提交状态
       if (restoreSubmitState) {
         restoreSubmitState()
       }
@@ -134,12 +134,12 @@ export function useGameWebSocket(
         const oldQuestionStartTime = room.value?.questionStartTime
         const newQuestionStartTime = update.questionStartTime
 
-        ��检测是否是第一次收到题目数据（游戏刚开始）
+        // 检测是否是第一次收到题目数据（游戏刚开始）
         const isFirstLoad = (oldIndex === undefined || oldIndex === -1) && newIndex >= 0
         const indexChanged = newIndex !== undefined && oldIndex !== newIndex
         const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
 
-        ��题目切换、重复题换轮、或首次加载时都需要处理
+        // 题目切换、重复题换轮、或首次加载时都需要处理
         if (isFirstLoad || indexChanged || questionTimeChanged) {
           if (indexChanged && newIndex !== undefined) {
             const submissionPrefix = `submission_${roomCode.value}_`
@@ -293,7 +293,7 @@ export function useGameWebSocket(
   })
 
   onUnmounted(() => {
-    ��使用unsubscribeRoom清理订阅，确保从全局Map中移除
+    // 使用unsubscribeRoom清理订阅，确保从全局Map中移除
     unsubscribeRoom(roomCode.value)
 
     window.removeEventListener('websocket-reconnecting', handleReconnecting)

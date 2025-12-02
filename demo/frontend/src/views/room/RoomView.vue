@@ -92,8 +92,7 @@ const loadActiveRooms = async () => {
     const response = await getAllActiveRooms()
     activeRooms.value = response.data.filter(r =>
       !currentRoom.value || r.roomCode !== currentRoom.value.roomCode
-    )      }
-    })
+    )
   } catch (error) {
     logger.error('加载房间列表失败:', error)
     if (!error.response || error.code === 'ECONNABORTED') {
@@ -123,20 +122,20 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
   }
 
   loading.value = true
-  let createdRoomCode = null   记录创建的房间代码，用于清理
+  let createdRoomCode = null // 记录创建的房间代码，用于清理
 
   try {
     const createResponse = await createRoom(maxPlayers, questionCount, 30, password, questionTagIds)
     const roomData = createResponse.data
-    createdRoomCode = roomData.roomCode  
+    createdRoomCode = roomData.roomCode
 
-     尝试加入房间，失败时清理
+    // 尝试加入房间，失败时清理
     try {
       const joinResponse = await joinRoom(
         roomData.roomCode,
         playerStore.playerId,
         playerStore.playerName,
-        false
+        false,
         password  // 房主加入时传入密码
       )
 
@@ -153,7 +152,7 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
 
       router.push(`/wait/${roomData.roomCode}`)
     } catch (joinError) {
-       加入失败，清理已创建的"幽灵房间"
+      // 加入失败，清理已创建的"幽灵房间"
       logger.error("加入房间失败，尝试清理幽灵房间:", joinError)
       try {
         await deleteRoom(createdRoomCode)
@@ -217,11 +216,13 @@ const handleJoinRoom = async (roomCode, hasPassword) => {
 
   loading.value = true
   try {
-    
+
     const response = await joinRoom(
       roomCode,
       playerStore.playerId,
-      playerStore.playerName,      password
+      playerStore.playerName,
+      false,
+      password
     )
     currentRoom.value = response.data
     playerStore.setRoom(response.data)
@@ -447,9 +448,6 @@ const handleLogout = () => {
                   </span>
                 </div>
 
-                
-                </div>
-
                 <!-- 加入按钮 -->
                 <button
                   @click="handleJoinRoom(room.roomCode, room.hasPassword)"
@@ -491,6 +489,5 @@ const handleLogout = () => {
         </div>
       </div>
     </div>
-
-    </div>
+  </div>
 </template>

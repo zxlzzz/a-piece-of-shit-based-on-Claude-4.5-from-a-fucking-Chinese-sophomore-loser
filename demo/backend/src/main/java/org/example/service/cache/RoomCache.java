@@ -78,6 +78,26 @@ public class RoomCache {
         }
     }
 
+    public Collection<GameRoom> getAll() {
+        try {
+            java.util.Set<String> keys = redisTemplate.keys(REDIS_KEY_PREFIX + "*");
+            if (keys == null || keys.isEmpty()) {
+                return java.util.Collections.emptyList();
+            }
+            java.util.List<GameRoom> rooms = new java.util.ArrayList<>();
+            for (String key : keys) {
+                Object value = redisTemplate.opsForValue().get(key);
+                if (value instanceof GameRoom) {
+                    rooms.add((GameRoom) value);
+                }
+            }
+            return rooms;
+        } catch (Exception e) {
+            log.error("❌ Redis扫描失败", e);
+            return java.util.Collections.emptyList();
+        }
+    }
+
     private String getRedisKey(String roomCode) {
         return REDIS_KEY_PREFIX + roomCode;
     }

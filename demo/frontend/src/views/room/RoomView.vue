@@ -141,7 +141,6 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
 
       currentRoom.value = joinResponse.data
       playerStore.setRoom(joinResponse.data)
-      playerStore.setSpectator(false)
 
       toast.add({
         severity: 'success',

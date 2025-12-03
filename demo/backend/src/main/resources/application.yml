@@ -38,17 +38,6 @@ spring:
       jakarta.persistence.query.timeout: 10000  # 查询超时10秒（毫秒）
       hibernate.query.timeout: 10            # Hibernate查询超时10秒（秒）
 
-  # Redis 基础配置
-  data:
-    redis:
-      timeout: 10000ms
-      jedis:
-        pool:
-          max-active: 20
-          max-idle: 10
-          min-idle: 5
-          max-wait: -1ms
-
   # 静态资源配置
   web:
     resources:

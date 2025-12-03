@@ -135,7 +135,6 @@ const handleCreate = async ({ questionCount, maxPlayers, password, questionTagId
         roomData.roomCode,
         playerStore.playerId,
         playerStore.playerName,
-        false,
         password  // 房主加入时传入密码
       )
 
@@ -220,7 +219,6 @@ const handleJoinRoom = async (roomCode, hasPassword) => {
       roomCode,
       playerStore.playerId,
       playerStore.playerName,
-      false,
       password
     )
     currentRoom.value = response.data

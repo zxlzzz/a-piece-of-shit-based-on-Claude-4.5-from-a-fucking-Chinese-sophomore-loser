@@ -110,7 +110,21 @@ public class GameService {
     }
 
     public List<RoomDTO> getAllActiveRoom() {
-        return List.of();
+        Collection<GameRoom> rooms = roomCache.getAll();
+        List<RoomDTO> roomDTOs = new ArrayList<>();
+        for (GameRoom room : rooms) {
+            if (room != null && room.getRoomEntity() != null) {
+                try {
+                    RoomDTO dto = roomLifecycleService.toRoomDTO(room.getRoomEntity().getRoomCode());
+                    if (dto != null) {
+                        roomDTOs.add(dto);
+                    }
+                } catch (Exception e) {
+                    log.error("转换房间DTO失败: {}", room.getRoomEntity().getRoomCode(), e);
+                }
+            }
+        }
+        return roomDTOs;
     }
 
     @Transactional

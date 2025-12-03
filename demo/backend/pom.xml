@@ -50,12 +50,6 @@
       <scope>runtime</scope>
     </dependency>
 
-    <!-- Redis -->
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-data-redis</artifactId>
-    </dependency>
-
     <!-- Lombok（简化 Getter/Setter/Builder） -->
     <dependency>
       <groupId>org.projectlombok</groupId>

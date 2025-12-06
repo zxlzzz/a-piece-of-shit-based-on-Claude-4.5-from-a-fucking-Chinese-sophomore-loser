@@ -115,10 +115,6 @@ export const register = (username, password, name) =>
 export const login = (username, password) =>
   api.post('/auth/login', { username, password });
 
-export const guestLogin = (name) =>
-  api.post('/auth/guest', { name });
-
-
 export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null) => {
   const params = { maxPlayers, questionCount, timeLimit, password };
   if (questionTagIds && questionTagIds.length > 0) {

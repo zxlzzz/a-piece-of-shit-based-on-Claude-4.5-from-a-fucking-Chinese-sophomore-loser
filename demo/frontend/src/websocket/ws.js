@@ -164,3 +164,85 @@ export function unsubscribeAll(subscriptions) {
     console.log(`✅ 已取消 ${subscriptions.length} 个订阅`);
   }
 }
+
+/**
+ * 获取 STOMP 客户端实例
+ */
+export function getStompClient() {
+  return stompClient;
+}
+
+/**
+ * 通用消息发送函数
+ */
+export function sendMessage(destination, body) {
+  if (!isConnected()) {
+    console.error('WebSocket 未连接');
+    return;
+  }
+
+  stompClient.publish({
+    destination,
+    body: JSON.stringify(body)
+  });
+}
+
+/**
+ * 等待连接建立（简化版 - demo 用）
+ */
+export function waitForConnection(timeout = 3000) {
+  return new Promise((resolve, reject) => {
+    if (isConnected()) {
+      resolve();
+      return;
+    }
+
+    const startTime = Date.now();
+    const checkInterval = setInterval(() => {
+      if (isConnected()) {
+        clearInterval(checkInterval);
+        resolve();
+      } else if (Date.now() - startTime > timeout) {
+        clearInterval(checkInterval);
+        reject(new Error('等待连接超时'));
+      }
+    }, 100);
+  });
+}
+
+// 重连回调列表（简化版 - demo 用）
+const subscriptionCallbacks = [];
+
+/**
+ * 注册订阅恢复回调
+ */
+export function registerSubscriptionCallback(callback) {
+  if (!subscriptionCallbacks.includes(callback)) {
+    subscriptionCallbacks.push(callback);
+  }
+}
+
+/**
+ * 注销订阅恢复回调
+ */
+export function unregisterSubscriptionCallback(callback) {
+  const index = subscriptionCallbacks.indexOf(callback);
+  if (index > -1) {
+    subscriptionCallbacks.splice(index, 1);
+  }
+}
+
+// 房间订阅映射（简化版 - demo 用）
+const roomSubscriptions = new Map();
+
+/**
+ * 取消房间订阅（简化版）
+ */
+export function unsubscribeRoom(roomCode) {
+  const subs = roomSubscriptions.get(roomCode);
+  if (subs) {
+    unsubscribeAll(subs);
+    roomSubscriptions.delete(roomCode);
+    console.log(`✅ 已取消房间订阅: ${roomCode}`);
+  }
+}

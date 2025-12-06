@@ -115,8 +115,6 @@ export const useChatStore = defineStore('chat', () => {
 
       registerSubscriptionCallback(restoreChatSubscriptions)
       logger.info(' ChatStore: 已注册重连回调')
-
-      sendJoinMessage()
     } catch (error) {
       logger.error(' ChatStore: 订阅聊天频道失败', error)
       throw error
@@ -137,17 +135,6 @@ export const useChatStore = defineStore('chat', () => {
 
     unregisterSubscriptionCallback(restoreChatSubscriptions)
     logger.info(' ChatStore: 已注销重连回调')
-  }
-
-  const sendJoinMessage = () => {
-    const playerStore = usePlayerStore()
-    const joinMsg = {
-      type: 'JOIN',
-      senderId: playerStore.playerId,
-      senderName: playerStore.playerName,
-      roomCode: roomCode.value
-    }
-    sendMessage(`/app/room/${roomCode.value}/join`, joinMsg)
   }
 
   const sendChatMessage = (content) => {

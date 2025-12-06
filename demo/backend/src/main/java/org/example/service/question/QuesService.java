@@ -38,47 +38,6 @@ public class QuesService {
         this.choiceConfigRepository = choiceConfigRepository;
         this.bidConfigRepository = bidConfigRepository;
     }
-     @Transactional
-    public void batchImport(List<QuestionDTO> questionDTOs) {
-        for (QuestionDTO dto : questionDTOs) {
-            QuestionEntity entity = QuestionEntity.builder()
-                    .type(dto.getType())
-                    .text(dto.getText())
-                    .calculateRule(dto.getCalculateRule())
-                    .strategyId(dto.getStrategyId())
-                    .minPlayers(dto.getMinPlayers())
-                    .maxPlayers(dto.getMaxPlayers())
-                    .defaultChoice(dto.getDefaultChoice())
-                    .build();
-
-            QuestionEntity savedEntity = questionRepository.save(entity);
-
-            // 保存选择题配置
-            if (dto.getType() == QuestionType.CHOICE && dto.getOptions() != null && !dto.getOptions().isEmpty()) {
-                try {
-                    ChoiceQuestionConfig config = ChoiceQuestionConfig.builder()
-                            .question(savedEntity)
-                            .optionsJson(objectMapper.writeValueAsString(dto.getOptions()))
-                            .build();
-                    choiceConfigRepository.save(config);
-                } catch (JsonProcessingException e) {
-                    log.error("序列化选项失败: {}", e.getMessage());
-                    throw new RuntimeException("保存选择题配置失败", e);
-                }
-            }
-
-            // 保存竞价题配置
-            if (dto.getType() == QuestionType.BID && dto.getMin() != null && dto.getMax() != null) {
-                BidQuestionConfig config = BidQuestionConfig.builder()
-                        .question(savedEntity)
-                        .minValue(dto.getMin())
-                        .maxValue(dto.getMax())
-                        .step(dto.getStep())
-                        .build();
-                bidConfigRepository.save(config);
-            }
-        }
-    }
 
     public List<QuestionDTO> getAllQuestionDTO() {
         List<QuestionEntity> entities = questionRepository.findAll();
@@ -188,9 +147,5 @@ public class QuesService {
             }
         }
         return Collections.emptyList();
-    }
-
-    public void deleteById(Long id) {
-        questionRepository.deleteById(id);
     }
 }

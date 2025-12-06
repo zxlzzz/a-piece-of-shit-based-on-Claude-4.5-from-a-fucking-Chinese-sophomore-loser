@@ -58,20 +58,4 @@ public class RoomLock {
         }
         return removed;
     }
-
-    /**
-     * 获取当前锁对象总数（用于监控）
-     *
-     * @return 锁对象数量
-     */
-    public static int getLockCount() {
-        return LOCKS.size();
-    }
-
-    /**
-     *  修复：获取所有锁的房间代码（用于监控和调试）
-     */
-    public static Set<String> getAllLockKeys() {
-        return LOCKS.keySet();
-    }
 }

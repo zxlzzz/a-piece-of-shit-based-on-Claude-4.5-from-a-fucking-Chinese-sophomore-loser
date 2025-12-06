@@ -42,11 +42,6 @@ public class JwtUtil {
     public String getUsernameFromToken(String token) {
         return getClaimsFromToken(token).getSubject();
     }
-
-    public String getPlayerIdFromToken(String token) {
-        return getClaimsFromToken(token).get("playerId", String.class);
-    }
-
     public boolean validateToken(String token) {
         try {
             // 修复：只解析一次，避免重复解析导致性能浪费
@@ -66,9 +61,4 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // 已废弃：不再使用，避免重复解析
-    // private boolean isTokenExpired(String token) {
-    // Date expiration = getClaimsFromToken(token).getExpiration();
-    // return expiration.before(new Date());
-    // }
 }

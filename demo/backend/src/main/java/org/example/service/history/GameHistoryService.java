@@ -48,13 +48,11 @@ public class GameHistoryService {
             return List.of();
         }
 
-        
-        List<GameHistorySummaryDTO> summaries = results.stream()
+
+        return results.stream()
                 .map(result -> convertToSummary(result, playerId))
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
-
-        return summaries;
     }
 
     public GameHistoryDTO getHistoryDetail(Long gameId) {

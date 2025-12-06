@@ -92,22 +92,9 @@ public class GameFlowService {
 
             int playerCount = gameRoom.getPlayers().size();
 
-            List<Long> questionTagIds = null;
-            if (room.getQuestionTagIdsJson() != null && !room.getQuestionTagIdsJson().isEmpty()) {
-                try {
-                    questionTagIds = objectMapper.readValue(
-                            room.getQuestionTagIdsJson(),
-                            new TypeReference<List<Long>>() {}
-                    );
-                } catch (Exception e) {
-                    log.error("Failed to parse question tag IDs", e);
-                }
-            }
-
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
-                    playerCount,
-                    questionTagIds
+                    playerCount
             );
 
             if (questions == null || questions.isEmpty()) {
@@ -192,7 +179,7 @@ public class GameFlowService {
     }
 
     @Transactional
-    private void finishGame(GameRoom gameRoom) {
+    protected void finishGame(GameRoom gameRoom) {
         try {
             gameRoom.setFinished(true);
 

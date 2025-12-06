@@ -61,12 +61,6 @@ public class PlayerController {
         }
     }
 
-    /**
-     * 删除玩家（硬删除）
-     * DELETE /api/players/{playerId}
-     *  ��添加警告日志，建议使用软删除
-     *  警告：此操作会永久删除玩家及其所有游戏历史记录
-     */
     @DeleteMapping("/{playerId}")
     @Transactional
     public ResponseEntity<Void> deletePlayer(@PathVariable String playerId) {

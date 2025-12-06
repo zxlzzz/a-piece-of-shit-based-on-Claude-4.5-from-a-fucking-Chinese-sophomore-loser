@@ -48,33 +48,6 @@ public class GameService {
     }
 
     @Transactional
-    public RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount) {
-        GameRoom gameRoom = new GameRoom();
-        gameRoom.setTestRoom(true);
-
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, 30, gameRoom);
-        gameRoom.setRoomEntity(savedRoom);
-
-        for (int i = 1; i < maxPlayers; i++) {
-            String botId = "BOT_" + i;
-            String botName = "Bot" + i;
-
-            PlayerDTO botPlayer = PlayerDTO.builder()
-                    .playerId(botId)
-                    .name(botName)
-                    .ready(true)
-                    .build();
-
-            gameRoom.getPlayers().add(botPlayer);
-            gameRoom.getScores().put(botId, 0);
-        }
-
-        roomCache.put(savedRoom.getRoomCode(), gameRoom);
-
-        return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
-    }
-
-    @Transactional
     public RoomDTO joinRoom(String roomCode, String playerId, String playerName, String password) {
         roomLifecycleService.handleJoin(roomCode, playerId, playerName);
         return roomLifecycleService.toRoomDTO(roomCode);

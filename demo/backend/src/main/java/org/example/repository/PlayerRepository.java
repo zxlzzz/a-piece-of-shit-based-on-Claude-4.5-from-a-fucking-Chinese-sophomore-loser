@@ -25,7 +25,4 @@ public interface PlayerRepository extends JpaRepository<PlayerEntity, Long> {
 
     @Query("SELECT CASE WHEN COUNT(p) > 0 THEN true ELSE false END FROM PlayerEntity p WHERE p.username = ?1 AND p.deleted = false")
     boolean existsByUsername(String username);
-    // =========================
-
-    List<PlayerEntity> findByRoom(RoomEntity room);
 }

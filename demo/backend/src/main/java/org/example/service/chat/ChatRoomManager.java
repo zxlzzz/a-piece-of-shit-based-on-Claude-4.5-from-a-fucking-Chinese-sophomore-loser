@@ -22,14 +22,4 @@ public class ChatRoomManager {
         log.debug("玩家 {} 加入聊天室 {}", playerId, roomCode);
     }
 
-    public void playerLeave(String roomCode, String playerId) {
-        Set<String> users = chatRoomUsers.get(roomCode);
-        if (users != null) {
-            users.remove(playerId);
-            if (users.isEmpty()) {
-                chatRoomUsers.remove(roomCode);
-            }
-            log.debug("玩家 {} 离开聊天室 {}", playerId, roomCode);
-        }
-    }
 }

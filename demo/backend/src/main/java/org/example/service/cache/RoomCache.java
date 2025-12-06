@@ -35,10 +35,6 @@ public class RoomCache {
         return room;
     }
 
-    public boolean exists(String roomCode) {
-        return roomMap.containsKey(roomCode);
-    }
-
     public void remove(String roomCode) {
         roomMap.remove(roomCode);
         log.info("🗑️ 房间 {} 已从内存移除", roomCode);

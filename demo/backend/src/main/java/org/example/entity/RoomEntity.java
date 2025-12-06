@@ -77,11 +77,6 @@ public class RoomEntity implements Serializable {
     @Column(length = 50)
     private String hostPlayerId;
 
-    /**
-     * 房间内的玩家列表
-     *  ��移除级联删除和orphanRemoval，防止删除房间时误删玩家
-     * 玩家是独立实体，应通过业务逻辑解绑（setRoom(null)），而非级联删除
-     */
     @OneToMany(mappedBy = "room",
             cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH},
             fetch = FetchType.LAZY)

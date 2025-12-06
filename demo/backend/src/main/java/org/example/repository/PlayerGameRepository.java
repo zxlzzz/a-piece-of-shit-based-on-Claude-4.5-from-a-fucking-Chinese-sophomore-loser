@@ -12,7 +12,4 @@ public interface PlayerGameRepository extends JpaRepository<PlayerGameEntity, Lo
 
     // 查找特定玩家在特定游戏中的记录
     Optional<PlayerGameEntity> findByPlayerAndGame(PlayerEntity player, GameEntity game);
-
-    // 按分数排序查找游戏排行榜
-    List<PlayerGameEntity> findByGameOrderByScoreDesc(GameEntity game);
 }

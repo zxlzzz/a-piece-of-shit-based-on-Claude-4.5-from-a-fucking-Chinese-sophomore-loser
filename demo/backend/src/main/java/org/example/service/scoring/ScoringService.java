@@ -149,41 +149,4 @@ public class ScoringService {
                 .totalRounds(totalRounds)
                 .build();
     }
-
-    public boolean shouldContinueRepeating(GameRoom gameRoom, ScoringResult result) {
-        if (!result.isRepeatableQuestion()) {
-            return false;
-        }
-
-        // 判断：currentRound < totalRounds 时继续
-        return result.getCurrentRound() < result.getTotalRounds();
-    }
-
-    public void clearRounds(String roomCode) {
-        roomStrategyRounds.remove(roomCode);
-    }
-
-    // ==================== 私有方法 ====================
-
-    /**
-     * 获取当前轮次（从1开始）
-     */
-    private int getCurrentRound(String roomCode, String strategyId) {
-        Map<String, Integer> strategyRounds = roomStrategyRounds
-                .computeIfAbsent(roomCode, k -> new ConcurrentHashMap<>());
-
-        return strategyRounds.getOrDefault(strategyId, 1);
-    }
-
-    /**
-     * 增加轮次计数
-     */
-    private void incrementRound(String roomCode, String strategyId) {
-        Map<String, Integer> strategyRounds = roomStrategyRounds
-                .computeIfAbsent(roomCode, k -> new ConcurrentHashMap<>());
-
-        int current = strategyRounds.getOrDefault(strategyId, 1);
-        strategyRounds.put(strategyId, current + 1);
-
-    }
 }

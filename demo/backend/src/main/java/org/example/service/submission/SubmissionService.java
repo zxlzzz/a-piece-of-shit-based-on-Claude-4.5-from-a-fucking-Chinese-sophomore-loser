@@ -80,8 +80,8 @@ public class SubmissionService {
                 .filter(p -> p.getPlayerId().equals(playerId))
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
-
         // 关键修复：每次提交后立即同步到Redis
+
         // 这确保了多次从Redis获取时能看到最新的提交状态
         roomCache.put(roomCode, gameRoom);
 

@@ -24,17 +24,11 @@ public class QuestionSelectorService {
         this.dtoConverter = dtoConverter;
     }
 
-    /**
-     * 选择题目（简化版：随机选择）
-     */
-    public List<QuestionDTO> selectQuestions(int totalCount, int playerCount) {
-        return selectQuestions(totalCount, playerCount, null);
-    }
 
     /**
      * 选择题目（简化版：随机选择，忽略标签筛选）
      */
-    public List<QuestionDTO> selectQuestions(int totalCount, int playerCount, List<Long> tagIds) {
+    public List<QuestionDTO> selectQuestions(int totalCount, int playerCount) {
         // 查询所有题目
         List<QuestionEntity> allQuestions = questionRepository.findAllWithConfigs();
 

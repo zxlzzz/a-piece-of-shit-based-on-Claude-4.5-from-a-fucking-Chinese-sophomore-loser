@@ -31,25 +31,6 @@ public class DTOConverter {
     private final ChoiceQuestionConfigRepository choiceConfigRepo;
     private final BidQuestionConfigRepository bidConfigRepo;
 
-    /**
-     * QuestionEntity → QuestionDTO（不带配置）
-     */
-    public QuestionDTO toQuestionDTO(QuestionEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-
-        return QuestionDTO.builder()
-                .id(entity.getId())
-                .type(entity.getType())
-                .text(entity.getText())
-                .calculateRule(entity.getCalculateRule())  //  添加计分规则
-                .strategyId(entity.getStrategyId())
-                .defaultChoice(entity.getDefaultChoice())
-                .minPlayers(entity.getMinPlayers())
-                .maxPlayers(entity.getMaxPlayers())
-                .build();
-    }
 
     /**
      * QuestionEntity → QuestionDTO（带配置）
@@ -101,28 +82,6 @@ public class DTOConverter {
     }
 
     /**
-     * PlayerEntity → PlayerDTO
-     */
-    public PlayerDTO toPlayerDTO(PlayerEntity entity) {
-        if (entity == null) {
-            return null;
-        }
-
-        // 处理已删除账号的显示名称
-        String displayName = entity.getName();
-        if (entity.getDeleted() != null && entity.getDeleted()) {
-            displayName = entity.getName() + " [已删除]";
-        }
-
-        return PlayerDTO.builder()
-                .playerId(entity.getPlayerId())
-                .name(displayName)
-                .score(0)
-                .ready(entity.getReady())
-                .build();
-    }
-
-    /**
      * 解析 optionsJson 为 QuestionOption 列表
      */
     private List<QuestionOption> parseOptions(String optionsJson) {
@@ -141,19 +100,4 @@ public class DTOConverter {
         }
     }
 
-    /**
-     * 序列化 options 为 JSON 字符串
-     */
-    public String toOptionsJson(List<QuestionOption> options) {
-        if (options == null || options.isEmpty()) {
-            return null;
-        }
-
-        try {
-            return objectMapper.writeValueAsString(options);
-        } catch (Exception e) {
-            log.error("序列化 options 失败", e);
-            return null;
-        }
-    }
 }

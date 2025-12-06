@@ -16,8 +16,4 @@ public interface QuestionScoringStrategy {
      * @return 题目ID，如 "Q001", "Q007"
      */
     String getQuestionIdentifier();
-
-    Map<String, Integer> test(Map<String, String> submissions);
-
-    Map<String, Integer> calculateScores(Map<String, String> submissions);
 }

@@ -24,8 +24,4 @@ public interface BidQuestionConfigRepository extends JpaRepository<BidQuestionCo
     @Query("SELECT b FROM BidQuestionConfig b WHERE b.question.id IN :questionIds")
     List<BidQuestionConfig> findByQuestionIds(@Param("questionIds") List<Long> questionIds);
 
-    /**
-     * 检查题目是否已有配置
-     */
-    boolean existsByQuestion_Id(Long questionId);
 }

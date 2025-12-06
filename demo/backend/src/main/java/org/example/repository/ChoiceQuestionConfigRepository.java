@@ -24,8 +24,4 @@ public interface ChoiceQuestionConfigRepository extends JpaRepository<ChoiceQues
     @Query("SELECT c FROM ChoiceQuestionConfig c WHERE c.question.id IN :questionIds")
     List<ChoiceQuestionConfig> findByQuestionIds(@Param("questionIds") List<Long> questionIds);
 
-    /**
-     * 检查题目是否已有配置
-     */
-    boolean existsByQuestion_Id(Long questionId);
 }

@@ -28,9 +28,6 @@ public class GameController {
     private final RoomCache roomCache;
     private final RoomLifecycleService roomLifecycleService;
 
-    /**
-     *  ��移除try-catch，让全局异常处理器统一处理错误响应
-     */
     @PostMapping("/rooms")
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
@@ -42,9 +39,6 @@ public class GameController {
         return ResponseEntity.ok(room);
     }
 
-    /**
-     *  ��移除try-catch并简化逻辑
-     */
     @GetMapping("/rooms/{roomCode}")
     public ResponseEntity<RoomDTO> getRoomStatus(@PathVariable String roomCode) {
         GameRoom gameRoom = roomCache.get(roomCode);
@@ -57,18 +51,13 @@ public class GameController {
         return ResponseEntity.ok(roomDTO);
     }
 
-    
 
-    /**
-     *  ��移除try-catch，让全局异常处理器统一处理错误响应
-     */
     @PostMapping("/rooms/{roomCode}/join")
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
             @RequestParam String playerId,
             @RequestParam String playerName,
             @RequestParam(required = false) String password) {
-        // 简化实现：直接加入，不处理重连
         RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, password);
         broadcaster.sendRoomUpdate(roomCode, room);
         return ResponseEntity.ok(room);

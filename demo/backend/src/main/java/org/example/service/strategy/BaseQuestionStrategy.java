@@ -38,7 +38,7 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         // 6. 获取选项文本
         String optionText = getOptionText(context.getCurrentQuestion());
 
-        
+
         return QuestionDetailDTO.builder()
                 .questionIndex(context.getCurrentQuestionIndex())
                 .questionText(context.getCurrentQuestion().getText())
@@ -92,12 +92,4 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
         return "";
     }
 
-    @Override
-    public Map<String, Integer> calculateScores(Map<String, String> submissions) {
-        return calculateBaseScores(submissions);
-    }
-
-    public Map<String, Integer> test(Map<String, String> submissions) {
-        return calculateBaseScores(submissions);
-    }
 }

@@ -38,12 +38,7 @@ public class QuesService {
         this.choiceConfigRepository = choiceConfigRepository;
         this.bidConfigRepository = bidConfigRepository;
     }
-
-    public List<QuestionDTO> convertEntitiesToDTOs(List<QuestionEntity> entities) {
-        return convertToDTO(entities);
-    }
-
-    @Transactional
+     @Transactional
     public void batchImport(List<QuestionDTO> questionDTOs) {
         for (QuestionDTO dto : questionDTOs) {
             QuestionEntity entity = QuestionEntity.builder()
@@ -54,7 +49,6 @@ public class QuesService {
                     .minPlayers(dto.getMinPlayers())
                     .maxPlayers(dto.getMaxPlayers())
                     .defaultChoice(dto.getDefaultChoice())
-                    .hasMetadata(false)
                     .build();
 
             QuestionEntity savedEntity = questionRepository.save(entity);

@@ -51,7 +51,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {
-                    // ��token验证失败，返回401而不是继续处理
                     log.warn(" JWT验证失败（token无效或过期）");
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
@@ -59,7 +58,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return; // 阻止继续处理
                 }
             } catch (Exception e) {
-                // ��token验证异常，返回401而不是继续处理
                 log.error(" JWT认证失败: {}", e.getMessage());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 response.setContentType("application/json");

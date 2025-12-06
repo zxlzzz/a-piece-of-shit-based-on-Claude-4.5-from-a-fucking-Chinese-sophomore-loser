@@ -75,7 +75,6 @@ public class QuestionDataInitializer {
                 .minPlayers(dto.getMinPlayers())
                 .maxPlayers(dto.getMaxPlayers())
                 .defaultChoice(dto.getDefaultChoice())
-                .hasMetadata(false)
                 .build();
 
         QuestionEntity savedEntity = questionRepository.save(entity);
@@ -121,12 +120,6 @@ public class QuestionDataInitializer {
         bidConfigRepository.save(config);
         log.debug("BidQuestionConfig 保存成功: questionId={}, min={}, max={}, step={}",
                 entity.getId(), dto.getMin(), dto.getMax(), config.getStep());
-    }
-
-    private boolean needsMetadata(QuestionDTO dto) {
-        return dto.getSequenceGroupId() != null
-                || dto.getIsRepeatable() != null
-                || dto.getRepeatGroupId() != null;
     }
 
 }

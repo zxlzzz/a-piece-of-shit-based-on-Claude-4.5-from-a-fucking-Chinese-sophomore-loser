@@ -34,9 +34,7 @@ public class RoomLifecycleService {
     private final RoomRepository roomRepository;
     private final PlayerRepository playerRepository;
     private final RoomCache roomCache;
-    private final ObjectMapper objectMapper;
     private final QuestionTimerService timerService;
-    private final ChatRoomManager chatRoomManager;
 
     @Transactional
     public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, GameRoom gameRoom) {

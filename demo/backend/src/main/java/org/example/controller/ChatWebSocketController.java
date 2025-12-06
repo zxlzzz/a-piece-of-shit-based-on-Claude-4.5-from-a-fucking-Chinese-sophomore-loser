@@ -68,7 +68,6 @@ public class ChatWebSocketController {
             log.error(" 发送聊天消息失败: roomCode={}, senderId={}", roomCode, message.getSenderId(), e);
             // 发送错误通知给发送者
             try {
-                // ��错误通知也使用user queue
                 ChatMessage errorMsg = ChatMessage.system(roomCode, "消息发送失败，请重试");
                 messagingTemplate.convertAndSendToUser(
                     message.getSenderId(),

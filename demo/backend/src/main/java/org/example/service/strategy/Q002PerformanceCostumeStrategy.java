@@ -1,6 +1,5 @@
 package org.example.service.strategy;
 
-import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -24,9 +23,6 @@ public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy {
         "C", 3   // 普通侍卫
     );
 
-    public Q002PerformanceCostumeStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

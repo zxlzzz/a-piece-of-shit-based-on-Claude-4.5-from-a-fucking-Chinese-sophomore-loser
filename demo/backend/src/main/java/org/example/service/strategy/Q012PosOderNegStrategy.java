@@ -1,7 +1,6 @@
 package org.example.service.strategy;
 
 import lombok.extern.slf4j.Slf4j;
-import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -18,9 +17,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class Q012PosOderNegStrategy extends BaseQuestionStrategy {
 
-    public Q012PosOderNegStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
    /* @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

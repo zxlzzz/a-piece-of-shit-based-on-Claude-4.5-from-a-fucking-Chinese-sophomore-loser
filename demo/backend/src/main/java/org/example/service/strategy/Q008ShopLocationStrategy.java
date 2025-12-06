@@ -1,6 +1,5 @@
 package org.example.service.strategy;
 
-import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -17,9 +16,6 @@ import java.util.stream.Collectors;
  */
 @Component
 public class Q008ShopLocationStrategy extends BaseQuestionStrategy {
-    public Q008ShopLocationStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

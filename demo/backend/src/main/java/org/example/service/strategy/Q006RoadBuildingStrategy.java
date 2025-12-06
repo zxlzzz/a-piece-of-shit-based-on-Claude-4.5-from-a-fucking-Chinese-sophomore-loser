@@ -1,6 +1,5 @@
 package org.example.service.strategy;
 
-import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
@@ -13,9 +12,6 @@ import java.util.Map;
 @Component
 public class Q006RoadBuildingStrategy extends BaseQuestionStrategy {
 
-    public Q006RoadBuildingStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     public String getQuestionIdentifier() {

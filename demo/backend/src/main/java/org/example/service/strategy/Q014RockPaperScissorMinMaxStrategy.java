@@ -1,6 +1,5 @@
 package org.example.service.strategy;
 
-import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
@@ -14,9 +13,6 @@ import java.util.stream.Collectors;
  */
 @Service
 public class Q014RockPaperScissorMinMaxStrategy extends BaseQuestionStrategy {
-    public Q014RockPaperScissorMinMaxStrategy(BuffApplier buffApplier) {
-        super(buffApplier);
-    }
 
     @Override
     protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {

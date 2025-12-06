@@ -1,7 +1,6 @@
 <script setup>
 const props = defineProps({
   isRoomOwner: Boolean,
-  isSpectator: Boolean,
   currentPlayerReady: Boolean,
   isAllReady: Boolean,
   loading: Boolean,
@@ -42,8 +41,7 @@ const emit = defineEmits(['ready', 'start', 'leave', 'showCustom'])
       自定义
     </button>
 
-        <button
-      v-if="!isSpectator"
+    <button
       @click="emit('ready')"
       :disabled="currentPlayerReady || loading || !wsConnected"
       class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium

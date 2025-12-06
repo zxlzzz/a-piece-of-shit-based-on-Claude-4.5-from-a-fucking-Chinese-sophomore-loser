@@ -71,7 +71,7 @@ const {
   clearCountdown
 } = useGameCountdown(handleAutoSubmit)
 
-useGameKeyboard(computed(() => chatStore.visible), hasSubmitted, question, computed(() => playerStore.isSpectator))
+useGameKeyboard(computed(() => chatStore.visible), hasSubmitted, question)
 
 const { connectWebSocket, wsConnected } = useGameWebSocket(
   roomCode,

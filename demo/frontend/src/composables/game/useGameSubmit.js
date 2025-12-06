@@ -13,14 +13,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   const handleChoose = async (choice) => {
-    if (playerStore.isSpectator) {
-      toast.add({
-        severity: 'warn',
-        life: 2000
-      })
-      return
-    }
-
     if (hasSubmitted.value) {
       toast.add({
         severity: 'warn',
@@ -76,10 +68,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   const handleAutoSubmit = async () => {
-    if (playerStore.isSpectator) {
-      return
-    }
-
     if (hasSubmitted.value) {
       return
     }
@@ -141,10 +129,6 @@ export function useGameSubmit(roomCode, playerStore, toast, question, room) {
   }
 
   const verifySubmissionState = (submittedPlayerIds) => {
-    if (playerStore.isSpectator) {
-      return
-    }
-
     if (!room.value || room.value.currentIndex === undefined || room.value.currentIndex < 0) {
       return
     }

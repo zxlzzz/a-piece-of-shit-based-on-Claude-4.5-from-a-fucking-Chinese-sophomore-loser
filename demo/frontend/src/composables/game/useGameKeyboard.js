@@ -1,6 +1,6 @@
 import { onMounted, onUnmounted } from 'vue'
 
-export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
+export function useGameKeyboard(showChat, hasSubmitted, question) {
   const focusChatInput = () => {
     showChat.value = true
     setTimeout(() => {
@@ -33,8 +33,6 @@ export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
     
     if (e.key === 'Escape') {
       showChat.value = false
-      return
-    }    if (isSpectator?.value) {
       return
     }
 
@@ -72,9 +70,7 @@ export function useGameKeyboard(showChat, hasSubmitted, question, isSpectator) {
       }
     }
     
-    if (e.key === 'Enter') {      if (isSpectator?.value) {
-        return
-      }
+    if (e.key === 'Enter') {
       e.preventDefault()
       const event = new CustomEvent('submit-answer')
       window.dispatchEvent(event)

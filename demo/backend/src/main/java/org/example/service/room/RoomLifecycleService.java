@@ -14,7 +14,6 @@ import org.example.pojo.RoomStatus;
 import org.example.repository.PlayerRepository;
 import org.example.repository.RoomRepository;
 import org.example.service.cache.RoomCache;
-import org.example.service.chat.ChatRoomManager;
 import org.example.service.timer.QuestionTimerService;
 import org.example.utils.RoomLock;
 import org.springframework.stereotype.Service;

@@ -5,14 +5,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.dto.PlayerSubmissionDTO;
 import org.example.dto.QuestionDTO;
 import org.example.dto.QuestionDetailDTO;
-import org.example.entity.QuestionEntity;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameContext;
 import org.example.pojo.GameRoom;
 import org.example.pojo.PlayerGameState;
 import org.example.service.question.QuestionScoringStrategy;
-import org.example.service.cache.RoomCache;
-import org.example.service.scoring.ScoringResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,16 +26,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ScoringService {
 
-    private final RoomCache roomCache;
-
     @Autowired
     private List<QuestionScoringStrategy> allStrategies;
 
     private final Map<String, QuestionScoringStrategy> STRATEGIES = new ConcurrentHashMap<>();
-
-    public ScoringService(RoomCache roomCache) {
-        this.roomCache = roomCache;
-    }
 
     @PostConstruct
     public void init() {

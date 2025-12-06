@@ -1,10 +1,14 @@
 package org.example.service.strategy.QR;
 
-import org.example.pojo.*;
+import org.example.pojo.GameContext;
+import org.example.pojo.PlayerGameState;
 import org.example.service.buff.BuffApplier;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 选4次，A.得2分，B.下一次得分翻倍，C.对手下一题得分减半

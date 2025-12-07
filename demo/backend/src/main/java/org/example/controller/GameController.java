@@ -32,10 +32,8 @@ public class GameController {
     public ResponseEntity<RoomDTO> createRoom(
             @RequestParam(defaultValue = "4") Integer maxPlayers,
             @RequestParam(defaultValue = "10") Integer questionCount,
-            @RequestParam(defaultValue = "30") Integer timeLimit,
-            @RequestParam(required = false) String password,
-            @RequestParam(required = false) List<Long> questionTagIds) {
-        RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds);
+            @RequestParam(defaultValue = "30") Integer timeLimit) {
+        RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit);
         return ResponseEntity.ok(room);
     }
 
@@ -56,9 +54,8 @@ public class GameController {
     public ResponseEntity<RoomDTO> joinRoom(
             @PathVariable String roomCode,
             @RequestParam String playerId,
-            @RequestParam String playerName,
-            @RequestParam(required = false) String password) {
-        RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName, password);
+            @RequestParam String playerName) {
+        RoomDTO room = gameService.joinRoom(roomCode, playerId, playerName);
         broadcaster.sendRoomUpdate(roomCode, room);
         return ResponseEntity.ok(room);
     }
@@ -96,16 +93,6 @@ public class GameController {
         gameService.removeRoom(roomCode);
         broadcaster.sendRoomDeleted(roomCode);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/rooms/{roomCode}/kick")
-    public ResponseEntity<RoomDTO> kickPlayer(
-            @PathVariable String roomCode,
-            @RequestParam String ownerId,
-            @RequestParam String targetPlayerId) {
-        RoomDTO room = gameService.kickPlayer(roomCode, ownerId, targetPlayerId);
-        broadcaster.sendRoomUpdate(roomCode, room);
-        return ResponseEntity.ok(room);
     }
 
     @GetMapping("/rooms")

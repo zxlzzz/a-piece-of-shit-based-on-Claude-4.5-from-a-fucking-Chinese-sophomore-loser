@@ -39,7 +39,7 @@ public class GameService {
     private final GameRepository gameRepository;
 
     @Transactional
-    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds) {
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit) {
         GameRoom gameRoom = new GameRoom();
         RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, timeLimit, gameRoom);
         gameRoom.setRoomEntity(savedRoom);
@@ -48,7 +48,7 @@ public class GameService {
     }
 
     @Transactional
-    public RoomDTO joinRoom(String roomCode, String playerId, String playerName, String password) {
+    public RoomDTO joinRoom(String roomCode, String playerId, String playerName) {
         roomLifecycleService.handleJoin(roomCode, playerId, playerName);
         return roomLifecycleService.toRoomDTO(roomCode);
     }
@@ -155,29 +155,5 @@ public class GameService {
 
     public GameHistoryDTO getHistoryDetail(Long gameId) {
         return gameHistoryService.getHistoryDetail(gameId);
-    }
-
-    @Transactional
-    public RoomDTO kickPlayer(String roomCode, String ownerId, String targetPlayerId) {
-        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
-
-        synchronized (RoomLock.getLock(roomCode)) {
-            if (gameRoom.isStarted()) {
-                throw new BusinessException("游戏已开始，无法踢出玩家");
-            }
-
-            if (gameRoom.getPlayers().isEmpty() ||
-                !gameRoom.getPlayers().get(0).getPlayerId().equals(ownerId)) {
-                throw new BusinessException("只有房主可以踢出玩家");
-            }
-
-            if (targetPlayerId.equals(ownerId)) {
-                throw new BusinessException("不能踢出自己");
-            }
-
-            roomLifecycleService.handleLeave(roomCode, targetPlayerId);
-
-            return roomLifecycleService.toRoomDTO(roomCode);
-        }
     }
 }

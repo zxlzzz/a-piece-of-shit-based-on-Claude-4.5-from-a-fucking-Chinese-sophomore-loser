@@ -1,5 +1,5 @@
 <script setup>
-import { getRoomStatus, kickPlayer } from '@/api'
+import { getRoomStatus } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
@@ -101,7 +101,6 @@ onMounted(async () => {
   }
 
   window.addEventListener('room-deleted', handleRoomDeleted)
-  window.addEventListener('player-kicked', handlePlayerKicked)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('websocket-reconnecting', handleReconnecting)
   window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
@@ -111,7 +110,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('room-deleted', handleRoomDeleted)
-  window.removeEventListener('player-kicked', handlePlayerKicked)
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('websocket-reconnecting', handleReconnecting)
   window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
@@ -134,21 +132,6 @@ const handleRoomDeleted = (event) => {
     router.push('/find')
   }, 1000)
 }
-
-const handlePlayerKicked = (event) => {
-  const reason = event.detail?.reason || event.detail?.message || '您已被房主踢出房间'
-  toast.add({
-    severity: 'warn',
-    summary: '账号登录提示',
-    detail: reason,
-    life: 4000
-  })
-  playerStore.clearRoom()
-  setTimeout(() => {
-    router.push('/find')
-  }, 1500)
-}
-
 
 const handleWebSocketError = (event) => {
   logger.error(' WaitRoom 收到 WebSocket 错误:', event.detail)
@@ -390,30 +373,6 @@ const handleLeave = () => {
   router.push("/find")
 }
 
-const handleKickPlayer = async (targetPlayerId, playerName) => {
-  if (!confirm(`确定要踢出玩家 ${playerName} 吗？`)) {
-    return
-  }
-
-  try {
-    await kickPlayer(roomCode.value, playerStore.playerId, targetPlayerId)
-    toast.add({
-      severity: 'success',
-      summary: '踢出成功',
-      detail: `已将 ${playerName} 踢出房间`,
-      life: 2000
-    })
-  } catch (error) {
-    logger.error('踢出玩家失败:', error)
-    toast.add({
-      severity: 'error',
-      summary: '踢出失败',
-      detail: error.response?.data?.message || '踢出玩家失败',
-      life: 3000
-    })
-  }
-}
-
 const copyRoomCode = async () => {
   try {
     await navigator.clipboard.writeText(roomCode.value)
@@ -653,17 +612,6 @@ const refreshRoomState = async () => {
                       {{ player.ready ? '已准备' : '等待中' }}
                     </p>
                   </div>
-
-                  <!-- 踢出按钮（仅房主可见，且不能踢自己和房主） -->
-                  <button
-                    v-if="isRoomOwner && index !== 0 && player.playerId !== playerStore.playerId"
-                    @click="handleKickPlayer(player.playerId, player.name)"
-                    class="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20
-                           text-red-500 dark:text-red-400 transition-colors"
-                    title="踢出玩家"
-                  >
-                    <i class="pi pi-times text-xs sm:text-sm"></i>
-                  </button>
                 </div>
               </div>
             </div>

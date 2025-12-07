@@ -130,39 +130,23 @@ public class RoomLifecycleService {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (RoomLock.getLock(roomCode)) {
-            if (!gameRoom.isStarted()) {
-                boolean isRoomOwner = !gameRoom.getPlayers().isEmpty() &&
-                        gameRoom.getPlayers().get(0).getPlayerId().equals(playerId);
+            // 移除玩家
+            gameRoom.getPlayers().removeIf(p -> p.getPlayerId().equals(playerId));
+            gameRoom.getScores().remove(playerId);
 
-                if (isRoomOwner) {
-                    deleteRoom(roomCode, gameRoom);
-                    return false;
-                } else {
-                    gameRoom.getPlayers().removeIf(p -> p.getPlayerId().equals(playerId));
-                    gameRoom.getScores().remove(playerId);
-
-                    PlayerEntity player = playerRepository.findByPlayerId(playerId).orElse(null);
-                    if (player != null) {
-                        player.setRoom(null);
-                        playerRepository.save(player);
-                    }
-
-                    roomCache.put(roomCode, gameRoom);
-                }
-            } else {
-                if (gameRoom.getPlayers().isEmpty()) {
-                    if (!gameRoom.isFinished()) {
-                        roomCache.put(roomCode, gameRoom);
-                        return true;
-                    } else {
-                        deleteRoom(roomCode, gameRoom);
-                        return false;
-                    }
-                }
-
-                roomCache.put(roomCode, gameRoom);
+            PlayerEntity player = playerRepository.findByPlayerId(playerId).orElse(null);
+            if (player != null) {
+                player.setRoom(null);
+                playerRepository.save(player);
             }
 
+            // 如果房间没人了，直接删除
+            if (gameRoom.getPlayers().isEmpty()) {
+                deleteRoom(roomCode, gameRoom);
+                return false;
+            }
+
+            roomCache.put(roomCode, gameRoom);
             return true;
         }
     }

@@ -188,7 +188,7 @@ export function sendMessage(destination, body) {
 }
 
 /**
- * 等待连接建立（简化版 - demo 用）
+ * 等待连接建立
  */
 export function waitForConnection(timeout = 3000) {
   return new Promise((resolve, reject) => {
@@ -208,41 +208,4 @@ export function waitForConnection(timeout = 3000) {
       }
     }, 100);
   });
-}
-
-// 重连回调列表（简化版 - demo 用）
-const subscriptionCallbacks = [];
-
-/**
- * 注册订阅恢复回调
- */
-export function registerSubscriptionCallback(callback) {
-  if (!subscriptionCallbacks.includes(callback)) {
-    subscriptionCallbacks.push(callback);
-  }
-}
-
-/**
- * 注销订阅恢复回调
- */
-export function unregisterSubscriptionCallback(callback) {
-  const index = subscriptionCallbacks.indexOf(callback);
-  if (index > -1) {
-    subscriptionCallbacks.splice(index, 1);
-  }
-}
-
-// 房间订阅映射（简化版 - demo 用）
-const roomSubscriptions = new Map();
-
-/**
- * 取消房间订阅（简化版）
- */
-export function unsubscribeRoom(roomCode) {
-  const subs = roomSubscriptions.get(roomCode);
-  if (subs) {
-    unsubscribeAll(subs);
-    roomSubscriptions.delete(roomCode);
-    console.log(`✅ 已取消房间订阅: ${roomCode}`);
-  }
 }

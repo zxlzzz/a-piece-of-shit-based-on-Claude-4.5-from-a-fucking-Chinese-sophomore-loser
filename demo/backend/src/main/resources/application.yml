@@ -7,9 +7,15 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL:jdbc:mysql://localhost:3306/game_db?useSSL=false&serverTimezone=UTC&characterEncoding=UTF-8&allowPublicKeyRetrieval=true}
+    username: ${DB_USERNAME:gameuser}
+    password: ${DB_PASSWORD:123456}
 
   jpa:
     open-in-view: false
+    hibernate:
+      ddl-auto: create
+    show-sql: false
     properties:
       hibernate.dialect: org.hibernate.dialect.MySQLDialect
 
@@ -20,8 +26,13 @@ spring:
     static-path-pattern: /**
 
 cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173}
   allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,DELETE,OPTIONS}
   max-age: ${CORS_MAX_AGE:3600}
+
+jwt:
+  secret: ${JWT_SECRET:dev-only-secret-key-change-in-production-32chars-minimum}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 server:
   port: ${SERVER_PORT:8080}

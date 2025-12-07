@@ -411,7 +411,7 @@ const handleOpenPractice = (playerCount = 2) => {
                      transition-all flex items-center justify-center gap-2"
             >
               <i class="pi pi-play-circle"></i>
-              开始练习
+              练习
             </button>
           </div>
 

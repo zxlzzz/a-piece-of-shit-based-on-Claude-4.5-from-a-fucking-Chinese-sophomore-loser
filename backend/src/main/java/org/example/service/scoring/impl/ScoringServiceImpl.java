@@ -31,7 +31,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ScoringServiceImpl implements ScoringService {
 
-    private final RoomCache roomCache;
     private final QuestionFactory questionFactory;
 
     /**

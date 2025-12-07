@@ -1,7 +1,6 @@
 <script setup>
 import { useChatStore } from '@/stores/chat'
-import { usePlayerStore } from '@/stores/player'
-import { computed, nextTick, ref, watch, onUnmounted } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 
 const props = defineProps({
   roomCode: {
@@ -21,21 +20,10 @@ const props = defineProps({
 const emit = defineEmits(['close'])
 
 const chatStore = useChatStore()
-const playerStore = usePlayerStore()
 const inputMessage = ref('')
 const chatContainer = ref(null)
-const showPlayerList = ref(false)  //  控制玩家列表显示
 
 const messages = computed(() => chatStore.messages)
-
-const otherPlayers = computed(() => {
-  if (!playerStore.currentRoom || !playerStore.currentRoom.players) return []
-  return playerStore.currentRoom.players.filter(p => p.playerId !== props.playerId)
-})
-
-const selectedRecipients = computed(() => chatStore.selectedRecipients)
-
-const privateChatEnabled = computed(() => playerStore.currentRoom?.privateChatEnabled ?? true)
 
 const messageTypeClass = computed(() => ({
   CHAT: 'chat-message',
@@ -73,60 +61,6 @@ const handleKeyPress = (event) => {
     sendChatMessage()
   }
 }
-
-const selectPlayer = (player) => {
-  chatStore.addRecipient({
-    id: player.playerId,
-    name: player.name
-  })
-  showPlayerList.value = false  // 选择后关闭玩家列表
-}
-
-const removeRecipient = (recipientId) => {
-  chatStore.removeRecipient(recipientId)
-}
-
-const closePlayerListOnClickOutside = (event) => {
-  
-  const playerListButton = event.target.closest('.player-list-trigger')
-  const playerListMenu = event.target.closest('.player-list-menu')
-
-  if (!playerListButton && !playerListMenu) {
-    showPlayerList.value = false
-  }
-}
-
-watch(showPlayerList, (newVal) => {
-  if (newVal) {
-    document.addEventListener('click', closePlayerListOnClickOutside)
-  } else {
-    document.removeEventListener('click', closePlayerListOnClickOutside)
-  }
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', closePlayerListOnClickOutside)
-})
-
-const getRecipientNames = (message) => {
-  if (!message.isPrivate || !message.recipientIds || message.recipientIds.length === 0) {
-    return null
-  }
-
-  const room = playerStore.currentRoom
-  if (!room || !room.players) {
-    return message.recipientIds.join(', ')
-  }
-
-  const names = message.recipientIds
-    .map(id => {
-      const player = room.players.find(p => p.playerId === id)
-      return player?.name || id
-    })
-    .join(', ')
-
-  return names || '未知收件人'
-}
 </script>
 <template>
   <div class="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -137,87 +71,14 @@ const getRecipientNames = (message) => {
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">
           聊天
         </h3>
-        <div class="flex items-center gap-2">
-          <!--  玩家列表按钮 - 只在启用私聊时显示 -->
-          <div v-if="privateChatEnabled" class="relative">
-            <button
-              @click.stop="showPlayerList = !showPlayerList"
-              class="player-list-trigger p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="选择私聊对象"
-            >
-              <i class="pi pi-users text-sm text-gray-600 dark:text-gray-400"></i>
-            </button>
-
-            <!-- 玩家列表下拉菜单 -->
-            <transition name="fade">
-              <div v-if="showPlayerList"
-                   class="player-list-menu absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800
-                          rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50
-                          max-h-64 overflow-y-auto">
-                <div class="p-2">
-                  <div v-if="otherPlayers.length === 0"
-                       class="text-xs text-gray-500 dark:text-gray-400 text-center py-2">
-                    没有其他玩家
-                  </div>
-                  <button
-                    v-for="player in otherPlayers"
-                    :key="player.playerId"
-                    @click="selectPlayer(player)"
-                    class="w-full flex items-center gap-2 px-3 py-2 rounded-lg
-                           hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-left"
-                  >
-                    <div class="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-purple-500
-                                flex items-center justify-center text-white text-xs font-bold">
-                      {{ player.name?.charAt(0)?.toUpperCase() || '?' }}
-                    </div>
-                    <span class="text-sm text-gray-900 dark:text-white truncate">
-                      {{ player.name }}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </transition>
-          </div>
-
-          <button
-            @click="emit('close')"
-            class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            title="关闭聊天"
-          >
-            <i class="pi pi-times text-sm text-gray-600 dark:text-gray-400"></i>
-          </button>
-        </div>
+        <button
+          @click="emit('close')"
+          class="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          title="关闭聊天"
+        >
+          <i class="pi pi-times text-sm text-gray-600 dark:text-gray-400"></i>
+        </button>
       </div>
-
-      <!--  收件人chips - 只在启用私聊时显示 -->
-      <transition name="fade">
-        <div v-if="privateChatEnabled && selectedRecipients.length > 0"
-             class="mt-3 flex flex-wrap gap-2">
-          <div v-for="recipient in selectedRecipients"
-               :key="recipient.id"
-               class="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30
-                      text-purple-700 dark:text-purple-300 rounded-md text-xs">
-            <i class="pi pi-user text-xs"></i>
-            <span>{{ recipient.name }}</span>
-            <button
-              @click="removeRecipient(recipient.id)"
-              class="ml-1 hover:bg-purple-200 dark:hover:bg-purple-800/50 rounded-full p-0.5"
-            >
-              <i class="pi pi-times text-xs"></i>
-            </button>
-          </div>
-          <button
-            @click="chatStore.clearSelectedRecipients()"
-            class="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700
-                   text-gray-600 dark:text-gray-400 rounded-md text-xs hover:bg-gray-200
-                   dark:hover:bg-gray-600 transition-colors"
-            title="清空收件人"
-          >
-            <i class="pi pi-trash text-xs"></i>
-            <span>清空</span>
-          </button>
-        </div>
-      </transition>
     </div>
 
     <!-- 消息列表 -->
@@ -228,22 +89,15 @@ const getRecipientNames = (message) => {
           <!-- 聊天消息 -->
           <div v-if="msg.type === 'CHAT'"
                :class="['flex flex-col', isOwnMessage(msg) ? 'items-end' : 'items-start']">
-            <!--  私聊标识 -->
-            <div v-if="msg.isPrivate" class="text-xs text-purple-600 dark:text-purple-400 mb-1 flex items-center gap-1">
-              <i class="pi pi-lock text-xs"></i>
-              <span>私聊给: {{ getRecipientNames(msg) }}</span>
-            </div>
-
             <div :class="[
               'max-w-[75%] rounded-lg px-3 py-2',
               isOwnMessage(msg)
-                ? (msg.isPrivate ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white')
+                ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700'
             ]">
               <p class="text-xs font-medium mb-0.5"
                  :class="isOwnMessage(msg) ? 'text-white/80' : 'text-gray-500 dark:text-gray-400'">
                 {{ msg.senderName }}
-                
               </p>
               <p class="text-sm">{{ msg.content }}</p>
             </div>

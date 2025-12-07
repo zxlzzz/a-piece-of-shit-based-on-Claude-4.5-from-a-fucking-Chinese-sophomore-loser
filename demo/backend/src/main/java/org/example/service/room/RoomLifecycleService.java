@@ -45,9 +45,6 @@ public class RoomLifecycleService {
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
                 .timeLimit(timeLimit != null ? timeLimit : 30)
-                .rankingMode("standard")
-                .targetScore(null)
-                .winConditionsJson(null)
                 .build();
 
         RoomEntity savedRoom = roomRepository.save(roomEntity);
@@ -209,10 +206,6 @@ public class RoomLifecycleService {
                 .currentQuestion(currentQuestionDTO)
                 .questionCount(questionCount)
                 .submittedPlayerIds(submittedPlayerIds)
-                .rankingMode(roomEntity.getRankingMode())
-                .targetScore(roomEntity.getTargetScore())
-                .chatEnabled(roomEntity.getChatEnabled())
-                .privateChatEnabled(roomEntity.getPrivateChatEnabled())
                 .build();
     }
 

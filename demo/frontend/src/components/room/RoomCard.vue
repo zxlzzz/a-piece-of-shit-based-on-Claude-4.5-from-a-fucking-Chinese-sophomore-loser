@@ -35,19 +35,6 @@ const statusClass = computed(() => {
       return 'bg-gray-100 text-gray-700'
   }
 })
-
-const rankingModeText = computed(() => {
-  switch (props.room.rankingMode) {
-    case 'closest_to_avg': return '接近平均分'
-    case 'closest_to_target': return '接近目标分'
-    default: return null
-  }
-})
-
-const hasWinConditions = computed(() => {
-  const wc = props.room.winConditions
-  return wc && (wc.minScorePerPlayer || wc.minTotalScore || wc.minAvgScore)
-})
 </script>
 
 <template>
@@ -109,37 +96,6 @@ const hasWinConditions = computed(() => {
           <i class="pi pi-clock text-purple-500 text-xs"></i>
           <span class="text-xs text-gray-600 dark:text-gray-400">
             {{ room.timeLimit }}秒/题
-          </span>
-        </div>
-
-        <!-- 聊天室状态 -->
-        <div class="flex items-center gap-2 py-2 px-3
-                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-          <i :class="room.chatEnabled ? 'pi pi-comment text-green-500' : 'pi pi-comment-slash text-gray-400'"
-             class="text-xs"></i>
-          <span class="text-xs text-gray-600 dark:text-gray-400">
-            {{ room.chatEnabled ? '聊天启用' : '聊天禁用' }}
-          </span>
-        </div>
-
-        <!-- 排名模式（仅非标准模式显示） -->
-        <div v-if="rankingModeText"
-             class="flex items-center gap-2 py-2 px-3
-                    bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-          <i class="pi pi-chart-bar text-orange-500 text-xs"></i>
-          <span class="text-xs text-gray-600 dark:text-gray-400">
-            {{ rankingModeText }}
-          </span>
-        </div>
-
-        <!-- 额外获胜方式 -->
-        <div v-if="hasWinConditions"
-             class="flex items-center gap-2 py-2 px-3
-                    bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-             :class="rankingModeText ? '' : 'col-span-2'">
-          <i class="pi pi-trophy text-yellow-500 text-xs"></i>
-          <span class="text-xs text-gray-600 dark:text-gray-400">
-            有额外获胜方式
           </span>
         </div>
       </div>

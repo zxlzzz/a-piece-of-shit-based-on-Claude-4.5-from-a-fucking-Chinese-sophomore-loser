@@ -66,12 +66,6 @@ public class RoomEntity implements Serializable {
     private Integer timeLimit = 30;
 
     /**
-     * 房间密码（可选）
-     */
-    @Column(length = 50)
-    private String password;
-
-    /**
      * 房主玩家ID
      */
     @Column(length = 50)
@@ -82,52 +76,6 @@ public class RoomEntity implements Serializable {
             fetch = FetchType.LAZY)
     @Builder.Default
     private List<PlayerEntity> players = new ArrayList<>();
-
-    /**
-     * 排名模式
-     * standard: 标准排名（分数高者胜）
-     * closest_to_avg: 接近平均分排名
-     * closest_to_target: 接近目标分排名
-     */
-    @Column(length = 20)
-    @Builder.Default
-    private String rankingMode = "standard";
-
-    /**
-     * 目标分数（仅当 rankingMode = closest_to_target 时有效）
-     */
-    @Column
-    private Integer targetScore;
-
-    /**
-     * 通关条件（JSON 格式存储）
-     * 例如: {"minScorePerPlayer":80,"minTotalScore":500,"minAvgScore":60}
-     * 使用 @Convert 或者直接存 JSON 字符串
-     */
-    @Column(columnDefinition = "TEXT")
-    private String winConditionsJson;
-
-    /**
-     * 题目标签筛选（JSON 格式存储标签ID列表）
-     * 例如: [1,2,3]
-     * 用于选题时筛选指定标签的题目
-     */
-    @Column(columnDefinition = "TEXT")
-    private String questionTagIdsJson;
-
-    /**
-     * 是否启用聊天室
-     */
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean chatEnabled = true;
-
-    /**
-     *  是否启用私聊功能
-     */
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean privateChatEnabled = true;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)

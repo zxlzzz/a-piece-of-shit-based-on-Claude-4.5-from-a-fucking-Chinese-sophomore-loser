@@ -205,7 +205,6 @@ onUnmounted(() => {
           :totalPlayers="totalPlayers"
           :showChat="chatStore.visible"
           :hasUnreadMessages="chatStore.unreadPrivateCount > 0"
-          :chatEnabled="room?.chatEnabled ?? true"
           @toggleChat="chatStore.toggleChat(isMobile)"
         />
 

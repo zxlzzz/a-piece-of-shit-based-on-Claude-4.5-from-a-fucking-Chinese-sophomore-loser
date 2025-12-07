@@ -175,8 +175,8 @@ const handleEnterRoom = () => {
   }
 }
 
-const handleJoinRoom = async (roomCode, hasPassword) => {
-  
+const handleJoinRoom = async (roomCode) => {
+
   if (!playerStore.isLoggedIn) {
     toast.add({
       severity: 'warn',
@@ -345,7 +345,6 @@ const handleLogout = () => {
                   <div>
                     <h3 class="font-bold text-base sm:text-lg text-gray-800 dark:text-white flex items-center gap-2">
                       {{ room.roomCode }}
-                      <i v-if="room.hasPassword" class="pi pi-lock text-orange-500 text-sm" title="需要密码"></i>
                     </h3>
                     <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       <i class="pi pi-users text-xs"></i>
@@ -380,15 +379,11 @@ const handleLogout = () => {
                     <i class="pi pi-clock text-purple-500"></i>
                     {{ room.timeLimit }}s
                   </span>
-                  <span v-if="room.chatEnabled" class="flex items-center gap-1 px-2 py-1 bg-white dark:bg-gray-800 rounded-md text-gray-600 dark:text-gray-400">
-                    <i class="pi pi-comment text-green-500"></i>
-                    聊天
-                  </span>
                 </div>
 
                 <!-- 加入按钮 -->
                 <button
-                  @click="handleJoinRoom(room.roomCode, room.hasPassword)"
+                  @click="handleJoinRoom(room.roomCode)"
                   :disabled="room.status !== 'WAITING' ||
                             room.currentPlayers >= room.maxPlayers ||
                             loading"

@@ -443,7 +443,7 @@ const refreshRoomState = async () => {
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
             <!-- Toggle Chat Button -->
-            <div v-if="room?.chatEnabled" class="flex justify-end mb-3">
+            <div class="flex justify-end mb-3">
               <button
                 @click="chatStore.toggleChat(isMobile)"
                 class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
@@ -507,43 +507,6 @@ const refreshRoomState = async () => {
                   <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                     {{ room.players?.filter(p => p.ready).length || 0 }}/{{ room.players?.length || 0 }}
                   </p>
-                </div>
-              </div>
-              
-              <!-- 排名模式和通关条件 -->
-              <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
-                   class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="text-xs sm:text-sm space-y-2">
-                  <!-- 排名模式 -->
-                  <div v-if="room?.rankingMode !== 'standard'" 
-                       class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <i class="pi pi-chart-line text-blue-500"></i>
-                    <span>
-                      目标：{{ 
-                        room.rankingMode === 'closest_to_avg' ? '接近平均分' :
-                        room.rankingMode === 'closest_to_target' ? `接近 ${room.targetScore} 分` :
-                        '标准排名'
-                      }}
-                    </span>
-                  </div>
-                  <!-- 通关条件 -->
-                  <div v-if="room?.winConditions" class="space-y-1">
-                    <div v-if="room?.winConditions.minScorePerPlayer" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-users text-green-500"></i>
-                      <span>所有人 ≥ {{ room.winConditions.minScorePerPlayer }} 分</span>
-                    </div>
-                    <div v-if="room?.winConditions.minTotalScore" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-flag text-purple-500"></i>
-                      <span>总分 ≥ {{ room.winConditions.minTotalScore }} 分</span>
-                    </div>
-                    <div v-if="room?.winConditions.minAvgScore" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-chart-bar text-orange-500"></i>
-                      <span>平均分 ≥ {{ room.winConditions.minAvgScore }} 分</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>

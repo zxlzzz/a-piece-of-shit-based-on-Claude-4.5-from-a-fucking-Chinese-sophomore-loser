@@ -39,9 +39,6 @@ public class PlayerEntity {
     // ========== 软删除字段 ==========
     @Column(nullable = false)
     private Boolean deleted = false;  // 软删除标记
-
-    @Column
-    private LocalDateTime deletedAt;  // 删除时间
     // =============================
 
     @ManyToOne(fetch = FetchType.LAZY)

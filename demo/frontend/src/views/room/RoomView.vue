@@ -7,7 +7,6 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import CreateRoomCard from '@/components/room/CreateRoomCard.vue'
 import RoomCard from '@/components/room/RoomCard.vue'
-import SkeletonRoomCard from '@/components/common/SkeletonRoomCard.vue'
 
 const router = useRouter()
 const route = useRoute() 
@@ -321,12 +320,6 @@ const handleLogout = () => {
               >
                 <i class="pi pi-refresh text-gray-600 dark:text-gray-400"></i>
               </button>
-            </div>
-
-            <!-- 骨架屏（首次加载） -->
-            <div v-if="refreshing && activeRooms.length === 0"
-                 class="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <SkeletonRoomCard v-for="i in 4" :key="i" />
             </div>
 
             <!-- 房间列表 -->

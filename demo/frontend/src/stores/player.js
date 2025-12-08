@@ -1,5 +1,4 @@
 import { logger } from '@/utils/logger'
-import { ROOM_DATA_EXPIRY_TIME } from '@/config/constants'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -70,7 +69,7 @@ export const usePlayerStore = defineStore('player', () => {
       const roomData = JSON.parse(saved)
 
       
-      if (roomData._savedAt && (Date.now() - roomData._savedAt > ROOM_DATA_EXPIRY_TIME)) {
+      if (roomData._savedAt && (Date.now() - roomData._savedAt > 10 * 60 * 1000)) {
         logger.info('🧹 房间缓存已过期，自动清理')
         clearRoom()
         return null

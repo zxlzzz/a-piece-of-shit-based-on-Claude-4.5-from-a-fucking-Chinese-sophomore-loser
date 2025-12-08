@@ -7,7 +7,6 @@ import { useChatStore } from '@/stores/chat'
 import WebSocketStatus from './components/common/WebSocketStatus.vue'
 import ChatRoom from './components/chat/ChatRoom.vue'
 import MobileChatDrawer from './components/game/MobileChatDrawer.vue'
-import { TOAST_DEBOUNCE_TIME, TOAST_CLEANUP_DELAY, TOAST_DEFAULT_LIFE, ROOM_DATA_EXPIRY_TIME } from '@/config/constants'
 import { connect, disconnect, isConnected } from '@/websocket/ws'
 import { useBreakpoints } from '@vueuse/core'
 
@@ -24,13 +23,13 @@ const isDesktop = breakpoints.greaterOrEqual('desktop')
 
 const recentToasts = ref(new Map())
 
-const showToast = (severity, summary, detail, life = TOAST_DEFAULT_LIFE) => {
+const showToast = (severity, summary, detail, life = 3000) => {
   const key = `${severity}-${summary}-${detail}`
   const now = Date.now()
   const lastTime = recentToasts.value.get(key)
 
-  
-  if (lastTime && now - lastTime < TOAST_DEBOUNCE_TIME) {
+
+  if (lastTime && now - lastTime < 3000) {
     return
   }
 
@@ -39,7 +38,7 @@ const showToast = (severity, summary, detail, life = TOAST_DEFAULT_LIFE) => {
 
   setTimeout(() => {
     recentToasts.value.delete(key)
-  }, life + TOAST_CLEANUP_DELAY)
+  }, life + 1000)
 }
 
 const handleApiError = (event) => {
@@ -118,7 +117,7 @@ onMounted(() => {
           localStorage.removeItem('currentRoom')
         }
       }
-      else if (now - savedAt > ROOM_DATA_EXPIRY_TIME) {
+      else if (now - savedAt > 10 * 60 * 1000) {
         logger.info('🧹 房间缓存已过期，自动清理')
         localStorage.removeItem('currentRoom')
       }

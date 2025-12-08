@@ -6,8 +6,6 @@ import Dialog from 'primevue/dialog'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import ResultContent from '@/components/result/ResultContent.vue'
-import SkeletonHistoryCard from '@/components/common/SkeletonHistoryCard.vue'
-import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { useBreakpoints } from '@vueuse/core'
 
 const playerStore = usePlayerStore()
@@ -174,11 +172,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 加载状态 -->
-      <div v-if="loading" class="space-y-2 sm:space-y-3">
-        <SkeletonHistoryCard v-for="i in 5" :key="i" />
-      </div>
-
       <!-- 历史记录列表 -->
       <div v-else-if="filteredGames.length > 0" class="space-y-2 sm:space-y-3">
         <div 
@@ -248,8 +241,6 @@ onMounted(() => {
           <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">游戏详情</h3>
         </div>
       </template>
-
-      <SkeletonResult v-if="detailLoading" />
 
       <ResultContent 
         v-else-if="selectedGame" 

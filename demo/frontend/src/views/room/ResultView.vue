@@ -6,7 +6,6 @@ import { usePlayerStore } from '@/stores/player'
 import { useChatStore } from '@/stores/chat'
 import { useBreakpoints } from '@vueuse/core'
 import ResultContent from '@/components/result/ResultContent.vue'
-import SkeletonResult from '@/components/common/SkeletonResult.vue'
 import { getGameHistory } from '@/api'
 
 const route = useRoute()
@@ -75,9 +74,6 @@ const handleBackToLobby = () => {
             </button>
           </div>
         </div>
-
-        <!-- 加载状态 -->
-        <SkeletonResult v-if="loading" />
 
         <!-- 错误状态 -->
         <div v-else-if="!gameHistory"

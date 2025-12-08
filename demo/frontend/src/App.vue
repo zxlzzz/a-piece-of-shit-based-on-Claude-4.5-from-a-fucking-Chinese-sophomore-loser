@@ -78,24 +78,6 @@ const handleVueError = (event) => {
   showToast('error', '页面异常', event.detail.message, 5000)
 }
 
-// const connectGlobalWebSocket = async () => {
-//     return
-//   }
-//
-//   
-//   if (isConnected()) {
-//     return
-//   }
-//
-//   try {
-//   } catch (err) {
-//   }
-// }
-
-// 不再全局连接，由各个页面按需连接
-//   }
-// }, { immediate: true })
-
 onMounted(() => {
   window.addEventListener('api-error', handleApiError)
   window.addEventListener('websocket-error', handleWebSocketError)

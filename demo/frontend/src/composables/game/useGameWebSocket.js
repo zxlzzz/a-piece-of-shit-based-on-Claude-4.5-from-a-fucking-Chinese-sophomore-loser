@@ -14,10 +14,7 @@ export function useGameWebSocket(
   timeLimit,
   resetCountdown,
   clearCountdown,
-  resetSubmitState,
-  restoreSubmitState,
-  getSubmissionKey,
-  verifySubmissionState
+  resetSubmitState
 ) {
   const subscriptions = ref([])
   const wsConnected = ref(false)

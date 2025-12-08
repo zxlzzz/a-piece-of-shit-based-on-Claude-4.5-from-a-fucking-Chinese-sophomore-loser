@@ -25,17 +25,6 @@ const chatContainer = ref(null)
 
 const messages = computed(() => chatStore.messages)
 
-const messageTypeClass = computed(() => ({
-  CHAT: 'chat-message',
-  SYSTEM: 'system-message',
-  JOIN: 'join-message',
-  LEAVE: 'leave-message',
-  READY: 'ready-message',
-  UNREADY: 'unready-message',
-  GAME_START: 'game-start-message',
-  GAME_END: 'game-end-message'
-}))
-
 const sendChatMessage = () => {
   if (!inputMessage.value.trim()) return
 

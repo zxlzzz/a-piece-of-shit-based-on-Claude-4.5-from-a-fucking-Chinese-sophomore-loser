@@ -1,5 +1,4 @@
 <script setup>
-
 const props = defineProps({
   roomCode: String,
   room: Object,

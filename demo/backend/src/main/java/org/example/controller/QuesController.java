@@ -51,21 +51,4 @@ public class QuesController {
             return ResponseEntity.badRequest().body(null);
         }
     }
-
-    /**
-     * 根据人数获取合适的题目
-     * GET /api/question/suitable?playerCount=4&questionCount=10
-     */
-    @GetMapping("/suitable")
-    public ResponseEntity<List<QuestionDTO>> getSuitableQuestions(  // ← 改返回类型
-                                                                    @RequestParam int playerCount,
-                                                                    @RequestParam(defaultValue = "10") int questionCount) {
-        try {
-            List<QuestionDTO> questions = questionService.getQuestionsByPlayerCountDTO(playerCount, questionCount);  // ← 改方法名
-            return ResponseEntity.ok(questions);
-        } catch (BusinessException e) {
-            log.error("获取合适题目失败: {}", e.getMessage());
-            return ResponseEntity.badRequest().body(null);
-        }
-    }
 }

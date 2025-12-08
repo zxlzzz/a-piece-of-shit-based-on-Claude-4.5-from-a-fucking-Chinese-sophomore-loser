@@ -12,7 +12,7 @@ import org.springframework.stereotype.Controller;
 import java.time.LocalDateTime;
 
 /**
- * 聊天 WebSocket 控制器（简化版）
+ * 聊天 WebSocket 控制器
  */
 @Controller
 @RequiredArgsConstructor

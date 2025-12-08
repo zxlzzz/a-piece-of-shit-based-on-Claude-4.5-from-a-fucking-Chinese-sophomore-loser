@@ -212,11 +212,6 @@ export const getAllQuestions = () =>
 export const getRandomQuestions = (count = 10) =>
   api.get(`/question/random`, { params: { count } });
 
-export const getSuitableQuestions = (playerCount, questionCount = 10) =>
-  api.get(`/questions/suitable`, {
-    params: { playerCount, questionCount }
-  });
-
 /**
  * 提交题目反馈
  * @param {number} questionId - 题目ID

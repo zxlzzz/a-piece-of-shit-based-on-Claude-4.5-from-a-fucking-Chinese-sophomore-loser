@@ -1,5 +1,5 @@
 <script setup>
-import { getRoomStatus, kickPlayer } from '@/api'
+import { getRoomStatus } from '@/api'
 import { usePlayerStore } from '@/stores/player'
 import { useChatStore } from '@/stores/chat'
 import { generatePlayerColor } from '@/utils/player'
@@ -101,7 +101,6 @@ onMounted(async () => {
   }
 
   window.addEventListener('room-deleted', handleRoomDeleted)
-  window.addEventListener('player-kicked', handlePlayerKicked)
   window.addEventListener('websocket-error', handleWebSocketError)
   window.addEventListener('websocket-reconnecting', handleReconnecting)
   window.addEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
@@ -111,7 +110,6 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('room-deleted', handleRoomDeleted)
-  window.removeEventListener('player-kicked', handlePlayerKicked)
   window.removeEventListener('websocket-error', handleWebSocketError)
   window.removeEventListener('websocket-reconnecting', handleReconnecting)
   window.removeEventListener('websocket-max-reconnect-failed', handleMaxReconnectFailed)
@@ -134,21 +132,6 @@ const handleRoomDeleted = (event) => {
     router.push('/find')
   }, 1000)
 }
-
-const handlePlayerKicked = (event) => {
-  const reason = event.detail?.reason || event.detail?.message || '您已被房主踢出房间'
-  toast.add({
-    severity: 'warn',
-    summary: '账号登录提示',
-    detail: reason,
-    life: 4000
-  })
-  playerStore.clearRoom()
-  setTimeout(() => {
-    router.push('/find')
-  }, 1500)
-}
-
 
 const handleWebSocketError = (event) => {
   logger.error(' WaitRoom 收到 WebSocket 错误:', event.detail)
@@ -390,30 +373,6 @@ const handleLeave = () => {
   router.push("/find")
 }
 
-const handleKickPlayer = async (targetPlayerId, playerName) => {
-  if (!confirm(`确定要踢出玩家 ${playerName} 吗？`)) {
-    return
-  }
-
-  try {
-    await kickPlayer(roomCode.value, playerStore.playerId, targetPlayerId)
-    toast.add({
-      severity: 'success',
-      summary: '踢出成功',
-      detail: `已将 ${playerName} 踢出房间`,
-      life: 2000
-    })
-  } catch (error) {
-    logger.error('踢出玩家失败:', error)
-    toast.add({
-      severity: 'error',
-      summary: '踢出失败',
-      detail: error.response?.data?.message || '踢出玩家失败',
-      life: 3000
-    })
-  }
-}
-
 const copyRoomCode = async () => {
   try {
     await navigator.clipboard.writeText(roomCode.value)
@@ -484,7 +443,7 @@ const refreshRoomState = async () => {
           <!-- 房间头部 -->
           <div class="bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-8">
             <!-- Toggle Chat Button -->
-            <div v-if="room?.chatEnabled" class="flex justify-end mb-3">
+            <div class="flex justify-end mb-3">
               <button
                 @click="chatStore.toggleChat(isMobile)"
                 class="relative px-3 sm:px-4 py-1.5 sm:py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300
@@ -548,43 +507,6 @@ const refreshRoomState = async () => {
                   <p class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
                     {{ room.players?.filter(p => p.ready).length || 0 }}/{{ room.players?.length || 0 }}
                   </p>
-                </div>
-              </div>
-              
-              <!-- 排名模式和通关条件 -->
-              <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
-                   class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div class="text-xs sm:text-sm space-y-2">
-                  <!-- 排名模式 -->
-                  <div v-if="room?.rankingMode !== 'standard'" 
-                       class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <i class="pi pi-chart-line text-blue-500"></i>
-                    <span>
-                      目标：{{ 
-                        room.rankingMode === 'closest_to_avg' ? '接近平均分' :
-                        room.rankingMode === 'closest_to_target' ? `接近 ${room.targetScore} 分` :
-                        '标准排名'
-                      }}
-                    </span>
-                  </div>
-                  <!-- 通关条件 -->
-                  <div v-if="room?.winConditions" class="space-y-1">
-                    <div v-if="room?.winConditions.minScorePerPlayer" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-users text-green-500"></i>
-                      <span>所有人 ≥ {{ room.winConditions.minScorePerPlayer }} 分</span>
-                    </div>
-                    <div v-if="room?.winConditions.minTotalScore" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-flag text-purple-500"></i>
-                      <span>总分 ≥ {{ room.winConditions.minTotalScore }} 分</span>
-                    </div>
-                    <div v-if="room?.winConditions.minAvgScore" 
-                         class="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <i class="pi pi-chart-bar text-orange-500"></i>
-                      <span>平均分 ≥ {{ room.winConditions.minAvgScore }} 分</span>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -653,17 +575,6 @@ const refreshRoomState = async () => {
                       {{ player.ready ? '已准备' : '等待中' }}
                     </p>
                   </div>
-
-                  <!-- 踢出按钮（仅房主可见，且不能踢自己和房主） -->
-                  <button
-                    v-if="isRoomOwner && index !== 0 && player.playerId !== playerStore.playerId"
-                    @click="handleKickPlayer(player.playerId, player.name)"
-                    class="p-1.5 sm:p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20
-                           text-red-500 dark:text-red-400 transition-colors"
-                    title="踢出玩家"
-                  >
-                    <i class="pi pi-times text-xs sm:text-sm"></i>
-                  </button>
                 </div>
               </div>
             </div>

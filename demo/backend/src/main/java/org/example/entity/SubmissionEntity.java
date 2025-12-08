@@ -48,9 +48,6 @@ public class SubmissionEntity {
     private Integer scoreGained;
 
     @CreationTimestamp
-    private LocalDateTime submittedAt;
-
-    @CreationTimestamp
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;  // 创建时间
 

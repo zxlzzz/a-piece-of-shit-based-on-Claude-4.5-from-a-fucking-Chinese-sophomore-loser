@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-const status = ref('connected') // connected | reconnecting | disconnected
+const status = ref('connected')
 
 const handleReconnecting = () => {
   status.value = 'reconnecting'

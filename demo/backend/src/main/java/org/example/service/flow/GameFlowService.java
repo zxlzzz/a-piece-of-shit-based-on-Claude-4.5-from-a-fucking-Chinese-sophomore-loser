@@ -67,7 +67,6 @@ public class GameFlowService {
             GameEntity game = GameEntity.builder()
                     .room(room)
                     .startTime(LocalDateTime.now())
-                    .isTest(gameRoom.isTestRoom())
                     .build();
             GameEntity savedGame = gameRepository.save(game);
 

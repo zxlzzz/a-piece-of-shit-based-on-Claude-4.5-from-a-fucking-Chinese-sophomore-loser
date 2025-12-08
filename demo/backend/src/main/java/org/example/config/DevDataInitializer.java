@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 开发环境数据初始化器 - 简化版
+ * 本文件用于快捷注册，在启动时会自动注册四个账号，test1,test2,test3,test4，密码都是123456
  */
 @Component
 @Profile("dev")
@@ -31,14 +31,13 @@ public class DevDataInitializer implements ApplicationRunner {
     private void createTestAccounts() {
         String[] testUsers = {"test1", "test2", "test3", "test4"};
 
-        log.info("🔧 开始初始化测试账号...");
 
         for (String username : testUsers) {
             if (playerRepository.findByUsername(username).isEmpty()) {
                 PlayerEntity player = PlayerEntity.builder()
                         .playerId(UUID.randomUUID().toString())
                         .username(username)
-                        .password("123456")  // 明文密码（demo 用）
+                        .password("123456")
                         .name("测试玩家-" + username)
                         .ready(false)
                         .createdAt(LocalDateTime.now())
@@ -47,12 +46,10 @@ public class DevDataInitializer implements ApplicationRunner {
                         .build();
 
                 playerRepository.save(player);
-                log.info("✅ 创建测试账号: {} (密码: 123456)", username);
             } else {
                 log.info("⏭️  测试账号已存在: {}", username);
             }
         }
 
-        log.info("🎉 测试账号初始化完成！");
     }
 }

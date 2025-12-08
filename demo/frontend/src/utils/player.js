@@ -1,7 +1,3 @@
-/**
- * 玩家相关工具函数（简化版 - demo 用）
- */
-
 export function validateUsername(username) {
   if (!username?.trim()) {
     return { valid: false, message: '请输入用户名' }

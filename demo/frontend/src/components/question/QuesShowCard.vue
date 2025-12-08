@@ -23,34 +23,6 @@ const props = defineProps({
   }
 })
 
-const availablePlayerCounts = computed(() => {
-  if (!props.people) return [2, 3, 4, 5, 6]
-
-  const peopleStr = String(props.people)
-
-  if (/^\d+$/.test(peopleStr)) {
-    const count = parseInt(peopleStr)
-    return [count]
-  }
-
-  const rangeMatch = peopleStr.match(/^(\d+)-(\d+)$/)
-  if (rangeMatch) {
-    const min = parseInt(rangeMatch[1])
-    const max = parseInt(rangeMatch[2])
-    const counts = []
-    for (let i = min; i <= max; i++) {
-      counts.push(i)
-    }
-    return counts
-  }
-
-  const listMatch = peopleStr.match(/^[\d,]+$/)
-  if (listMatch) {
-    return peopleStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n))
-  }
-
-  return [2, 3, 4, 5, 6]
-})
 </script>
 
 <template>

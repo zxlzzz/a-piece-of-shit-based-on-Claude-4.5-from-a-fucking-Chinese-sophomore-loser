@@ -45,11 +45,6 @@ public class RoomLifecycleService {
                 .maxPlayers(maxPlayers)
                 .questionCount(questionCount)
                 .timeLimit(timeLimit != null ? timeLimit : 30)
-                .password(null)
-                .rankingMode("standard")
-                .targetScore(null)
-                .winConditionsJson(null)
-                .questionTagIdsJson(null)
                 .build();
 
         RoomEntity savedRoom = roomRepository.save(roomEntity);
@@ -109,12 +104,7 @@ public class RoomLifecycleService {
                         .ready(false)
                         .build();
 
-                if (gameRoom.isTestRoom()) {
-                    gameRoom.getPlayers().add(0, playerDTO);
-                } else {
-                    gameRoom.getPlayers().add(playerDTO);
-                }
-
+                gameRoom.getPlayers().add(playerDTO);
                 gameRoom.getScores().put(playerId, 0);
             }
             
@@ -130,39 +120,23 @@ public class RoomLifecycleService {
         GameRoom gameRoom = roomCache.getOrThrow(roomCode);
 
         synchronized (RoomLock.getLock(roomCode)) {
-            if (!gameRoom.isStarted()) {
-                boolean isRoomOwner = !gameRoom.getPlayers().isEmpty() &&
-                        gameRoom.getPlayers().get(0).getPlayerId().equals(playerId);
+            // 移除玩家
+            gameRoom.getPlayers().removeIf(p -> p.getPlayerId().equals(playerId));
+            gameRoom.getScores().remove(playerId);
 
-                if (isRoomOwner) {
-                    deleteRoom(roomCode, gameRoom);
-                    return false;
-                } else {
-                    gameRoom.getPlayers().removeIf(p -> p.getPlayerId().equals(playerId));
-                    gameRoom.getScores().remove(playerId);
-
-                    PlayerEntity player = playerRepository.findByPlayerId(playerId).orElse(null);
-                    if (player != null) {
-                        player.setRoom(null);
-                        playerRepository.save(player);
-                    }
-
-                    roomCache.put(roomCode, gameRoom);
-                }
-            } else {
-                if (gameRoom.getPlayers().isEmpty()) {
-                    if (!gameRoom.isFinished()) {
-                        roomCache.put(roomCode, gameRoom);
-                        return true;
-                    } else {
-                        deleteRoom(roomCode, gameRoom);
-                        return false;
-                    }
-                }
-
-                roomCache.put(roomCode, gameRoom);
+            PlayerEntity player = playerRepository.findByPlayerId(playerId).orElse(null);
+            if (player != null) {
+                player.setRoom(null);
+                playerRepository.save(player);
             }
 
+            // 如果房间没人了，直接删除
+            if (gameRoom.getPlayers().isEmpty()) {
+                deleteRoom(roomCode, gameRoom);
+                return false;
+            }
+
+            roomCache.put(roomCode, gameRoom);
             return true;
         }
     }
@@ -226,12 +200,7 @@ public class RoomLifecycleService {
                 .currentIndex(gameRoom.getCurrentIndex())
                 .currentQuestion(currentQuestionDTO)
                 .questionCount(questionCount)
-                .hasPassword(roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .submittedPlayerIds(submittedPlayerIds)
-                .rankingMode(roomEntity.getRankingMode())
-                .targetScore(roomEntity.getTargetScore())
-                .chatEnabled(roomEntity.getChatEnabled())
-                .privateChatEnabled(roomEntity.getPrivateChatEnabled())
                 .build();
     }
 

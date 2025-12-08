@@ -1,9 +1,8 @@
 import axios from "axios";
-import { API_TIMEOUT } from '@/config/constants';
 
 const api = axios.create({
   baseURL: "/api",
-  timeout: API_TIMEOUT,
+  timeout: 10000,
 });
 
 api.interceptors.request.use(
@@ -115,17 +114,15 @@ export const register = (username, password, name) =>
 export const login = (username, password) =>
   api.post('/auth/login', { username, password });
 
-export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null) => {
-  const params = { maxPlayers, questionCount, timeLimit, password };
-  if (questionTagIds && questionTagIds.length > 0) {
-    params.questionTagIds = questionTagIds;
-  }
-  return api.post('/rooms', null, { params });
+export const createRoom = (maxPlayers, questionCount, timeLimit = 30) => {
+  return api.post('/rooms', null, {
+    params: { maxPlayers, questionCount, timeLimit }
+  });
 };
 
-export const joinRoom = (roomCode, playerId, playerName, password = null) =>
+export const joinRoom = (roomCode, playerId, playerName) =>
   api.post(`/rooms/${roomCode}/join`, null, {
-    params: { playerId, playerName, password }
+    params: { playerId, playerName }
   });
 
 export const startGame = (roomCode) =>
@@ -152,12 +149,6 @@ export const deleteRoom = (roomCode) =>
 
 export const getAllActiveRooms = () =>
   api.get(`/rooms`);
-
-export const kickPlayer = (roomCode, ownerId, targetPlayerId) =>
-  api.post(`/rooms/${roomCode}/kick`, null, {
-    params: { ownerId, targetPlayerId }
-  });
-
 
 export const getAllQuestions = () =>
   api.get(`/question`);

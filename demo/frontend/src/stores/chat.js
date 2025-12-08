@@ -3,7 +3,6 @@ import { ref } from 'vue'
 import { logger } from '@/utils/logger'
 import { getStompClient, isConnected, sendMessage, registerSubscriptionCallback, unregisterSubscriptionCallback, waitForConnection } from '@/websocket/ws'
 import { usePlayerStore } from './player'
-import { WS_TOPIC_PRIVATE_MESSAGE, WS_TOPIC_ROOM_CHAT } from '@/config/constants'
 
 export const useChatStore = defineStore('chat', () => {
   const roomCode = ref(null)
@@ -89,7 +88,7 @@ export const useChatStore = defineStore('chat', () => {
       const playerStore = usePlayerStore()
 
       // 使用常量确保路径一致性
-      chatSubscription = client.subscribe(WS_TOPIC_ROOM_CHAT(code), (message) => {
+      chatSubscription = client.subscribe(`/topic/room/${code}/chat`, (message) => {
         try {
           const chatMessage = JSON.parse(message.body)
           addMessage(chatMessage)
@@ -99,7 +98,7 @@ export const useChatStore = defineStore('chat', () => {
       })
 
       
-      privateSubscription = client.subscribe(WS_TOPIC_PRIVATE_MESSAGE, (message) => {
+      privateSubscription = client.subscribe('/user/queue/private', (message) => {
         try {
           const chatMessage = JSON.parse(message.body)
           addMessage(chatMessage)

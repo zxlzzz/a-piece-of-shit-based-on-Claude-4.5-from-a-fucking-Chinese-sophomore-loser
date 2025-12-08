@@ -125,10 +125,6 @@ public class GameService {
 
             submissionService.submitAnswer(roomCode, playerId, choice);
 
-            if (gameRoom.isTestRoom() && !playerId.startsWith("BOT_")) {
-                submissionService.autoSubmitBots(gameRoom);
-            }
-
             gameRoom = roomCache.getOrThrow(roomCode);
 
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);

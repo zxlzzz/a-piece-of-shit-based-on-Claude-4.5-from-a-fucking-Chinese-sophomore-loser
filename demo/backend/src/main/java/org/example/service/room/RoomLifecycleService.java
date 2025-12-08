@@ -104,12 +104,7 @@ public class RoomLifecycleService {
                         .ready(false)
                         .build();
 
-                if (gameRoom.isTestRoom()) {
-                    gameRoom.getPlayers().add(0, playerDTO);
-                } else {
-                    gameRoom.getPlayers().add(playerDTO);
-                }
-
+                gameRoom.getPlayers().add(playerDTO);
                 gameRoom.getScores().put(playerId, 0);
             }
             

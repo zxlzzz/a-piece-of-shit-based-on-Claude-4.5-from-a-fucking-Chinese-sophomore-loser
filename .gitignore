@@ -33,6 +33,8 @@ backend/.mvn/wrapper/maven-wrapper.jar
 # 依赖
 frontend/node_modules/
 
+logs
+
 # 构建输出
 frontend/dist/
 frontend/.vite/

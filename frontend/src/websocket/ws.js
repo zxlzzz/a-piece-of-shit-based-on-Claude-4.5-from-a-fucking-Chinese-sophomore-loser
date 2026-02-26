@@ -1,4 +1,5 @@
 import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 import { logger } from "@/utils/logger";
 import {
   WS_MAX_RECONNECT_ATTEMPTS,

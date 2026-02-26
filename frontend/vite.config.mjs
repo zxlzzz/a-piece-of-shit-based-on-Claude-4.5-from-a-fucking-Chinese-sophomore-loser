@@ -14,7 +14,8 @@ export default defineConfig(({ mode }) => {
 
   return {
     optimizeDeps: {
-        noDiscovery: true
+        noDiscovery: true,
+        include: ['sockjs-client']
     },
     plugins: [
         vue(),

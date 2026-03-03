@@ -1,0 +1,81 @@
+{
+  "questionTagMappings" : [ {
+    "questionId" : 1,
+    "tagIds" : [ 2 ]
+  }, {
+    "questionId" : 2,
+    "tagIds" : [ 5 ]
+  }, {
+    "questionId" : 3,
+    "tagIds" : [ 3 ]
+  }, {
+    "questionId" : 4,
+    "tagIds" : [ 4 ]
+  }, {
+    "questionId" : 5,
+    "tagIds" : [ 2 ]
+  }, {
+    "questionId" : 6,
+    "tagIds" : [ 1 ]
+  }, {
+    "questionId" : 7,
+    "tagIds" : [ 5, 7 ]
+  },  {
+    "questionId" : 9,
+    "tagIds" : [ 2 ]
+  }, {
+    "questionId" : 10,
+    "tagIds" : [ 3, 6 ]
+  }, {
+    "questionId" : 11,
+    "tagIds" : [ 3 ]
+  }, {
+    "questionId" : 12,
+    "tagIds" : [ 4 ]
+  }, {
+    "questionId" : 13,
+    "tagIds" : [ 2 ]
+  }, {
+    "questionId" : 14,
+    "tagIds" : [ 2 ]
+  }, {
+    "questionId" : 15,
+    "tagIds" : [ 3 ]
+  } ],
+  "tags" : [ {
+    "color" : "#60a5fa",
+    "name" : "协调型",
+    "id" : 1,
+    "category" : "mechanism"
+  }, {
+    "color" : "#a78bfa",
+    "name" : "类囚徒困境型",
+    "id" : 2,
+    "category" : "mechanism"
+  }, {
+    "color" : "#f87171",
+    "name" : "竞争型",
+    "id" : 3,
+    "category" : "mechanism"
+  }, {
+    "color" : "#34d399",
+    "name" : "公共资源型",
+    "id" : 4,
+    "category" : "mechanism"
+  }, {
+    "color" : "#fbbf24",
+    "name" : "资源争夺型",
+    "id" : 5,
+    "category" : "mechanism"
+  }, {
+    "color" : "#fb923c",
+    "name" : "重复博弈",
+    "id" : 6,
+    "category" : "strategy"
+  }, {
+    "color" : "#c084fc",
+    "name" : "嵌套博弈",
+    "id" : 7,
+    "category" : "strategy"
+  } ]
+}

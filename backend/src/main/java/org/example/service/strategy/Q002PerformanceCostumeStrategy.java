@@ -1,11 +1,10 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.ConditionBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。
@@ -17,7 +16,7 @@ import java.util.Map;
  *         "text": "普通侍卫服装（3）"
  */
 @Component
-public class Q002PerformanceCostumeStrategy extends ConditionBasedTemplateStrategy {
+public class Q002PerformanceCostumeStrategy extends BaseQuestionStrategy {
 
     private static final Map<String, Integer> COSTUME_VALUES = Map.of(
         "A", 7,  // 精致侍卫
@@ -35,21 +34,20 @@ public class Q002PerformanceCostumeStrategy extends ConditionBasedTemplateStrate
     }
 
     @Override
-    protected StrategyConfig.ConditionBasedConfig getConfig() {
-        return new StrategyConfig.ConditionBasedConfig() {
-            @Override
-            public java.util.function.Function<Map<String, String>, Boolean> getConditionChecker() {
-                return submissions -> {
-                    // 集齐侍卫+王子：有A（精致侍卫） 或者 (有B（王子） 且 有C（普通侍卫）)
-                    return submissions.containsValue("A") ||
-                           (submissions.containsValue("B") && submissions.containsValue("C"));
-                };
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 集齐侍卫+王子：必须有B（王子）且有A或C（任一侍卫）
+        boolean hasKing = submissions.containsValue("B");
+        boolean hasGuard = submissions.containsValue("A") || submissions.containsValue("C");
+        boolean success = hasKing && hasGuard;
 
-            @Override
-            public java.util.function.Function<String, Integer> getBaseValueCalculator() {
-                return choice -> COSTUME_VALUES.getOrDefault(choice, 3);
-            }
-        };
+        // 成功得分，失败扣分
+        return submissions.entrySet().stream()
+            .collect(Collectors.toMap(
+                Map.Entry::getKey,
+                e -> {
+                    int value = COSTUME_VALUES.getOrDefault(e.getValue(), 3);
+                    return success ? value : -value;
+                }
+            ));
     }
 }

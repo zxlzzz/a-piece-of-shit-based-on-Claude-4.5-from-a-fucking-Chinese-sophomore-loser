@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 选择一项（x初始为0，偶数次取反后为正数
+ * 选择一项（x初始为1，偶数次取反后为正数）
  * 4人 3选
  * A.x*2最后获得x的分数
  * B.x取反，无获得

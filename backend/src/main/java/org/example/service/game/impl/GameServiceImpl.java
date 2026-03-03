@@ -57,7 +57,6 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public RoomDTO createTestRoom(Integer maxPlayers, Integer questionCount) {
-        log.info("🔧 创建测试房间: maxPlayers={}, questionCount={}", maxPlayers, questionCount);
 
         // 创建普通房间
         GameRoom gameRoom = new GameRoom();
@@ -66,7 +65,6 @@ public class GameServiceImpl implements GameService {
         RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
         gameRoom.setRoomEntity(savedRoom);
 
-        log.info("🔧 RoomEntity 已保存: roomCode={}, id={}", savedRoom.getRoomCode(), savedRoom.getId());
 
         // 添加虚拟玩家 (maxPlayers - 1 个)
         for (int i = 1; i < maxPlayers; i++) {
@@ -83,15 +81,9 @@ public class GameServiceImpl implements GameService {
             gameRoom.getPlayers().add(botPlayer);
             gameRoom.getScores().put(botId, 0);  // 初始化分数
 
-            log.info("🔧 添加虚拟玩家: {}, ready={}", botName, true);
         }
 
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
-
-        log.info("🔧 测试房间创建完成: {}, Bot数量: {}, 玩家列表: {}",
-            savedRoom.getRoomCode(),
-            maxPlayers - 1,
-            gameRoom.getPlayers().stream().map(PlayerDTO::getName).toList());
 
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
     }
@@ -154,7 +146,6 @@ public class GameServiceImpl implements GameService {
     public void removeRoom(String roomCode) {
         timerService.cancelTimeout(roomCode);
         roomCache.remove(roomCode);
-        log.info("🗑️ 移除房间: {}", roomCode);
     }
 
     @Override
@@ -206,13 +197,16 @@ public class GameServiceImpl implements GameService {
                 throw new BusinessException("本轮已经提交过答案");
             }
 
-            // 提交答案
+            // 提交答案（内部会自动同步到Redis）
             submissionService.submitAnswer(roomCode, playerId, choice);
 
             // 如果是测试房间且提交者不是Bot，立即触发Bot提交
             if (gameRoom.isTestRoom() && !playerId.startsWith("BOT_")) {
                 submissionService.autoSubmitBots(gameRoom);
             }
+
+            // 🔥 修复：重新从Redis获取最新的gameRoom（因为submitAnswer已经同步了）
+            gameRoom = roomCache.getOrThrow(roomCode);
 
             // 检查是否所有人都已提交
             boolean allSubmitted = submissionService.allSubmitted(gameRoom);
@@ -222,6 +216,10 @@ public class GameServiceImpl implements GameService {
                 // 🔥 总是填充默认答案，已提交的不会被覆盖
                 String reason = force ? "force" : "allSubmitted";
                 gameFlowService.advanceQuestion(roomCode, reason, true);
+                // 🔥 advanceQuestion内部会广播，这里不需要再广播
+            } else {
+                // 🔥 只在未满员时才广播，减少广播次数
+                broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
             }
 
             return roomLifecycleService.toRoomDTO(roomCode);

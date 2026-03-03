@@ -195,7 +195,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
                                         PlayerEntity player = playerOpt.get();
                                         String playerName = player.getName();
                                         boolean isRegisteredUser = player.getUsername() != null;
-                                        String roomCode = player.getRoom() != null ? player.getRoom().getRoomCode() : null;
+
+                                        // 🔥 修复懒加载问题：安全获取roomCode
+                                        String roomCode = null;
+                                        try {
+                                            if (player.getRoom() != null) {
+                                                roomCode = player.getRoom().getRoomCode();
+                                            }
+                                        } catch (Exception lazyEx) {
+                                            // 懒加载失败，roomCode保持null
+                                            log.debug("无法加载玩家房间信息（懒加载）: playerId={}", playerId);
+                                        }
 
                                         // 🔥 注册会话（注册用户和游客都注册，确保sessionToPlayer映射完整）
                                         sessionManager.registerSession(

@@ -30,9 +30,10 @@ public class RoomStateBroadcaster {
         }
         try {
             messagingTemplate.convertAndSend("/topic/room/" + roomCode, room);
-            log.debug("✅ 广播房间更新: {}", roomCode);
+            log.info("✅ 广播房间更新: roomCode={}, currentIndex={}, status={}",
+                roomCode, room.getCurrentIndex(), room.getStatus());
         } catch (Exception e) {
-            log.error("❌ 广播房间更新失败, roomCode={}: {}", roomCode, e.getMessage());
+            log.error("❌ 广播房间更新失败, roomCode={}: {}", roomCode, e.getMessage(), e);
         }
     }
 

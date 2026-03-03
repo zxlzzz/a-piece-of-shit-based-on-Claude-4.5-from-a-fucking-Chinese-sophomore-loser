@@ -1,10 +1,9 @@
 package org.example.service.strategy;
 
 import org.example.service.buff.BuffApplier;
-import org.example.service.strategy.template.SortBasedTemplateStrategy;
-import org.example.service.strategy.template.StrategyConfig;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.Map;
 
 /**
@@ -12,7 +11,7 @@ import java.util.Map;
  * 2-7
  */
 @Component
-public class Q004SheepAuctionStrategy extends SortBasedTemplateStrategy {
+public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
 
     public Q004SheepAuctionStrategy(BuffApplier buffApplier) {
         super(buffApplier);
@@ -24,20 +23,27 @@ public class Q004SheepAuctionStrategy extends SortBasedTemplateStrategy {
     }
 
     @Override
-    protected StrategyConfig.SortBasedConfig getConfig() {
-        return new StrategyConfig.SortBasedConfig() {
-            @Override
-            public java.util.function.Function<Map.Entry<String, String>, Integer> getSortKey() {
-                return e -> Integer.parseInt(e.getValue());
-            }
+    protected Map<String, Integer> calculateBaseScores(Map<String, String> submissions) {
+        // 按出价排序（升序）
+        var sorted = submissions.entrySet().stream()
+            .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
+            .toList();
 
-            @Override
-            public java.util.function.Function<java.util.List<Map.Entry<String, String>>, Map<String, Integer>> getScoreCalculator() {
-                return sorted -> Map.of(
+        int firstBid = Integer.parseInt(sorted.get(0).getValue());
+        int secondBid = Integer.parseInt(sorted.get(1).getValue());
+
+        // 如果出价相同，都给 2 分
+        if (firstBid == secondBid) {
+            return Map.of(
                     sorted.get(0).getKey(), 2,
-                    sorted.get(1).getKey(), 8 - Integer.parseInt(sorted.get(1).getValue())
-                );
-            }
-        };
+                    sorted.get(1).getKey(), 2
+            );
+        }
+
+        // 正常情况：低价者得2分，高价者得8-出价
+        return Map.of(
+                sorted.get(0).getKey(), 2,
+                sorted.get(1).getKey(), 8 - secondBid
+        );
     }
 }

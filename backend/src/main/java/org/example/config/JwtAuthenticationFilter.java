@@ -27,6 +27,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
+        // 🔥 修复：跳过公开路径（认证接口、WebSocket）
+        String path = request.getRequestURI();
+        if (path.startsWith("/api/auth/") || path.startsWith("/ws/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
         // 获取 Authorization header
         String authHeader = request.getHeader("Authorization");
 

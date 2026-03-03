@@ -40,13 +40,10 @@ public class GameHistoryServiceImpl implements GameHistoryService {
 
     @Override
     public List<GameHistorySummaryDTO> getHistoryList(Integer days, String playerId) {
-        log.info("=== 获取历史记录列表 ===");
-        log.info("days: {}, playerId: {}", days, playerId);
 
         // 查询游戏结果
         List<GameResultEntity> results = queryGameResults(days);
 
-        log.info("📊 数据库查询结果数量: {}", results.size());
 
         if (results.isEmpty()) {
             log.warn("❌ 数据库中没有任何游戏结果记录！");
@@ -59,14 +56,11 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toList());
 
-        log.info("✅ 返回 {} 条符合条件的记录", summaries.size());
         return summaries;
     }
 
     @Override
     public GameHistoryDTO getHistoryDetail(Long gameId) {
-        log.info("=== 获取游戏详情 ===");
-        log.info("gameId: {}", gameId);
 
         try {
             // 查询游戏实体
@@ -91,19 +85,15 @@ public class GameHistoryServiceImpl implements GameHistoryService {
 
     @Override
     public GameHistoryDTO getGameHistoryByRoomCode(String roomCode) {
-        log.info("=== 根据房间号获取游戏历史 ===");
-        log.info("roomCode: {}", roomCode);
 
         try {
             // ✅ 改：使用新方法
             Optional<GameResultEntity> resultOpt = gameResultRepository.findByRoomCodeWithDetails(roomCode);
 
             if (resultOpt.isPresent()) {
-                log.info("✅ 找到已保存的游戏结果");
                 GameResultEntity result = resultOpt.get();
                 return parseGameResultEntity(result);
             } else {
-                log.info("⚠️ 未找到已保存的游戏结果，返回当前游戏状态");
                 return getCurrentGameStatus(roomCode);
             }
         } catch (Exception e) {
@@ -120,10 +110,8 @@ public class GameHistoryServiceImpl implements GameHistoryService {
     private List<GameResultEntity> queryGameResults(Integer days) {
         if (days != null) {
             LocalDateTime after = LocalDateTime.now().minusDays(days);
-            log.info("查询 {} 天内的记录，after: {}", days, after);
             return gameResultRepository.findByCreatedAtAfterOrderByCreatedAtDesc(after);
         } else {
-            log.info("查询所有记录");
             return gameResultRepository.findAllByOrderByCreatedAtDesc();
         }
     }
@@ -147,7 +135,6 @@ public class GameHistoryServiceImpl implements GameHistoryService {
                         .orElse(null);
 
                 if (targetPlayer == null) {
-                    log.debug("未找到playerId={} 的玩家数据，跳过该记录", playerId);
                     return null;
                 }
             } else {

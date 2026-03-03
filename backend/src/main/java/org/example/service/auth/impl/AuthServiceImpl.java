@@ -50,8 +50,13 @@ public class AuthServiceImpl implements AuthService {
                 .name(request.getName())
                 .ready(false)
                 .createdAt(LocalDateTime.now())
+<<<<<<< HEAD
                 .deleted(false)
                 .updatedAt(LocalDateTime.now())
+=======
+                .updatedAt(LocalDateTime.now())
+                .deleted(false)
+>>>>>>> 52079cdce9d009b1f370b64856492d15356a3ce1
                 .build();
 
         playerRepository.save(player);
@@ -59,7 +64,6 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token
         String token = jwtUtil.generateToken(username, playerId);
 
-        log.info("用户注册成功: username={}, playerId={}", username, playerId);
 
         return AuthResponseDTO.builder()
                 .token(token)
@@ -76,9 +80,9 @@ public class AuthServiceImpl implements AuthService {
         // 验证输入
         validateLoginRequest(request);
 
-        // 查找用户（不区分大小写）
+        // 查找用户（不区分大小写）- 使用JOIN FETCH避免懒加载问题
         String username = request.getUsername().toLowerCase();
-        PlayerEntity player = playerRepository.findByUsername(username)
+        PlayerEntity player = playerRepository.findByUsernameWithRoom(username)
                 .orElseThrow(() -> new BusinessException("用户名或密码错误"));
 
         // 检查账号是否被删除
@@ -94,18 +98,15 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token
         String token = jwtUtil.generateToken(username, player.getPlayerId());
 
-        // 检查玩家是否在房间中
+        // 检查玩家是否在房间中（room已通过JOIN FETCH加载，不会懒加载）
         String roomCode = null;
         if (player.getRoom() != null) {
             roomCode = player.getRoom().getRoomCode();
-            log.info("用户登录成功，自动进入房间: username={}, playerId={}, roomCode={}",
-                     username, player.getPlayerId(), roomCode);
-        } else {
-            log.info("用户登录成功: username={}, playerId={}", username, player.getPlayerId());
         }
 
         return AuthResponseDTO.builder()
                 .token(token)
+                .id(player.getId())  // 🔥 修复：添加id字段（与register保持一致）
                 .playerId(player.getPlayerId())
                 .username(username)
                 .name(player.getName())
@@ -138,6 +139,8 @@ public class AuthServiceImpl implements AuthService {
                 .ready(false)
                 .spectator(false)
                 .deleted(false)
+                .createdAt(LocalDateTime.now())
+                .updatedAt(LocalDateTime.now())
                 .build();
 
         playerRepository.save(guestPlayer);
@@ -145,7 +148,6 @@ public class AuthServiceImpl implements AuthService {
         // 生成 token（使用 playerId 作为标识）
         String token = jwtUtil.generateToken(playerId, playerId);
 
-        log.info("游客试玩: playerId={}, name={}", playerId, name);
 
         return AuthResponseDTO.builder()
                 .token(token)

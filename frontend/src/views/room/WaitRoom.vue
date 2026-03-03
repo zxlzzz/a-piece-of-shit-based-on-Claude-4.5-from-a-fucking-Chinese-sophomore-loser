@@ -11,6 +11,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import CustomForm from '@/components/room/CustomForm.vue'
 import { useBreakpoints } from '@vueuse/core'
+import PracticeModal from '@/components/practice/PracticeModal.vue'
 
 const playerStore = usePlayerStore()
 const chatStore = useChatStore()
@@ -35,6 +36,10 @@ const showCustomForm = ref(false)
 
 // 🔥 改用 ref 而不是 computed，手动管理连接状态
 const wsConnected = ref(false)
+
+// 🔥 练习模式相关
+const showPracticeModal = ref(false)
+const practicePlayerCount = computed(() => room.value?.currentPlayers ||2)
 
 const isAllReady = computed(() => {
   if (!room.value || !room.value.players) return false
@@ -771,6 +776,18 @@ const refreshRoomState = async () => {
               自定义
             </button>
 
+            <!-- 🔥 练习按钮 -->
+            <button
+              @click="showPracticeModal = true"
+              class="w-full sm:w-auto px-4 sm:px-5 py-2.5 rounded-lg text-sm font-medium
+                     bg-purple-600 hover:bg-purple-700 active:scale-95
+                     text-white transition-all
+                     flex items-center justify-center gap-2"
+            >
+              <i class="pi pi-book"></i>
+              练习
+            </button>
+
             <button
               @click="handleReady"
               :disabled="loading || !wsConnected"
@@ -816,6 +833,13 @@ const refreshRoomState = async () => {
       :currentSettings="room"
       @submit="handleCustomFormSubmit"
       @cancel="handleCustomFormCancel"
+    />
+
+    <!-- 🔥 练习模式弹窗 -->
+    <PracticeModal
+      v-model:visible="showPracticeModal"
+      :questionId="null"
+      :playerCount="practicePlayerCount"
     />
   </div>
 </template>

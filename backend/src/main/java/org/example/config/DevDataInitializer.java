@@ -51,6 +51,8 @@ public class DevDataInitializer implements ApplicationRunner {
                         .name("测试玩家-" + username)
                         .spectator(false)
                         .ready(false)
+                        .createdAt(LocalDateTime.now())
+                        .updatedAt(LocalDateTime.now())
                         .deleted(false)
                         .build();
 

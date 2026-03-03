@@ -3,6 +3,8 @@ package org.example.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.ChatMessage;
+import org.example.pojo.GameRoom;
+import org.example.service.cache.RoomCache;
 import org.example.service.chat.ChatRoomManager;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -19,6 +21,7 @@ import java.time.LocalDateTime;
 public class ChatWebSocketController {
     private final SimpMessagingTemplate messagingTemplate;
     private final ChatRoomManager chatRoomManager;
+    private final RoomCache roomCache;
 
     /**
      * 发送聊天消息
@@ -34,7 +37,16 @@ public class ChatWebSocketController {
             message.setTimestamp(LocalDateTime.now());
             message.setRoomCode(roomCode);
 
-            log.debug("房间 {} 收到消息: {} - {}", roomCode, message.getSenderName(), message.getContent());
+            // 🔥 检查发送者是否为观战者
+            GameRoom gameRoom = roomCache.get(roomCode);
+            if (gameRoom != null) {
+                boolean isSpectator = gameRoom.getPlayers().stream()
+                        .filter(p -> p.getPlayerId().equals(message.getSenderId()))
+                        .findFirst()
+                        .map(p -> Boolean.TRUE.equals(p.getSpectator()))
+                        .orElse(false);
+                message.setIsSpectator(isSpectator);
+            }
 
             // 🔥 记录聊天室活动
             chatRoomManager.recordActivity(roomCode);
@@ -101,7 +113,6 @@ public class ChatWebSocketController {
             // 创建加入消息
             ChatMessage joinMessage = ChatMessage.join(roomCode, message.getSenderName());
 
-            log.debug("玩家 {} 加入房间 {}", message.getSenderName(), roomCode);
 
             // 广播加入消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", joinMessage);
@@ -122,8 +133,6 @@ public class ChatWebSocketController {
 
             ChatMessage readyMessage = ChatMessage.ready(roomCode, message.getSenderName(), isReady);
 
-            log.info("玩家 {} 在房间 {} 中{}", message.getSenderName(), roomCode,
-                    isReady ? "已准备" : "取消准备");
 
             // 广播准备消息
             messagingTemplate.convertAndSend("/topic/room/" + roomCode + "/chat", readyMessage);

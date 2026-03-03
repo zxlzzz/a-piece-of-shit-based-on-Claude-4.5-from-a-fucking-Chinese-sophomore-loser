@@ -12,6 +12,11 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 普通重复题基类
+ * 算分逻辑是每题都传入id:选项，返回本题的id:得分（部分题需要），另部分题逻辑是最后一题才计算，但使用相同的基类（后续可看情况分离）
+ * 所有的重复题都要预留一个逻辑：只有一题时依旧可以正常进行（统一按最后一题的逻辑进行），以便重复题的test模式
+ */
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -205,6 +210,12 @@ public abstract class BaseRepeatableStrategy implements RepeatableQuestionStrate
      * 子类实现：总轮数
      */
     public abstract int getTotalRounds();
+
+    @Override
+    public Map<String, Integer> calculateScores(Map<String, String> submissions) {
+        // 练习模式使用：按最后一轮计算
+        return calculateRoundBaseScores(submissions, getTotalRounds());
+    }
 
     public Map<String, Integer> test(Map<String, String> submissions) {
         return calculateRoundBaseScores(submissions, getTotalRounds());

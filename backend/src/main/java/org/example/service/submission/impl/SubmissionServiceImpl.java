@@ -13,6 +13,7 @@ import org.example.repository.PlayerRepository;
 import org.example.repository.QuestionRepository;
 import org.example.repository.SubmissionRepository;
 import org.example.service.cache.RoomCache;
+import org.example.service.statistics.QuestionStatisticsService;
 import org.example.service.submission.SubmissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     private final GameRepository gameRepository;
     private final SubmissionRepository submissionRepository;
     private final QuestionRepository questionRepository;
+    private final QuestionStatisticsService questionStatisticsService;
 
     @Override
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
@@ -77,6 +79,19 @@ public class SubmissionServiceImpl implements SubmissionService {
                     .build();
 
             submissionRepository.save(submission);
+
+            // 🔥 记录选项统计（异步，不影响主流程）
+            int playerCount = (int) gameRoom.getPlayers().stream()
+                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                    .count();
+            questionStatisticsService.recordChoice(
+                    currentQuestion.getId(),
+                    choice,
+                    playerId,
+                    playerCount,
+                    ChoiceRecordEntity.GameType.MATCH,
+                    roomCode
+            );
         }
 
         // 更新内存状态（Bot 和真实玩家都需要）
@@ -95,7 +110,12 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .findFirst()
                 .ifPresent(p -> p.setReady(true));
 
-        log.info("💾 玩家 {} 提交答案: {} {}", playerId, choice, isBot ? "(Bot)" : "");
+        // 🔥 关键修复：每次提交后立即同步到Redis
+        // 这确保了多次从Redis获取时能看到最新的提交状态
+        roomCache.syncToRedis(roomCode, gameRoom);
+
+        log.info("✅ 提交答案成功并同步: roomCode={}, playerId={}, choice={}, currentIndex={}, isBot={}",
+                gameRoom.getRoomCode(), playerId, choice, gameRoom.getCurrentIndex(), isBot);
     }
 
     @Override
@@ -157,20 +177,9 @@ public class SubmissionServiceImpl implements SubmissionService {
                         .computeIfAbsent(gameRoom.getCurrentIndex(), k -> new ConcurrentHashMap<>())
                         .put(playerId, defaultChoice);
 
-                // 🔥 添加：标记玩家状态
-                boolean isDisconnected = gameRoom.getDisconnectedPlayers().containsKey(playerId);
-                log.info("📝 为玩家 {} 填充默认答案: {} {}",
-                        player.getName(),
-                        defaultChoice,
-                        isDisconnected ? "(断线)" : "(超时)");
             }
         }
 
-        // 🔥 添加：日志统计
-        int filledCount = gameRoom.getPlayers().size() - (currentRoundSubmissions != null ? currentRoundSubmissions.size() : 0);
-        if (filledCount > 0) {
-            log.info("✅ 已为 {} 个玩家填充默认答案", filledCount);
-        }
     }
 
     @Override
@@ -179,13 +188,24 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .get(gameRoom.getCurrentIndex());
 
         if (currentRoundSubmissions == null) {
+            log.debug("allSubmitted=false: 当前题目没有任何提交记录");
             return false;
         }
 
         // 🔥 只检查非观战者玩家
-        return gameRoom.getPlayers().stream()
+        long totalPlayers = gameRoom.getPlayers().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                .count();
+        long submittedCount = currentRoundSubmissions.size();
+        boolean result = gameRoom.getPlayers().stream()
                 .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
                 .allMatch(p -> currentRoundSubmissions.containsKey(p.getPlayerId()));
+
+        log.info("📊 allSubmitted={}: roomCode={}, currentIndex={}, submitted={}/{}, submissions={}",
+                result, gameRoom.getRoomCode(), gameRoom.getCurrentIndex(),
+                submittedCount, totalPlayers, currentRoundSubmissions.keySet());
+
+        return result;
     }
 
     @Override
@@ -195,6 +215,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     public void autoSubmitBots(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();
         if (currentQuestion == null) {
+            log.warn("⚠️ autoSubmitBots: 当前题目为空，跳过Bot自动提交");
             return;
         }
 
@@ -202,6 +223,12 @@ public class SubmissionServiceImpl implements SubmissionService {
         int currentIndex = gameRoom.getCurrentIndex();
         Map<String, String> currentSubmissions = gameRoom.getSubmissions()
                 .computeIfAbsent(currentIndex, k -> new HashMap<>());
+
+        long botCount = gameRoom.getPlayers().stream()
+                .filter(player -> player.getPlayerId().startsWith("BOT_"))
+                .count();
+        log.info("🤖 开始Bot自动提交: roomCode={}, currentIndex={}, botCount={}",
+                gameRoom.getRoomCode(), currentIndex, botCount);
 
         // 为所有Bot提交答案
         gameRoom.getPlayers().stream()
@@ -228,6 +255,10 @@ public class SubmissionServiceImpl implements SubmissionService {
                             Integer min = currentQuestion.getMin();
                             Integer max = currentQuestion.getMax();
                             Integer step = currentQuestion.getStep();
+                            // 🔥 修复：防止step为0或null导致除零错误
+                            if (step == null || step == 0) {
+                                step = 1;
+                            }
                             if (min != null && max != null) {
                                 botAnswer = String.valueOf((random.nextInt((max - min) / step + 1) * step) + min);
                             } else {
@@ -239,7 +270,6 @@ public class SubmissionServiceImpl implements SubmissionService {
 
                         // 提交Bot答案
                         submitAnswer(gameRoom.getRoomCode(), bot.getPlayerId(), botAnswer);
-                        log.info("Bot {} 自动提交答案: {}", bot.getName(), botAnswer);
                     }
                 });
     }

@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 普通题目基类
+ * 算分逻辑是传入id:选项，返回id:得分
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -147,6 +151,11 @@ public abstract class BaseQuestionStrategy implements QuestionScoringStrategy {
     protected String getOptionText(QuestionDTO question) {
         // 默认返回空，子类可以根据需要覆盖
         return "";
+    }
+
+    @Override
+    public Map<String, Integer> calculateScores(Map<String, String> submissions) {
+        return calculateBaseScores(submissions);
     }
 
     public Map<String, Integer> test(Map<String, String> submissions) {

@@ -90,49 +90,6 @@
     ]
   },
   {
-    "id": 4,
-    "type": "CHOICE",
-    "text": "你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10）2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择",
-    "calculateRule": null,
-    "strategyId": "Q008",
-    "options": [
-      {
-        "key": "A",
-        "text": "核心地段（消耗5分）"
-      },
-      {
-        "key": "B",
-        "text": "边缘地段（消耗3分）"
-      },
-      {
-        "key": "C",
-        "text": "什么都不做"
-      }
-    ],
-    "min": null,
-    "max": null,
-    "step": null,
-    "sequenceGroupId": null,
-    "sequenceOrder": null,
-    "totalSequenceCount": null,
-    "prerequisiteQuestionIds": null,
-    "isRepeatable": null,
-    "repeatTimes": null,
-    "repeatInterval": null,
-    "repeatGroupId": null,
-    "defaultChoice": "C",
-    "minPlayers": 2,
-    "maxPlayers": 2,
-    "tags": [
-      {
-        "id": 4,
-        "name": "公共资源型",
-        "category": "mechanism",
-        "color": "#34d399"
-      }
-    ]
-  },
-  {
     "id": 5,
     "type": "CHOICE",
     "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",

@@ -13,8 +13,12 @@ export default defineConfig(({ mode }) => {
   const devPort = parseInt(env.VITE_DEV_PORT) || 5173;
 
   return {
+    define: {
+        global: 'globalThis'
+    },
     optimizeDeps: {
-        noDiscovery: true
+        noDiscovery: true,
+        include: ['sockjs-client']
     },
     plugins: [
         vue(),

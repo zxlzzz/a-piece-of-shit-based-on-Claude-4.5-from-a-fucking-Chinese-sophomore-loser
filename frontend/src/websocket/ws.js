@@ -1,4 +1,5 @@
 import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
 import { logger } from "@/utils/logger";
 import {
   WS_MAX_RECONNECT_ATTEMPTS,
@@ -123,6 +124,9 @@ export function connect(playerId, onConnect, onError) {
         connected = true;
         connectPromise = null;
         manualDisconnect = false;
+
+        // 触发连接成功事件（waitForConnection 依赖此事件）
+        window.dispatchEvent(new CustomEvent('websocket-connected'));
 
         // 重连成功
         if (isReconnecting) {

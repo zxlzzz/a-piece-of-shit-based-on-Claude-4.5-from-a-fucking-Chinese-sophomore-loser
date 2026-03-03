@@ -13,6 +13,10 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 普通题目基类
+ * 算分逻辑是传入id:选项，返回id:得分
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

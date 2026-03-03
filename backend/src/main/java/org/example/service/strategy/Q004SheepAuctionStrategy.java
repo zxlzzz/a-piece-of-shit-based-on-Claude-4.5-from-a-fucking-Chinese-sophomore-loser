@@ -29,10 +29,21 @@ public class Q004SheepAuctionStrategy extends BaseQuestionStrategy {
             .sorted(Comparator.comparingInt(e -> Integer.parseInt(e.getValue())))
             .toList();
 
-        // 低价者得2分，高价者得8-出价
+        int firstBid = Integer.parseInt(sorted.get(0).getValue());
+        int secondBid = Integer.parseInt(sorted.get(1).getValue());
+
+        // 如果出价相同，都给 2 分
+        if (firstBid == secondBid) {
+            return Map.of(
+                    sorted.get(0).getKey(), 2,
+                    sorted.get(1).getKey(), 2
+            );
+        }
+
+        // 正常情况：低价者得2分，高价者得8-出价
         return Map.of(
-            sorted.get(0).getKey(), 2,
-            sorted.get(1).getKey(), 8 - Integer.parseInt(sorted.get(1).getValue())
+                sorted.get(0).getKey(), 2,
+                sorted.get(1).getKey(), 8 - secondBid
         );
     }
 }

@@ -20,10 +20,7 @@
   }, {
     "questionId" : 7,
     "tagIds" : [ 5, 7 ]
-  }, {
-    "questionId" : 8,
-    "tagIds" : [ 1 ]
-  }, {
+  },  {
     "questionId" : 9,
     "tagIds" : [ 2 ]
   }, {

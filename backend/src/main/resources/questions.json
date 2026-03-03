@@ -1,14 +1,14 @@
 [
   {
-    "id": 2,
+    "id": 1,
     "type": "BID",
     "text": "村里拍卖一只稀有羊，价值 8 分。出价低者获得2分（无花费），价高者获得 8-出价 分数。",
     "calculateRule": null,
     "strategyId": "Q004",
     "options": null,
-    "min": 2,
-    "max": 7,
-    "step": 1,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
@@ -18,6 +18,36 @@
     "repeatInterval": null,
     "repeatGroupId": null,
     "defaultChoice": "4",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "type": "BID",
+    "text": "你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。",
+    "calculateRule": null,
+    "strategyId": "Q005",
+    "options": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "2",
     "minPlayers": 2,
     "maxPlayers": 2,
     "tags": [
@@ -32,43 +62,13 @@
   {
     "id": 3,
     "type": "BID",
-    "text": "你们二人遗失了同一个物品，向保险公司索赔。如果两人价格相同，则都获得该分数，否则高价者得 出价-3，低价者得出价。",
-    "calculateRule": null,
-    "strategyId": "Q005",
-    "options": null,
-    "min": 2,
-    "max": 8,
-    "step": 1,
-    "sequenceGroupId": null,
-    "sequenceOrder": null,
-    "totalSequenceCount": null,
-    "prerequisiteQuestionIds": null,
-    "isRepeatable": null,
-    "repeatTimes": null,
-    "repeatInterval": null,
-    "repeatGroupId": null,
-    "defaultChoice": "2",
-    "minPlayers": 2,
-    "maxPlayers": 2,
-    "tags": [
-      {
-        "id": 3,
-        "name": "竞争型",
-        "category": "mechanism",
-        "color": "#f87171"
-      }
-    ]
-  },
-  {
-    "id": 4,
-    "type": "BID",
     "text": "你们二人共同修路，总共需要 6 分。出分较高的人得 8 分，较低的得 4 分，相同则均得 4 分。",
     "calculateRule": null,
     "strategyId": "Q006",
     "options": null,
-    "min": 0,
-    "max": 6,
-    "step": 1,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
@@ -82,33 +82,20 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 4,
-        "name": "公共资源型",
+        "id": 3,
+        "name": "竞争型",
         "category": "mechanism",
-        "color": "#34d399"
+        "color": "#f87171"
       }
     ]
   },
   {
-    "id": 5,
+    "id": 4,
     "type": "CHOICE",
-    "text": "你们二人都想在商店街开店，分核心地段和边缘地段，若选择相同则收益减少。高人流量：1核心（14）1边缘（10）2核心（8） 2边缘（5）低人流量：核心（12） 边缘（8）你选择",
+    "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",
     "calculateRule": null,
-    "strategyId": "Q008",
-    "options": [
-      {
-        "key": "A",
-        "text": "核心地段（消耗5分）"
-      },
-      {
-        "key": "B",
-        "text": "边缘地段（消耗3分）"
-      },
-      {
-        "key": "C",
-        "text": "什么都不做"
-      }
-    ],
+    "strategyId": "Q002",
+    "options": null,
     "min": null,
     "max": null,
     "step": null,
@@ -125,33 +112,20 @@
     "maxPlayers": 2,
     "tags": [
       {
-        "id": 2,
-        "name": "类囚徒困境型",
+        "id": 4,
+        "name": "公共资源型",
         "category": "mechanism",
-        "color": "#a78bfa"
+        "color": "#34d399"
       }
     ]
   },
   {
-    "id": 6,
-    "type": "CHOICE",
-    "text": "你们二人参加演出，盲选服装。如果集齐侍卫+王子，则获得选项分数，否则扣分。",
+    "id": 5,
+    "type": "BID",
+    "text": "你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。",
     "calculateRule": null,
-    "strategyId": "Q002",
-    "options": [
-      {
-        "key": "A",
-        "text": "精致的侍卫服装（7）"
-      },
-      {
-        "key": "B",
-        "text": "王子服装（5）"
-      },
-      {
-        "key": "C",
-        "text": "普通侍卫服装（3）"
-      }
-    ],
+    "strategyId": "Q007",
+    "options": null,
     "min": null,
     "max": null,
     "step": null,
@@ -163,7 +137,37 @@
     "repeatTimes": null,
     "repeatInterval": null,
     "repeatGroupId": null,
-    "defaultChoice": "C",
+    "defaultChoice": "5",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "tags": [
+      {
+        "id": 2,
+        "name": "类囚徒困境型",
+        "category": "mechanism",
+        "color": "#a78bfa"
+      }
+    ]
+  },
+  {
+    "id": 6,
+    "type": "BID",
+    "text": "现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除",
+    "calculateRule": null,
+    "strategyId": "Q001",
+    "options": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "4",
     "minPlayers": 2,
     "maxPlayers": 2,
     "tags": [
@@ -178,13 +182,13 @@
   {
     "id": 7,
     "type": "BID",
-    "text": "你们二人拍两件拍品：第一件价值10分，第二件价值13分。每人只有 10 分预算，第二件的出价为 10-第一件出价。",
+    "text": "你们二人都想要一个物品（得到后可以十分的价格出售），现从第三人手里购买（均可购买），物品的价格由分别报价，如果你们的报价相差大于等于3分，则出价较低的人无法购买，否则都按自己的出价购买，则你的报价为",
     "calculateRule": null,
-    "strategyId": "Q007",
+    "strategyId": "Q009",
     "options": null,
-    "min": 0,
-    "max": 10,
-    "step": 1,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
@@ -214,13 +218,13 @@
   {
     "id": 8,
     "type": "BID",
-    "text": "现在数字被分为两组，123一组，456一组，你们选择一个数，如果位于同一组，则获得该分数，否则改为扣除",
+    "text": "选择一项（本题共进行3次），选完3个数后，会将所选数字之和加起来，和最小的玩家额外获得5分，最后计分时，如果你们所选的数有唯一众数（出现次数最多的），则这个数不计分（只不计入最后得分，求和时会算入）",
     "calculateRule": null,
-    "strategyId": "Q001",
+    "strategyId": "QR002",
     "options": null,
-    "min": 1,
-    "max": 6,
-    "step": 1,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
@@ -230,8 +234,8 @@
     "repeatInterval": null,
     "repeatGroupId": null,
     "defaultChoice": "4",
-    "minPlayers": 2,
-    "maxPlayers": 2,
+    "minPlayers": 3,
+    "maxPlayers": 4,
     "tags": [
       {
         "id": 1,
@@ -244,13 +248,13 @@
   {
     "id": 9,
     "type": "BID",
-    "text": "你们二人都想要一个物品（得到后可以十分的价格出售），现从第三人手里购买（均可购买），物品的价格由分别报价，如果你们的报价相差大于等于3分，则出价较低的人无法购买，否则都按自己的出价购买，则你的报价为",
-    "calculateRule": null,
-    "strategyId": "Q009",
+    "text": "你们三人分别有一支小偷团队，现在计划偷7家连续的无人的房子（编号左起1-7），每团队选择一个房子开始，并计算与其他房子的距离，房子的价值为 6 5 5 4 4 4 3",
+    "calculateRule": "• 唯一最近 → 独得该房价值\n• 多人最近 → 平分价值\n• 三人等距 → 无人得分",
+    "strategyId": "Q010",
     "options": null,
-    "min": 1,
-    "max": 9,
-    "step": 1,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
@@ -259,9 +263,9 @@
     "repeatTimes": null,
     "repeatInterval": null,
     "repeatGroupId": null,
-    "defaultChoice": "5",
-    "minPlayers": 2,
-    "maxPlayers": 2,
+    "defaultChoice": "4",
+    "minPlayers": 3,
+    "maxPlayers": 3,
     "tags": [
       {
         "id": 2,
@@ -274,24 +278,24 @@
   {
     "id": 10,
     "type": "BID",
-    "text": "选择一项（本题共进行3次），选完3个数后，会将所选数字之和加起来，和最小的玩家额外获得5分，最后计分时，如果你们所选的数有唯一众数（出现次数最多的），则这个数不计分（只不计入最后得分，求和时会算入）",
+    "text": "你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为",
     "calculateRule": null,
-    "strategyId": "QR002",
+    "strategyId": "Q011",
     "options": null,
-    "min": 2,
-    "max": 10,
-    "step": 2,
+    "min": null,
+    "max": null,
+    "step": null,
     "sequenceGroupId": null,
     "sequenceOrder": null,
     "totalSequenceCount": null,
     "prerequisiteQuestionIds": null,
-    "isRepeatable": true,
-    "repeatTimes": 3,
+    "isRepeatable": null,
+    "repeatTimes": null,
     "repeatInterval": null,
     "repeatGroupId": null,
     "defaultChoice": "4",
     "minPlayers": 3,
-    "maxPlayers": 4,
+    "maxPlayers": 3,
     "tags": [
       {
         "id": 3,
@@ -309,12 +313,125 @@
   },
   {
     "id": 11,
-    "type": "BID",
-    "text": "你们三人分别有一支小偷团队，现在计划偷7家连续的无人的房子（编号左起1-7），每团队选择一个房子开始，并计算与其他房子的距离，房子的价值为 6 5 5 4 4 4 3",
-    "calculateRule": "• 唯一最近 → 独得该房价值\n• 多人最近 → 平分价值\n• 三人等距 → 无人得分",
-    "strategyId": "Q010",
+    "type": "CHOICE",
+    "text": "选择一项（x初始为1，偶数次取反后为正数）",
+    "calculateRule": null,
+    "strategyId": "Q012",
     "options": null,
-    "min": 1,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": null,
+    "minPlayers": 4,
+    "maxPlayers": 4,
+    "tags": [
+      {
+        "id": 3,
+        "name": "竞争型",
+        "category": "mechanism",
+        "color": "#f87171"
+      }
+    ]
+  },
+  {
+    "id": 12,
+    "type": "CHOICE",
+    "text": "酸奶发酵中，有三类微生物的互作，乳酸链球菌（A），保加利亚乳杆菌（B）和酵母菌（C），其中（A）产生的作物会促进（B）的生长，（B）产生的作物会促进（C）的生长，而（C）产生的作物却会抑制（A）的活性，你们分别扮演一类菌群，受到另外两个菌种数量的影响",
+    "calculateRule": null,
+    "strategyId": "Q003",
+    "options": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 4,
+    "maxPlayers": 7,
+    "tags": [
+      {
+        "id": 4,
+        "name": "公共资源型",
+        "category": "mechanism",
+        "color": "#34d399"
+      }
+    ]
+  },
+  {
+    "id": 13,
+    "type": "CHOICE",
+    "text": "在一片丛林中，选择你的角色",
+    "calculateRule": null,
+    "strategyId": "Q013",
+    "options": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "C",
+    "minPlayers": 3,
+    "maxPlayers": 3,
+    "tags": [
+      {
+        "id": 1,
+        "name": "协调型",
+        "category": "mechanism",
+        "color": "#60a5fa"
+      }
+    ]
+  },
+  {
+    "id": 14,
+    "type": "CHOICE",
+    "text": "选择一项，仅当有一项选的人唯一最多和一项选的人唯一最少时计分，按剪刀石头布规则判别胜负，胜加对应分，负扣对应分，其他人分数不变，则你的选择是",
+    "calculateRule": null,
+    "strategyId": "Q014",
+    "options": null,
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": null,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 6,
+    "maxPlayers": 8,
+    "tags": []
+  },
+  {
+    "id": 15,
+    "type": "BID",
+    "text": "三人选择一项然后获得对应的分数，若有他人和你选的一样则改为扣除对应分数。则你的选择为",
+    "calculateRule": null,
+    "strategyId": "Q008",
+    "options": null,
+    "min": 4,
     "max": 7,
     "step": 1,
     "sequenceGroupId": null,
@@ -328,63 +445,26 @@
     "defaultChoice": "4",
     "minPlayers": 3,
     "maxPlayers": 3,
-    "tags": [
-      {
-        "id": 3,
-        "name": "竞争型",
-        "category": "mechanism",
-        "color": "#f87171"
-      }
-    ]
+    "tags": []
   },
   {
-    "id": 12,
-    "type": "BID",
-    "text": "你们三人分别决定在一片牧场养牛的数量，如果牛的总数在3头及以下，每头牛可价值3分，以上则每超过一头牛的价值减1（可以减至负数），则你的选择为",
-    "calculateRule": null,
-    "strategyId": "Q011",
-    "options": null,
-    "min": 0,
-    "max": 3,
-    "step": 1,
-    "sequenceGroupId": null,
-    "sequenceOrder": null,
-    "totalSequenceCount": null,
-    "prerequisiteQuestionIds": null,
-    "isRepeatable": null,
-    "repeatTimes": null,
-    "repeatInterval": null,
-    "repeatGroupId": null,
-    "defaultChoice": "4",
-    "minPlayers": 3,
-    "maxPlayers": 3,
-    "tags": [
-      {
-        "id": 4,
-        "name": "公共资源型",
-        "category": "mechanism",
-        "color": "#34d399"
-      }
-    ]
-  },
-  {
-    "id": 13,
+    "id": 16,
     "type": "CHOICE",
-    "text": "选择一项（x初始为1，偶数次取反后为正数）",
+    "text": "选择一项（本题共进行4次，还剩4次）（本题中获得的buff仅限这四道题可用）",
     "calculateRule": null,
-    "strategyId": "Q012",
+    "strategyId": "QR001",
     "options": [
       {
         "key": "A",
-        "text": "x*2最后获得x的分数"
+        "text": "得2分"
       },
       {
         "key": "B",
-        "text": "x取反，无获得"
+        "text": "你对手下一题得分减半"
       },
       {
         "key": "C",
-        "text": "什么都不做"
+        "text": "你下一次得分翻倍"
       }
     ],
     "min": null,
@@ -398,16 +478,222 @@
     "repeatTimes": null,
     "repeatInterval": null,
     "repeatGroupId": null,
-    "defaultChoice": null,
+    "defaultChoice": "A",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "tags": []
+  },
+  {
+    "id": 17,
+    "type": "CHOICE",
+    "text": "（本题共进行3次）你们三支团队去计划去偷三个地区，三个地区的价值是2，3，4你们每次都可以派一个人去，计分规则如下，若某地有一支团队的人唯一最多则它获得全部分数，否则由拥有最多的人的多支团队平分，第x次选择时第x个地方价值会翻倍，（每次派出的人会留在那里），则你选择",
+    "calculateRule": null,
+    "strategyId": "QR003",
+    "options": [
+      {
+        "key": "A",
+        "text": "第一个地区"
+      },
+      {
+        "key": "B",
+        "text": "第二个地区"
+      },
+      {
+        "key": "C",
+        "text": "第三个地区"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "",
+    "minPlayers": 3,
+    "maxPlayers": 3,
+    "tags": []
+  },
+  {
+    "id": 18,
+    "type": "CHOICE",
+    "text": "（本题共进行4次）选择一项，本组题结束后会比较双方攻击力与防御力，己方攻击力每比对方防御力高1可获得对方1分（最终得分可能为负）",
+    "calculateRule": null,
+    "strategyId": "QR004",
+    "options": [
+      {
+        "key": "A",
+        "text": "获得3分"
+      },
+      {
+        "key": "B",
+        "text": "获得6点攻击力"
+      },
+      {
+        "key": "C",
+        "text": "获得9点防御力"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "tags": []
+  },
+  {
+    "id": 19,
+    "type": "BID",
+    "text": "（本题进行5次）选择一项并获得对应分数，本组题截止目前，如果有人得分为唯一最高，则他本题不得分，如果得分为唯一最低，则他本题得分翻倍",
+    "calculateRule": null,
+    "strategyId": "QR005",
+    "options": null,
+    "min": 1,
+    "max": 5,
+    "step": 1,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "3",
     "minPlayers": 4,
     "maxPlayers": 4,
-    "tags": [
+    "tags": []
+  },
+  {
+    "id": 20,
+    "type": "CHOICE",
+    "text": "选择一项，如果你的选择仅有一人选择，获得选项对应的分数",
+    "calculateRule": null,
+    "strategyId": "Q015",
+    "options": [
       {
-        "id": 1,
-        "name": "协调型",
-        "category": "mechanism",
-        "color": "#60a5fa"
+        "key": "A",
+        "text": "3分"
+      },
+      {
+        "key": "B",
+        "text": "6分"
+      },
+      {
+        "key": "C",
+        "text": "10分"
       }
-    ]
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "A",
+    "minPlayers": 2,
+    "maxPlayers": 2,
+    "tags": []
+  },
+  {
+    "id": 21,
+    "type": "BID",
+    "text": "每人出价拍一个商品，出价均会被扣除，出价最高的人获得10分（多人出价最高则平分）",
+    "calculateRule": null,
+    "strategyId": "Q016",
+    "options": null,
+    "min": 0,
+    "max": 7,
+    "step": 1,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "0",
+    "minPlayers": 4,
+    "maxPlayers": 4,
+    "tags": []
+  },
+  {
+    "id": 22,
+    "type": "CHOICE",
+    "text": "你们遇到了海难，现在在一片海面上，有以下的逃生工具，选择一项，满足则获得靠前的分数，如果违法了选项后的条件，则改为靠后的分数",
+    "calculateRule": null,
+    "strategyId": "Q017",
+    "options": [
+      {
+        "key": "A",
+        "text": "A.专业潜水服（1人用，得10分，超过则每人-3分）"
+      },
+      {
+        "key": "B",
+        "text": "B.木筏（不超过4人用，每人6分，超过则每人-5分）"
+      },
+      {
+        "key": "C",
+        "text": "C.皮划艇（2人用，每人8分，不是2人则每人得0分）"
+      }
+    ],
+    "min": null,
+    "max": null,
+    "step": null,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "B",
+    "minPlayers": 6,
+    "maxPlayers": 6,
+    "tags": []
+  },
+  {
+    "id": 23,
+    "type": "BID",
+    "text": "所有人选择一个数，最接近所有人平均数*2/3的人获得10分（有多人则平分）",
+    "calculateRule": null,
+    "strategyId": "Q018",
+    "options": null,
+    "min": 0,
+    "max": 15,
+    "step": 3,
+    "sequenceGroupId": null,
+    "sequenceOrder": null,
+    "totalSequenceCount": null,
+    "prerequisiteQuestionIds": null,
+    "isRepeatable": false,
+    "repeatTimes": null,
+    "repeatInterval": null,
+    "repeatGroupId": null,
+    "defaultChoice": "0",
+    "minPlayers": 5,
+    "maxPlayers": 5,
+    "tags": []
   }
 ]

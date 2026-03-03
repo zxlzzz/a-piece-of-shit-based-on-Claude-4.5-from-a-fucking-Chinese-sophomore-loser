@@ -36,7 +36,7 @@ public class QuestionDataInitializer {
             }
 
 
-            InputStream is = getClass().getResourceAsStream("/questions.json");
+            InputStream is = getClass().getResourceAsStream("/src/main/questions.json");
             if (is == null) {
                 throw new FileNotFoundException("questions.json not found in classpath");
             }

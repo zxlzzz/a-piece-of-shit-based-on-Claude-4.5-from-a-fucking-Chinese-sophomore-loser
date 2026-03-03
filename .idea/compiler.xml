@@ -11,9 +11,6 @@
         <module name="boilune" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="boilune" target="17" />
-    </bytecodeTargetLevel>
   </component>
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">

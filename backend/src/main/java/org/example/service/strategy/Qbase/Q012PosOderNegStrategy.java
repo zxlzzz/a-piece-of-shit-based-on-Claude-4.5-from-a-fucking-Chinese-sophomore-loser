@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 /**
  * 选择一项（x初始为1，偶数次取反后为正数）
  * 4人 3选
- * A.x*2最后获得x的分数
+ * A.x*3最后获得x的分数
  * B.x取反，无获得
  * C.什么都不做
  */
@@ -51,7 +51,7 @@ public class Q012PosOderNegStrategy extends BaseQuestionStrategy {
         // 1️⃣ 通过 Stream 计算最终的 x
         int finalX = submissions.values().stream()
                 .reduce(1, (x, choice) -> switch (choice) {
-                    case "A" -> x * 2;
+                    case "A" -> x * 3;
                     case "B" -> -x;
                     default -> x;
                 }, (x1, x2) -> x1); // 并行时合并策略：保持左侧（但我们这里不会并行）

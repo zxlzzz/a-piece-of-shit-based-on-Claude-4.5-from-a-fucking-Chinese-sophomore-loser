@@ -45,8 +45,9 @@ public class QuestionDataInitializer {
                 }
                 log.info("题目初始化完成，共导入 {} 条", dtos.size());
             } else {
-                // 数据库已有题目：修复缺失的 BID 配置
+                // 数据库已有题目：修复缺失或错误的配置
                 repairMissingBidConfigs(dtos);
+                repairRepeatableMetadata(dtos);
             }
         } catch (IOException e) {
             throw new RuntimeException("题目初始化失败", e);
@@ -83,6 +84,58 @@ public class QuestionDataInitializer {
         }
         if (repaired > 0) {
             log.info("共修复 {} 个缺失的 BID 配置", repaired);
+        }
+    }
+
+    /**
+     * 修复 QR（可重复）题目的元数据：将 isRepeatable 设为 true 并写入正确的 repeatTimes。
+     * 针对 questions.json 中 isRepeatable=true 的条目，找到 DB 中对应的 QuestionMetadata
+     * 并 upsert（不存在则创建，存在但值错误则更新）。
+     */
+    private void repairRepeatableMetadata(List<QuestionDTO> dtos) {
+        Map<String, QuestionDTO> dtoByStrategyId = new HashMap<>();
+        for (QuestionDTO dto : dtos) {
+            if (dto.getStrategyId() != null && Boolean.TRUE.equals(dto.getIsRepeatable())
+                    && dto.getRepeatTimes() != null) {
+                dtoByStrategyId.put(dto.getStrategyId(), dto);
+            }
+        }
+        if (dtoByStrategyId.isEmpty()) return;
+
+        // 按 strategyId 查找对应的 QuestionEntity
+        List<QuestionEntity> allEntities = questionRepository.findAll();
+        int repaired = 0;
+        for (QuestionEntity entity : allEntities) {
+            QuestionDTO dto = dtoByStrategyId.get(entity.getStrategyId());
+            if (dto == null) continue;
+
+            QuestionMetadata existing = metadataRepository.findByQuestionId(entity.getId()).orElse(null);
+            if (existing != null) {
+                if (!Boolean.TRUE.equals(existing.getIsRepeatable())
+                        || !dto.getRepeatTimes().equals(existing.getRepeatTimes())) {
+                    existing.setIsRepeatable(true);
+                    existing.setRepeatTimes(dto.getRepeatTimes());
+                    metadataRepository.save(existing);
+                    repaired++;
+                    log.info("修复 repeatable 元数据: strategyId={}, repeatTimes={}",
+                            entity.getStrategyId(), dto.getRepeatTimes());
+                }
+            } else {
+                QuestionMetadata meta = QuestionMetadata.builder()
+                        .questionId(entity.getId())
+                        .isRepeatable(true)
+                        .repeatTimes(dto.getRepeatTimes())
+                        .build();
+                metadataRepository.save(meta);
+                entity.setHasMetadata(true);
+                questionRepository.save(entity);
+                repaired++;
+                log.info("新增 repeatable 元数据: strategyId={}, repeatTimes={}",
+                        entity.getStrategyId(), dto.getRepeatTimes());
+            }
+        }
+        if (repaired > 0) {
+            log.info("共修复/新增 {} 个 repeatable 元数据", repaired);
         }
     }
 

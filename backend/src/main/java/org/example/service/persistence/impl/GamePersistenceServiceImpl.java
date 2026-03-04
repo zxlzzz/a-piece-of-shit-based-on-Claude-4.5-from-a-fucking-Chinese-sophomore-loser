@@ -148,6 +148,7 @@ public class GamePersistenceServiceImpl implements GamePersistenceService {
             String optionText = formatOptions(question);
 
             details.add(QuestionDetailDTO.builder()
+                    .questionId(question.getId())
                     .questionIndex(i)
                     .questionText(question.getText())
                     .optionText(optionText)

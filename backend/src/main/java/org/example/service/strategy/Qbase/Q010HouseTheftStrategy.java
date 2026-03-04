@@ -1,7 +1,8 @@
-package org.example.service.strategy;
+package org.example.service.strategy.Qbase;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.service.buff.BuffApplier;
+import org.example.service.strategy.BaseQuestionStrategy;
 import org.springframework.stereotype.Component;
 
 import java.util.*;

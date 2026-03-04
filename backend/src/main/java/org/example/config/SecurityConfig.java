@@ -30,6 +30,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()  // WebSocket
 
+                        // 题库只读接口：无需登录
+                        .requestMatchers("/api/question/**").permitAll()
+                        .requestMatchers("/api/tags/**").permitAll()
+
                         // Swagger UI 和 API 文档
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
 

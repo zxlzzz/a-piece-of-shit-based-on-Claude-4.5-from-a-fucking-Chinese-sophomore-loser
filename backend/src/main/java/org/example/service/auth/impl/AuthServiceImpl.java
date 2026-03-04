@@ -50,13 +50,8 @@ public class AuthServiceImpl implements AuthService {
                 .name(request.getName())
                 .ready(false)
                 .createdAt(LocalDateTime.now())
-<<<<<<< HEAD
                 .deleted(false)
                 .updatedAt(LocalDateTime.now())
-=======
-                .updatedAt(LocalDateTime.now())
-                .deleted(false)
->>>>>>> 52079cdce9d009b1f370b64856492d15356a3ce1
                 .build();
 
         playerRepository.save(player);

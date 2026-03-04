@@ -113,9 +113,15 @@ const getOptionText = (optionKey) => {
   return option ? `${option.key}. ${option.text}` : optionKey
 }
 
-const isDraw = computed(() => {
-  if (!result.value) return false
-  return result.value.playerScore === result.value.botScore
+// botChoices 是 { bot1: "A", bot2: "3", ... } 格式的对象
+const botEntries = computed(() => {
+  if (!result.value?.botChoices) return []
+  return Object.entries(result.value.botChoices).map(([botId, choice], idx) => ({
+    botId,
+    label: `Bot ${idx + 1}`,
+    choice,
+    score: result.value.allScores?.[botId] ?? 0
+  }))
 })
 </script>
 
@@ -254,8 +260,8 @@ const isDraw = computed(() => {
         </div>
       </div>
 
-      <!-- 双方选择和得分 -->
-      <div class="grid grid-cols-2 gap-4 mb-6">
+      <!-- 所有选手选择和得分 -->
+      <div class="grid gap-4 mb-6" :class="botEntries.length === 1 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'">
         <!-- 玩家 -->
         <div class="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
           <div class="flex items-center gap-2 mb-3">
@@ -278,23 +284,27 @@ const isDraw = computed(() => {
           </div>
         </div>
 
-        <!-- Bot -->
-        <div class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4">
+        <!-- 每个 Bot -->
+        <div
+          v-for="bot in botEntries"
+          :key="bot.botId"
+          class="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4"
+        >
           <div class="flex items-center gap-2 mb-3">
             <i class="pi pi-desktop text-purple-600 dark:text-purple-400"></i>
-            <span class="font-semibold text-gray-800 dark:text-white">Bot</span>
+            <span class="font-semibold text-gray-800 dark:text-white">{{ bot.label }}</span>
           </div>
           <div class="space-y-2">
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">选择</p>
               <p class="text-lg font-bold text-gray-800 dark:text-white">
-                {{ result.question.type === 'CHOICE' ? getOptionText(result.botChoice) : result.botChoice }}
+                {{ result.question.type === 'CHOICE' ? getOptionText(bot.choice) : bot.choice }}
               </p>
             </div>
             <div>
               <p class="text-xs text-gray-600 dark:text-gray-400">得分</p>
               <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                {{ result.botScore }}
+                {{ bot.score }}
               </p>
             </div>
           </div>

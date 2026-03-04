@@ -144,8 +144,7 @@ public class GameServiceImpl implements GameService {
 
     @Override
     public void removeRoom(String roomCode) {
-        timerService.cancelTimeout(roomCode);
-        roomCache.remove(roomCode);
+        roomLifecycleService.deleteRoom(roomCode);
     }
 
     @Override

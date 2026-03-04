@@ -1,6 +1,7 @@
-package org.example.service.strategy;
+package org.example.service.strategy.Qbase;
 
 import org.example.service.buff.BuffApplier;
+import org.example.service.strategy.BaseQuestionStrategy;
 import org.example.utils.StrategyUtil.SubmissionCountUtil;
 import org.springframework.stereotype.Component;
 
@@ -8,7 +9,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
-public class Q008SameMinusStrategy extends BaseQuestionStrategy{
+public class Q008SameMinusStrategy extends BaseQuestionStrategy {
     public Q008SameMinusStrategy(BuffApplier buffApplier) {
         super(buffApplier);
     }

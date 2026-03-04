@@ -1,6 +1,7 @@
-package org.example.service.strategy;
+package org.example.service.strategy.Qbase;
 
 import org.example.service.buff.BuffApplier;
+import org.example.service.strategy.BaseQuestionStrategy;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;

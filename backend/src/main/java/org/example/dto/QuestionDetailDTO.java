@@ -10,6 +10,7 @@ import java.util.Map;
 @Data
 @Builder
 public class QuestionDetailDTO {
+    private Long questionId;
     private Integer questionIndex;
     private String questionText;
     private String optionText;

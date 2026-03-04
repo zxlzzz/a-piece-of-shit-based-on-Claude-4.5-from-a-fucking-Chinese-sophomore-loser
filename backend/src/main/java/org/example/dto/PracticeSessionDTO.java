@@ -24,11 +24,6 @@ public class PracticeSessionDTO {
     private QuestionDTO question;
 
     /**
-     * Bot选择（提交前不返回）
-     */
-    private String botChoice;
-
-    /**
      * 当前玩家人数（用于统计）
      */
     private Integer playerCount;

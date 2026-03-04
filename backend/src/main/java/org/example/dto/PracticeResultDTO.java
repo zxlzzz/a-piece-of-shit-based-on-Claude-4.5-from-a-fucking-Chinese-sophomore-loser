@@ -21,9 +21,9 @@ public class PracticeResultDTO {
     private String playerChoice;
 
     /**
-     * Bot选择
+     * 所有Bot的选择（key: "bot1","bot2"... value: 选择）
      */
-    private String botChoice;
+    private Map<String, String> botChoices;
 
     /**
      * 玩家得分
@@ -31,17 +31,12 @@ public class PracticeResultDTO {
     private Integer playerScore;
 
     /**
-     * Bot得分
-     */
-    private Integer botScore;
-
-    /**
      * 题目信息（用于显示）
      */
     private QuestionDTO question;
 
     /**
-     * 所有玩家的分数（玩家+Bot）
+     * 所有玩家的分数（玩家+所有Bot）
      */
     private Map<String, Integer> allScores;
 }

@@ -11,10 +11,11 @@ import org.example.entity.*;
 import org.example.repository.*;
 import org.springframework.stereotype.Component;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 @Slf4j
@@ -29,25 +30,59 @@ public class QuestionDataInitializer {
     @PostConstruct
     @Transactional
     public void init() {
-        try {log.info("数据库中已有题目，跳过初始化");
-            if (questionRepository.count() > 0) {
-                
+        try {
+            InputStream is = getClass().getResourceAsStream("/questions.json");
+            if (is == null) {
+                log.warn("questions.json 未找到，跳过初始化");
                 return;
             }
-
-
-            InputStream is = getClass().getResourceAsStream("/src/main/questions.json");
-            if (is == null) {
-                throw new FileNotFoundException("questions.json not found in classpath");
-            }
-
             List<QuestionDTO> dtos = objectMapper.readValue(is, new TypeReference<>() {});
 
-            System.out.println(dtos);
-
+            if (questionRepository.count() == 0) {
+                log.info("数据库无题目，开始初始化...");
+                for (QuestionDTO dto : dtos) {
+                    saveQuestion(dto);
+                }
+                log.info("题目初始化完成，共导入 {} 条", dtos.size());
+            } else {
+                // 数据库已有题目：修复缺失的 BID 配置
+                repairMissingBidConfigs(dtos);
+            }
         } catch (IOException e) {
-
             throw new RuntimeException("题目初始化失败", e);
+        }
+    }
+
+    /**
+     * 修复已有 BID 题目中缺失的 bid_question_config 记录
+     */
+    private void repairMissingBidConfigs(List<QuestionDTO> dtos) {
+        Map<String, QuestionDTO> dtoByStrategyId = new HashMap<>();
+        for (QuestionDTO dto : dtos) {
+            if (dto.getStrategyId() != null && dto.getType() == QuestionType.BID
+                    && dto.getMin() != null && dto.getMax() != null) {
+                dtoByStrategyId.put(dto.getStrategyId(), dto);
+            }
+        }
+
+        List<QuestionEntity> bidQuestions = questionRepository.findAll().stream()
+                .filter(q -> q.getType() == QuestionType.BID)
+                .toList();
+
+        int repaired = 0;
+        for (QuestionEntity entity : bidQuestions) {
+            if (!bidConfigRepository.existsByQuestion_Id(entity.getId())) {
+                QuestionDTO dto = dtoByStrategyId.get(entity.getStrategyId());
+                if (dto != null) {
+                    saveBidConfig(entity, dto);
+                    repaired++;
+                    log.info("修复 BID 配置: strategyId={}, min={}, max={}, step={}",
+                            entity.getStrategyId(), dto.getMin(), dto.getMax(), dto.getStep());
+                }
+            }
+        }
+        if (repaired > 0) {
+            log.info("共修复 {} 个缺失的 BID 配置", repaired);
         }
     }
 

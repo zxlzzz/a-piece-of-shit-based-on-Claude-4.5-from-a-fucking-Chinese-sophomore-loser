@@ -89,13 +89,16 @@ public class PracticeController {
         // 转换为DTO
         QuestionDTO questionDTO = quesService.convertEntitiesToDTOs(List.of(questionEntity)).get(0);
 
-        // 生成Bot选择（基于统计数据）
-        String botChoice = statisticsService.generateBotChoice(questionEntity.getId(), playerCount);
-
-        // 如果没有统计数据，随机生成Bot选择
-        if (botChoice == null) {
-            botChoice = generateRandomChoice(questionDTO);
-            log.info("📊 没有统计数据，随机生成Bot选择: {}", botChoice);
+        // 生成 playerCount-1 个Bot的选择
+        Map<String, String> botChoices = new HashMap<>();
+        for (int i = 1; i <= playerCount - 1; i++) {
+            String botId = "bot" + i;
+            String choice = statisticsService.generateBotChoice(questionEntity.getId(), playerCount);
+            if (choice == null) {
+                choice = generateRandomChoice(questionDTO);
+                log.info("📊 没有统计数据，随机生成Bot{}选择: {}", i, choice);
+            }
+            botChoices.put(botId, choice);
         }
 
         // 创建并保存会话
@@ -103,7 +106,7 @@ public class PracticeController {
                 sessionId,
                 questionEntity.getId(),
                 questionDTO,
-                botChoice,
+                botChoices,
                 playerCount
         );
         sessions.put(sessionId, session);
@@ -112,7 +115,6 @@ public class PracticeController {
         PracticeSessionDTO response = PracticeSessionDTO.builder()
                 .sessionId(sessionId)
                 .question(questionDTO)
-                .botChoice(null)  // 提交前不返回
                 .playerCount(playerCount)
                 .build();
 
@@ -153,10 +155,10 @@ public class PracticeController {
         // 获取计分策略
         QuestionScoringStrategy strategy = questionFactory.getStrategy(question.getStrategyId());
 
-        // 准备提交数据（玩家 + Bot）
+        // 准备提交数据（玩家 + 所有Bot）
         Map<String, String> submissions = new HashMap<>();
         submissions.put("player", playerChoice);
-        submissions.put("bot", session.getBotChoice());
+        submissions.putAll(session.getBotChoices());
 
         // 计算分数
         Map<String, Integer> scores = strategy.calculateScores(submissions);
@@ -174,9 +176,8 @@ public class PracticeController {
         // 构建结果
         PracticeResultDTO result = PracticeResultDTO.builder()
                 .playerChoice(playerChoice)
-                .botChoice(session.getBotChoice())
+                .botChoices(session.getBotChoices())
                 .playerScore(scores.getOrDefault("player", 0))
-                .botScore(scores.getOrDefault("bot", 0))
                 .question(question)
                 .allScores(scores)
                 .build();
@@ -185,7 +186,7 @@ public class PracticeController {
         sessions.remove(sessionId);
 
         log.info("✅ 练习答案提交成功: sessionId={}, 玩家得分={}, Bot得分={}",
-                sessionId, result.getPlayerScore(), result.getBotScore());
+                sessionId, result.getPlayerScore(), result.getAllScores());
 
         return ResponseEntity.ok(result);
     }
@@ -244,22 +245,22 @@ public class PracticeController {
         private final String sessionId;
         private final Long questionId;
         private final QuestionDTO question;
-        private final String botChoice;
+        private final Map<String, String> botChoices;
         private final Integer playerCount;
 
         public PracticeSession(String sessionId, Long questionId, QuestionDTO question,
-                               String botChoice, Integer playerCount) {
+                               Map<String, String> botChoices, Integer playerCount) {
             this.sessionId = sessionId;
             this.questionId = questionId;
             this.question = question;
-            this.botChoice = botChoice;
+            this.botChoices = botChoices;
             this.playerCount = playerCount;
         }
 
         public String getSessionId() { return sessionId; }
         public Long getQuestionId() { return questionId; }
         public QuestionDTO getQuestion() { return question; }
-        public String getBotChoice() { return botChoice; }
+        public Map<String, String> getBotChoices() { return botChoices; }
         public Integer getPlayerCount() { return playerCount; }
     }
 }

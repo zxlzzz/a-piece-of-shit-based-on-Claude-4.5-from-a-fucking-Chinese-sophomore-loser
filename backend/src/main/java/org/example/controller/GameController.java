@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.dto.*;
+import org.example.pojo.GameMode;
 import org.example.exception.BusinessException;
 import org.example.pojo.GameRoom;
 import org.example.service.game.GameService;
@@ -37,8 +38,9 @@ public class GameController {
             @RequestParam(defaultValue = "10") Integer questionCount,
             @RequestParam(defaultValue = "30") Integer timeLimit,
             @RequestParam(required = false) String password,
-            @RequestParam(required = false) List<Long> questionTagIds) {
-        RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds);
+            @RequestParam(required = false) List<Long> questionTagIds,
+            @RequestParam(required = false) GameMode gameMode) {
+        RoomDTO room = gameService.createRoom(maxPlayers, questionCount, timeLimit, password, questionTagIds, gameMode);
         return ResponseEntity.ok(room);
     }
 
@@ -163,7 +165,8 @@ public class GameController {
         private Integer questionCount;
         private Integer timeLimit;
         private Boolean chatEnabled;
-        private Boolean privateChatEnabled;  // 🔥 是否启用私聊功能
+        private Boolean privateChatEnabled;
+        private GameMode gameMode;
         private String rankingMode;
         private Integer targetScore;
         private RoomDTO.WinConditions winConditions;

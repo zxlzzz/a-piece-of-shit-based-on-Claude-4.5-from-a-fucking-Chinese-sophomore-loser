@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.pojo.GameMode;
 import org.example.pojo.RoomStatus;
 
 
@@ -29,6 +30,7 @@ public class RoomDTO {
     private Boolean hasPassword;         // 是否有密码保护
     private List<String> submittedPlayerIds; // 🔥 当前题目已提交的玩家ID列表（用于前端验证）
 
+    private GameMode gameMode;           // 游戏模式（SYNCHRONIZED / ASYNC）
     private String rankingMode;          // 排名模式
     private Integer targetScore;         // 目标分数
     private WinConditions winConditions; // 通关条件对象

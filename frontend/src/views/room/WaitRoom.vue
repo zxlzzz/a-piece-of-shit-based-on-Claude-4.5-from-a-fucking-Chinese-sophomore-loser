@@ -473,6 +473,8 @@ const handleCustomFormSubmit = async (formData) => {
       questionCount: formData.questionCount,
       timeLimit: formData.timeLimit,
       chatEnabled: formData.chatEnabled,
+      privateChatEnabled: formData.privateChatEnabled,
+      gameMode: formData.gameMode,
       rankingMode: formData.rankingMode,
       targetScore: formData.targetScore,
       winConditions: formData.winConditions,
@@ -626,8 +628,20 @@ const refreshRoomState = async () => {
                 </div>
               </div>
               
-              <!-- 排名模式和通关条件 -->
-              <div v-if="room?.rankingMode !== 'standard' || room.winConditions" 
+              <!-- 游戏模式 -->
+              <div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div class="flex items-center gap-2 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                  <i class="pi pi-bolt text-blue-500"></i>
+                  <span>{{ room?.gameMode === 'ASYNC' ? '异步答题' : '同时答题' }}</span>
+                  <span v-if="room?.gameMode === 'ASYNC'"
+                        class="text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                    提交后可撤
+                  </span>
+                </div>
+              </div>
+
+            <!-- 排名模式和通关条件 -->
+              <div v-if="room?.rankingMode !== 'standard' || room.winConditions"
                    class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-200 dark:border-gray-700">
                 <div class="text-xs sm:text-sm space-y-2">
                   <!-- 排名模式 -->

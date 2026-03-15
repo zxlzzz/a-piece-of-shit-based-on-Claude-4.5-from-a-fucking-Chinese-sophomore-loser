@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.pojo.GameMode;
 import org.example.pojo.RoomStatus;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -119,6 +120,16 @@ public class RoomEntity implements Serializable {
      */
     @Column(columnDefinition = "TEXT")
     private String questionTagIdsJson;
+
+    /**
+     * 游戏模式
+     * SYNCHRONIZED: 同时答题（默认）
+     * ASYNC:        异步答题
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private GameMode gameMode = GameMode.SYNCHRONIZED;
 
     /**
      * 是否启用聊天室

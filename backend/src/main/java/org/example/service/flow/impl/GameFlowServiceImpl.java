@@ -8,6 +8,7 @@ import org.example.dto.PlayerDTO;
 import org.example.dto.QuestionDTO;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
+import org.example.pojo.GameMode;
 import org.example.pojo.GameRoom;
 import org.example.pojo.RoomStatus;
 import org.example.repository.*;
@@ -132,10 +133,14 @@ public class GameFlowServiceImpl implements GameFlowService {
                 }
             }
 
+            GameMode gameMode = room.getGameMode() != null ? room.getGameMode() : GameMode.SYNCHRONIZED;
+            gameRoom.setGameMode(gameMode);
+
             List<QuestionDTO> questions = questionSelector.selectQuestions(
                     room.getQuestionCount(),
                     nonSpectatorCount,
-                    questionTagIds
+                    questionTagIds,
+                    gameMode
             );
 
             // 🔥 修复问题3.2：检查题目是否为空

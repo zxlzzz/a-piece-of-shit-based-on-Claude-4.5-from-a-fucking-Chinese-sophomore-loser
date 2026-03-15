@@ -8,6 +8,7 @@ import org.example.dto.PlayerDTO;
 import org.example.dto.QuestionDTO;
 import org.example.entity.QuestionEntity;
 import org.example.entity.RoomEntity;
+import org.example.pojo.GameMode;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -63,6 +64,11 @@ public class GameRoom implements Serializable {
      * 游戏是否已结束
      */
     private boolean finished = false;
+
+    /**
+     * 游戏模式（同时答题 / 异步答题）
+     */
+    private GameMode gameMode = GameMode.SYNCHRONIZED;
 
     /**
      * 是否为测试房间（包含虚拟玩家）

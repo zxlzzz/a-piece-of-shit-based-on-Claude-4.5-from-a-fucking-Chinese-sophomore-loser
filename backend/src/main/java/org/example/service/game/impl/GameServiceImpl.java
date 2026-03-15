@@ -7,6 +7,7 @@ import org.example.dto.*;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.*;
+import org.example.pojo.GameMode;
 import org.example.repository.*;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
@@ -46,9 +47,9 @@ public class GameServiceImpl implements GameService {
 
     @Transactional
     @Override
-    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds) {
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds, GameMode gameMode) {
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds, gameMode);
         gameRoom.setRoomEntity(savedRoom);
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
@@ -62,7 +63,7 @@ public class GameServiceImpl implements GameService {
         GameRoom gameRoom = new GameRoom();
         gameRoom.setTestRoom(true);  // 标记为测试房间
 
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null, null);
         gameRoom.setRoomEntity(savedRoom);
 
 

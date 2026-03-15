@@ -7,6 +7,7 @@ import org.example.entity.GameResultEntity;
 import org.example.entity.PlayerGameEntity;
 import org.example.dto.GameHistoryDTO;
 import org.example.dto.RoomDTO;
+import org.example.pojo.GameMode;
 import org.example.pojo.GameRoom;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,7 +16,7 @@ import java.util.List;
 public interface GameService {
 
     @Transactional
-    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds);
+    RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds, GameMode gameMode);
 
     /**
      * 创建测试房间（自动填充虚拟玩家）

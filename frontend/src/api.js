@@ -140,10 +140,13 @@ export const guestLogin = (name) =>
 
 // ============ 房间相关API ============
 
-export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null) => {
+export const createRoom = (maxPlayers, questionCount, timeLimit = 30, password = null, questionTagIds = null, gameMode = null) => {
   const params = { maxPlayers, questionCount, timeLimit, password };
   if (questionTagIds && questionTagIds.length > 0) {
     params.questionTagIds = questionTagIds;
+  }
+  if (gameMode) {
+    params.gameMode = gameMode;
   }
   return api.post('/rooms', null, { params });
 };

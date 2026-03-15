@@ -3,6 +3,7 @@ package org.example.service.room;
 import org.example.controller.GameController;
 import org.example.dto.RoomDTO;
 import org.example.entity.RoomEntity;
+import org.example.pojo.GameMode;
 import org.example.pojo.GameRoom;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,11 +17,12 @@ public interface RoomLifecycleService {
 
     /**
      * 初始化房间（创建数据库实体 + 内存房间）
+     * 兼容旧调用（无 gameMode / tagIds）
      */
     RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, GameRoom gameRoom);
 
     @Transactional
-    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, List<Long> questionTagIds);
+    RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, List<Long> questionTagIds, GameMode gameMode);
 
     /**
      * 加入房间

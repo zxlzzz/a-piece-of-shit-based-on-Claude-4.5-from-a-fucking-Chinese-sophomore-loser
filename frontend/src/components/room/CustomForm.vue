@@ -182,6 +182,49 @@
           </label>
         </div>
 
+        <!-- 游戏模式 -->
+        <div>
+          <label class="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5 sm:mb-2">
+            游戏模式
+          </label>
+          <div class="space-y-2">
+            <label class="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border cursor-pointer transition-all"
+                   :class="formData.gameMode === 'SYNCHRONIZED'
+                     ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
+                     : 'bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
+              <input
+                type="radio"
+                v-model="formData.gameMode"
+                value="SYNCHRONIZED"
+                class="mt-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 focus:ring-blue-500"
+              />
+              <div class="flex-1">
+                <span class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white">同时答题</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                  所有玩家在同一题目页面等待，全部提交或超时后统一推进
+                </span>
+              </div>
+            </label>
+            <label class="flex items-start gap-2 sm:gap-3 p-2.5 sm:p-3 rounded-lg border cursor-pointer transition-all"
+                   :class="formData.gameMode === 'ASYNC'
+                     ? 'bg-blue-50 border-blue-200 dark:bg-blue-900/10 dark:border-blue-800'
+                     : 'bg-gray-50 border-gray-200 dark:bg-gray-700/50 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'">
+              <input
+                type="radio"
+                v-model="formData.gameMode"
+                value="ASYNC"
+                class="mt-0.5 w-3.5 h-3.5 sm:w-4 sm:h-4 text-blue-600 focus:ring-blue-500"
+              />
+              <div class="flex-1">
+                <span class="block text-xs sm:text-sm font-medium text-gray-900 dark:text-white">异步答题</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5 block">
+                  提交后无需在题目页面等待，可切换至等待视图；仍需全员提交后才结算
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
+
         <!-- ========================================= -->
         <!-- 🔥 高级规则区域（可折叠） -->
         <!-- ========================================= -->
@@ -453,7 +496,8 @@ const formData = ref({
   questionCount: props.currentSettings?.questionCount || 10,
   timeLimit: props.currentSettings?.timeLimit || 30,
   chatEnabled: props.currentSettings?.chatEnabled ?? true,
-  privateChatEnabled: props.currentSettings?.privateChatEnabled ?? true,  // 🔥 私聊开关
+  privateChatEnabled: props.currentSettings?.privateChatEnabled ?? true,
+  gameMode: props.currentSettings?.gameMode || 'SYNCHRONIZED',
   rankingMode: props.currentSettings?.rankingMode || 'standard',
   targetScore: props.currentSettings?.targetScore || null,
   winConditions: {

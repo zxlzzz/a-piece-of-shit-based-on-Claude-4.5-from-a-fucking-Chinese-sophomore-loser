@@ -9,12 +9,14 @@ import org.example.pojo.GameRoom;
 public interface SubmissionService {
 
     /**
-     * 提交答案（保存到数据库 + 更新内存）
-     * @param roomCode 房间码
-     * @param playerId 玩家ID
-     * @param choice 选择答案
+     * 提交答案（保存到数据库 + 更新内存），使用房间当前 currentIndex 作为题目索引
      */
     void submitAnswer(String roomCode, String playerId, String choice);
+
+    /**
+     * ASYNC 模式：提交答案到指定题目索引（不依赖 gameRoom.currentIndex）
+     */
+    void submitAnswerAt(String roomCode, String playerId, String choice, int questionIndex);
 
     /**
      * 填充默认答案（超时未提交的玩家）

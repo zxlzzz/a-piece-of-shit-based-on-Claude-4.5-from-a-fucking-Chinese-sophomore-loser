@@ -36,9 +36,16 @@ const roomCode = ref(route.params.roomId)
 const room = ref(null)
 const question = ref(null)
 
+// ASYNC 模式：本地题目索引（前端独立推进）
+const asyncLocalIndex = ref(0)
+const asyncFinished = ref(false)  // 本玩家已答完所有题目，等待他人
+
+const isAsyncMode = computed(() => room.value?.gameMode === 'ASYNC')
+
 // 计算属性
 const currentQuestionIndex = computed(() => {
   if (!room.value) return 0
+  if (isAsyncMode.value) return asyncLocalIndex.value + 1
   return (room.value.currentIndex ?? 0) + 1
 })
 
@@ -55,17 +62,50 @@ const totalPlayers = computed(() => {
   return room.value?.players?.length || 0
 })
 
+// ===== ASYNC 模式：提交后推进到下一题 =====
+const advanceAsyncQuestion = () => {
+  asyncLocalIndex.value++
+  if (asyncLocalIndex.value >= totalQuestions.value) {
+    asyncFinished.value = true
+    question.value = null
+    logger.info('✅ ASYNC: 本玩家已答完所有题目，等待其他玩家')
+  } else {
+    question.value = room.value?.questions?.[asyncLocalIndex.value] ?? null
+    hasSubmitted.value = false
+    // 重置倒计时用于下一题
+    questionStartTime.value = new Date()
+    timeLimit.value = room.value?.timeLimit || 30
+    resetCountdown()
+    logger.info('⚡ ASYNC: 推进到下一题 index=', asyncLocalIndex.value)
+  }
+}
+
 // 🔥 使用 components
 const {
   hasSubmitted,
-  handleChoose,
-  handleAutoSubmit,
+  handleChoose: _handleChoose,
+  handleAutoSubmit: _handleAutoSubmit,
   resetSubmitState,
   restoreSubmitState,
   cleanupSubmission,
   getSubmissionKey,
   verifySubmissionState  // 🔥 P1-1: 验证提交状态
 } = useGameSubmit(roomCode, playerStore, toast, question, room)
+
+// ASYNC 模式下包装提交：成功后自动推进
+const handleChoose = async (choice) => {
+  await _handleChoose(choice)
+  if (isAsyncMode.value && hasSubmitted.value) {
+    advanceAsyncQuestion()
+  }
+}
+
+const handleAutoSubmit = async () => {
+  await _handleAutoSubmit()
+  if (isAsyncMode.value && hasSubmitted.value) {
+    advanceAsyncQuestion()
+  }
+}
 
 const {
   questionStartTime,
@@ -92,7 +132,8 @@ const { connectWebSocket, wsConnected } = useGameWebSocket(
   resetSubmitState,
   restoreSubmitState,
   getSubmissionKey,
-  verifySubmissionState  // 🔥 P1-1: 传递验证函数
+  verifySubmissionState,  // 🔥 P1-1: 传递验证函数
+  isAsyncMode             // ASYNC 模式标志，WS handler 据此决定是否覆盖 question
 )
 
 // 生命周期
@@ -229,8 +270,44 @@ onUnmounted(() => {
           </span>
         </div>
 
-        <!-- 游戏内容 -->
+        <!-- ASYNC 模式：本玩家已答完，等待他人 -->
+        <div v-if="isAsyncMode && asyncFinished"
+             class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-8 sm:p-12 text-center">
+          <div class="inline-flex items-center justify-center w-16 h-16 rounded-full
+                      bg-green-100 dark:bg-green-900/30 mb-4">
+            <i class="pi pi-check text-3xl text-green-600 dark:text-green-400"></i>
+          </div>
+          <h3 class="text-base sm:text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            答题完成，等待其他玩家
+          </h3>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            所有人答完后将自动公布结果
+          </p>
+
+          <!-- 各玩家进度 -->
+          <div class="flex flex-wrap gap-2 justify-center max-w-sm mx-auto">
+            <div
+              v-for="player in room?.players?.filter(p => !p.spectator)"
+              :key="player.playerId"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all"
+              :class="(room?.playerProgress?.[player.playerId] ?? 0) >= totalQuestions
+                ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-400'
+                : 'bg-gray-50 border-gray-200 text-gray-500 dark:bg-gray-700/50 dark:border-gray-600 dark:text-gray-400'"
+            >
+              <i class="pi text-xs"
+                 :class="(room?.playerProgress?.[player.playerId] ?? 0) >= totalQuestions
+                   ? 'pi-check-circle' : 'pi-clock'"></i>
+              <span>{{ player.name }}</span>
+              <span class="opacity-70">
+                {{ room?.playerProgress?.[player.playerId] ?? 0 }}/{{ totalQuestions }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 游戏内容（ASYNC 未答完时 / SYNC 模式） -->
         <GameContent
+          v-else
           :question="question"
           :hasSubmitted="hasSubmitted"
           :room="room"

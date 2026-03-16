@@ -27,4 +27,10 @@ public interface GameFlowService {
      * @param roomCode 房间码
      */
     void finishGame(String roomCode);
+
+    /**
+     * ASYNC 模式：所有玩家答完全部题目后，统一计分并结束游戏
+     * @param roomCode 房间码
+     */
+    void finishAsyncGame(String roomCode);
 }

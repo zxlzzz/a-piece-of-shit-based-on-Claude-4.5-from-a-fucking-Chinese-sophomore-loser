@@ -165,9 +165,11 @@ public class GameFlowServiceImpl implements GameFlowService {
             Integer timeLimit = room.getTimeLimit() != null ? room.getTimeLimit() : 30;
             gameRoom.setTimeLimit(timeLimit);
 
-            // 启动第一题的定时器（使用房间设置的 timeLimit）
-            timerService.scheduleTimeout(roomCode, timeLimit,
-                    () -> advanceQuestion(roomCode, "timeout", true));
+            // ASYNC 模式：前端自行管理倒计时，后端不启动定时器
+            if (gameMode != GameMode.ASYNC) {
+                timerService.scheduleTimeout(roomCode, timeLimit,
+                        () -> advanceQuestion(roomCode, "timeout", true));
+            }
 
 
             // 🔥 同步到 Redis
@@ -359,6 +361,36 @@ public class GameFlowServiceImpl implements GameFlowService {
                 }, Instant.now().plus(Duration.ofSeconds(10)));
             }
         }
+    }
+
+    // ==================== ASYNC 模式专用 ====================
+
+    @Override
+    public void finishAsyncGame(String roomCode) {
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        synchronized (RoomLock.getLock(roomCode)) {
+            if (gameRoom.isFinished()) {
+                log.warn("⚠️ 房间 {} 已结束，跳过 finishAsyncGame", roomCode);
+                return;
+            }
+
+            int total = gameRoom.getQuestions() != null ? gameRoom.getQuestions().size() : 0;
+            log.info("⚡ ASYNC 模式统一计分开始: roomCode={}, 总题数={}", roomCode, total);
+
+            for (int i = 0; i < total; i++) {
+                gameRoom.setCurrentIndex(i);
+                // 填充未提交玩家的默认答案
+                submissionService.fillDefaultAnswers(gameRoom);
+                // 计算本题分数
+                ScoringResult result = scoringService.calculateScores(gameRoom);
+                applyScoresToGameRoom(gameRoom, result);
+            }
+
+            roomCache.syncToRedis(roomCode, gameRoom);
+        }
+
+        finishGame(roomCode);
     }
 
     // ==================== 私有方法 ====================

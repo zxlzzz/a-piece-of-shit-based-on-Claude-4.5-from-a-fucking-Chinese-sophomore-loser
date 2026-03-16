@@ -71,6 +71,12 @@ public class GameRoom implements Serializable {
     private GameMode gameMode = GameMode.SYNCHRONIZED;
 
     /**
+     * ASYNC 模式：每位玩家已完成的题目数量
+     * 键：playerId，值：已答题数（0 = 还没答第一题）
+     */
+    private Map<String, Integer> playerProgress = new ConcurrentHashMap<>();
+
+    /**
      * 是否为测试房间（包含虚拟玩家）
      */
     private boolean testRoom = false;

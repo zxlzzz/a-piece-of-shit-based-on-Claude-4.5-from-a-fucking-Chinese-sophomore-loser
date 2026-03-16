@@ -587,6 +587,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
         }
 
+        // ASYNC 模式：携带全量题目 + 各玩家进度
+        boolean isAsync = gameRoom.getGameMode() == org.example.pojo.GameMode.ASYNC;
+        java.util.List<org.example.dto.QuestionDTO> allQuestions =
+                (isAsync && gameRoom.getQuestions() != null) ? new ArrayList<>(gameRoom.getQuestions()) : null;
+        java.util.Map<String, Integer> playerProgressSnapshot =
+                (isAsync && !gameRoom.getPlayerProgress().isEmpty())
+                        ? new java.util.HashMap<>(gameRoom.getPlayerProgress()) : null;
+
         return RoomDTO.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
@@ -604,6 +612,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .submittedPlayerIds(submittedPlayerIds)  // 🔥 P1-1: 已提交玩家列表
                 .gameMode(roomEntity != null ? roomEntity.getGameMode() : org.example.pojo.GameMode.SYNCHRONIZED)
+                .questions(allQuestions)          // ASYNC 全量题目
+                .playerProgress(playerProgressSnapshot) // ASYNC 各玩家进度
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)

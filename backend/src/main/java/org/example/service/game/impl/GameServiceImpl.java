@@ -7,6 +7,7 @@ import org.example.dto.*;
 import org.example.entity.*;
 import org.example.exception.BusinessException;
 import org.example.pojo.*;
+import org.example.pojo.GameMode;
 import org.example.repository.*;
 import org.example.service.broadcast.RoomStateBroadcaster;
 import org.example.service.cache.RoomCache;
@@ -46,9 +47,9 @@ public class GameServiceImpl implements GameService {
 
     @Transactional
     @Override
-    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds) {
+    public RoomDTO createRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, List<Long> questionTagIds, GameMode gameMode) {
         GameRoom gameRoom = new GameRoom();
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, questionTagIds, gameMode);
         gameRoom.setRoomEntity(savedRoom);
         roomCache.put(savedRoom.getRoomCode(), gameRoom);
         return roomLifecycleService.toRoomDTO(savedRoom.getRoomCode());
@@ -62,7 +63,7 @@ public class GameServiceImpl implements GameService {
         GameRoom gameRoom = new GameRoom();
         gameRoom.setTestRoom(true);  // 标记为测试房间
 
-        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null);
+        RoomEntity savedRoom = roomLifecycleService.initializeRoom(maxPlayers, questionCount, gameRoom, 30, null, null, null);
         gameRoom.setRoomEntity(savedRoom);
 
 
@@ -185,6 +186,12 @@ public class GameServiceImpl implements GameService {
                 throw new BusinessException("游戏未开始");
             }
 
+            // ===== ASYNC 模式：每位玩家独立推进 =====
+            if (gameRoom.getGameMode() == GameMode.ASYNC) {
+                return handleAsyncSubmit(roomCode, playerId, choice, gameRoom);
+            }
+
+            // ===== SYNCHRONIZED 模式（原有逻辑） =====
             if (gameRoom.getCurrentQuestion() == null) {
                 throw new BusinessException("当前没有有效题目");
             }
@@ -223,6 +230,47 @@ public class GameServiceImpl implements GameService {
 
             return roomLifecycleService.toRoomDTO(roomCode);
         }
+    }
+
+    private RoomDTO handleAsyncSubmit(String roomCode, String playerId, String choice, GameRoom gameRoom) {
+        int totalQuestions = gameRoom.getQuestions() != null ? gameRoom.getQuestions().size() : 0;
+        int playerIndex = gameRoom.getPlayerProgress().getOrDefault(playerId, 0);
+
+        if (playerIndex >= totalQuestions) {
+            throw new BusinessException("已完成所有题目");
+        }
+
+        // 检查该题是否已提交
+        Map<String, String> qSubmissions = gameRoom.getSubmissions().get(playerIndex);
+        if (qSubmissions != null && qSubmissions.containsKey(playerId)) {
+            throw new BusinessException("本题已经提交过答案");
+        }
+
+        // 提交答案到指定索引
+        submissionService.submitAnswerAt(roomCode, playerId, choice, playerIndex);
+
+        // 推进玩家进度
+        gameRoom = roomCache.getOrThrow(roomCode);
+        gameRoom.getPlayerProgress().put(playerId, playerIndex + 1);
+        roomCache.syncToRedis(roomCode, gameRoom);
+
+        log.info("⚡ [ASYNC] 玩家 {} 完成第 {}/{} 题", playerId, playerIndex + 1, totalQuestions);
+
+        // 广播最新状态（含 playerProgress）
+        broadcaster.sendRoomUpdate(roomCode, roomLifecycleService.toRoomDTO(roomCode));
+
+        // 检查是否所有非观战玩家都已完成全部题目
+        GameRoom finalRoom = gameRoom;
+        boolean allDone = finalRoom.getPlayers().stream()
+                .filter(p -> !Boolean.TRUE.equals(p.getSpectator()))
+                .allMatch(p -> finalRoom.getPlayerProgress().getOrDefault(p.getPlayerId(), 0) >= totalQuestions);
+
+        if (allDone) {
+            log.info("🎉 [ASYNC] 所有玩家完成全部题目，开始统一计分: roomCode={}", roomCode);
+            gameFlowService.finishAsyncGame(roomCode);
+        }
+
+        return roomLifecycleService.toRoomDTO(roomCode);
     }
 
     // ==================== 游戏结果 ====================

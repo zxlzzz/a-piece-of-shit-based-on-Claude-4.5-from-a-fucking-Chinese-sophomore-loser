@@ -119,6 +119,54 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     @Override
+    @Transactional(timeout = 10)
+    public void submitAnswerAt(String roomCode, String playerId, String choice, int questionIndex) {
+        GameRoom gameRoom = roomCache.getOrThrow(roomCode);
+
+        // 观战者检查
+        boolean isSpectator = gameRoom.getPlayers().stream()
+                .filter(p -> p.getPlayerId().equals(playerId))
+                .findFirst()
+                .map(PlayerDTO::getSpectator)
+                .orElse(false);
+        if (isSpectator) throw new BusinessException("观战者不能提交答案");
+
+        if (questionIndex < 0 || questionIndex >= gameRoom.getQuestions().size()) {
+            throw new BusinessException("题目索引越界: " + questionIndex);
+        }
+
+        org.example.dto.QuestionDTO questionDTO = gameRoom.getQuestions().get(questionIndex);
+        boolean isBot = playerId.startsWith("BOT_");
+
+        if (!isBot) {
+            QuestionEntity questionEntity = questionRepository.findById(questionDTO.getId())
+                    .orElseThrow(() -> new BusinessException("题目不存在: " + questionDTO.getId()));
+            PlayerEntity player = playerRepository.findByPlayerId(playerId)
+                    .orElseThrow(() -> new BusinessException("玩家不存在: " + playerId));
+            GameEntity game = gameRepository.findById(gameRoom.getGameId())
+                    .orElseThrow(() -> new BusinessException("游戏不存在"));
+
+            SubmissionEntity submission = SubmissionEntity.builder()
+                    .player(player).question(questionEntity).game(game).choice(choice).build();
+            submissionRepository.save(submission);
+
+            int playerCount = (int) gameRoom.getPlayers().stream()
+                    .filter(p -> !Boolean.TRUE.equals(p.getSpectator())).count();
+            questionStatisticsService.recordChoice(questionDTO.getId(), choice, playerId, playerCount,
+                    ChoiceRecordEntity.GameType.MATCH, roomCode);
+        }
+
+        // 更新内存状态
+        gameRoom.getSubmissions()
+                .computeIfAbsent(questionIndex, k -> new ConcurrentHashMap<>())
+                .put(playerId, choice);
+
+        roomCache.syncToRedis(roomCode, gameRoom);
+        log.info("✅ [ASYNC] submitAnswerAt: roomCode={}, playerId={}, questionIndex={}, choice={}",
+                roomCode, playerId, questionIndex, choice);
+    }
+
+    @Override
     @Transactional(timeout = 10)  // 🔥 P0-4修复：添加10秒超时，防止长时间占用连接
     public void fillDefaultAnswers(GameRoom gameRoom) {
         QuestionDTO currentQuestion = gameRoom.getCurrentQuestion();

@@ -16,6 +16,7 @@ import org.example.repository.PlayerRepository;
 import org.example.repository.RoomRepository;
 import org.example.service.cache.RoomCache;
 import org.example.service.chat.ChatRoomManager;
+import org.example.pojo.GameMode;
 import org.example.service.room.RoomLifecycleService;
 import org.example.service.timer.QuestionTimerService;
 import org.example.utils.RoomLock;
@@ -45,13 +46,13 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
     @Override
     @Transactional
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password,GameRoom gameRoom) {
-        return initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit,password, null);
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, Integer timeLimit, String password, GameRoom gameRoom) {
+        return initializeRoom(maxPlayers, questionCount, gameRoom, timeLimit, password, null, null);
     }
 
     @Transactional
     @Override
-    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, java.util.List<Long> questionTagIds) {
+    public RoomEntity initializeRoom(Integer maxPlayers, Integer questionCount, GameRoom gameRoom, Integer timeLimit, String password, java.util.List<Long> questionTagIds, GameMode gameMode) {
         String roomCode = generateRoomCode();
 
         // 🔥 序列化标签IDs
@@ -64,6 +65,8 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
         }
 
+        GameMode resolvedGameMode = gameMode != null ? gameMode : GameMode.SYNCHRONIZED;
+
         // 🔥 创建房间实体（只有基础字段）
         RoomEntity roomEntity = RoomEntity.builder()
                 .roomCode(roomCode)
@@ -73,6 +76,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .timeLimit(timeLimit != null ? timeLimit : 30)
                 .password(password != null && !password.trim().isEmpty() ? password : null)
                 // 🔥 高级规则使用默认值
+                .gameMode(resolvedGameMode)
                 .rankingMode("standard")
                 .targetScore(null)
                 .winConditionsJson(null)
@@ -83,6 +87,7 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
 
         // 初始化内存房间
         gameRoom.setRoomCode(roomCode);
+        gameRoom.setGameMode(resolvedGameMode);
         gameRoom.setMaxPlayers(maxPlayers);
         gameRoom.setPlayers(new ArrayList<>());
         gameRoom.setQuestions(new ArrayList<>());
@@ -328,6 +333,17 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 room.setChatEnabled(request.getChatEnabled());
             }
 
+            // 更新私聊开关
+            if (request.getPrivateChatEnabled() != null) {
+                room.setPrivateChatEnabled(request.getPrivateChatEnabled());
+            }
+
+            // 更新游戏模式
+            if (request.getGameMode() != null) {
+                room.setGameMode(request.getGameMode());
+                gameRoom.setGameMode(request.getGameMode());
+            }
+
             // 更新排名模式
             if (request.getRankingMode() != null) {
                 room.setRankingMode(request.getRankingMode());
@@ -571,6 +587,14 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
             }
         }
 
+        // ASYNC 模式：携带全量题目 + 各玩家进度
+        boolean isAsync = gameRoom.getGameMode() == org.example.pojo.GameMode.ASYNC;
+        java.util.List<org.example.dto.QuestionDTO> allQuestions =
+                (isAsync && gameRoom.getQuestions() != null) ? new ArrayList<>(gameRoom.getQuestions()) : null;
+        java.util.Map<String, Integer> playerProgressSnapshot =
+                (isAsync && !gameRoom.getPlayerProgress().isEmpty())
+                        ? new java.util.HashMap<>(gameRoom.getPlayerProgress()) : null;
+
         return RoomDTO.builder()
                 .roomCode(gameRoom.getRoomCode())
                 .maxPlayers(gameRoom.getMaxPlayers() != null ? gameRoom.getMaxPlayers() :
@@ -587,6 +611,9 @@ public class RoomLifecycleServiceImpl implements RoomLifecycleService {
                 .questionCount(questionCount)
                 .hasPassword(roomEntity != null && roomEntity.getPassword() != null && !roomEntity.getPassword().isEmpty())
                 .submittedPlayerIds(submittedPlayerIds)  // 🔥 P1-1: 已提交玩家列表
+                .gameMode(roomEntity != null ? roomEntity.getGameMode() : org.example.pojo.GameMode.SYNCHRONIZED)
+                .questions(allQuestions)          // ASYNC 全量题目
+                .playerProgress(playerProgressSnapshot) // ASYNC 各玩家进度
                 .rankingMode(roomEntity != null ? roomEntity.getRankingMode() : "standard")
                 .targetScore(roomEntity != null ? roomEntity.getTargetScore() : null)
                 .winConditions(winConditions)

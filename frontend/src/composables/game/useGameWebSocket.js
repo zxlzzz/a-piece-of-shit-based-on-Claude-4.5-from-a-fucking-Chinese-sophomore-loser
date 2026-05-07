@@ -17,7 +17,8 @@ export function useGameWebSocket(
   resetSubmitState,
   restoreSubmitState,
   getSubmissionKey,
-  verifySubmissionState  // 🔥 P1-1: 新增验证函数参数
+  verifySubmissionState,  // 🔥 P1-1: 新增验证函数参数
+  isAsyncMode             // ASYNC 模式标志：为 true 时不覆盖 question（前端本地管理）
 ) {
   const subscriptions = ref([])
   const wsConnected = ref(false) // 🔥 新增：连接状态
@@ -139,6 +140,8 @@ export function useGameWebSocket(
         const indexChanged = newIndex !== undefined && oldIndex !== newIndex
         const questionTimeChanged = newQuestionStartTime && oldQuestionStartTime !== newQuestionStartTime
 
+        const asyncMode = isAsyncMode?.value === true
+
         // 🔥 修复：题目切换、重复题换轮、或首次加载时都需要处理
         if (isFirstLoad || indexChanged || questionTimeChanged) {
           // 🔥 强制清理所有旧题目的localStorage，避免Bot房间快速切换导致的状态残留
@@ -167,30 +170,44 @@ export function useGameWebSocket(
             })
           }
 
-          clearCountdown()
-          resetSubmitState()
-
-          // 🔥 先更新room，再检查新题的提交状态
           room.value = update
-          question.value = update.currentQuestion
 
-          // 🔥 所有题目都检查localStorage（包括第一题）
-          const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
-          const savedSubmission = localStorage.getItem(newSubmissionKey)
-          if (savedSubmission === 'true') {
-            restoreSubmitState()
-            logger.info('✅ WebSocket恢复提交状态:', { newIndex, hasSubmitted: true })
-          }
+          // ASYNC 模式：首次加载时用 questions[0] 初始化 question 并启动倒计时；后续由前端本地推进
+          if (isFirstLoad && asyncMode) {
+            clearCountdown()
+            resetSubmitState()
+            question.value = update.questions?.[0] ?? update.currentQuestion
+            if (update.questionStartTime) {
+              questionStartTime.value = new Date(update.questionStartTime)
+              timeLimit.value = update.timeLimit || 30
+              resetCountdown()
+            }
+          } else if (!asyncMode) {
+            clearCountdown()
+            resetSubmitState()
+            question.value = update.currentQuestion
 
-          if (update.questionStartTime) {
-            questionStartTime.value = new Date(update.questionStartTime)
-            timeLimit.value = update.timeLimit || 30
-            resetCountdown()
+            // 🔥 所有题目都检查localStorage（包括第一题）
+            const newSubmissionKey = `submission_${roomCode.value}_${newIndex}`
+            const savedSubmission = localStorage.getItem(newSubmissionKey)
+            if (savedSubmission === 'true') {
+              restoreSubmitState()
+              logger.info('✅ WebSocket恢复提交状态:', { newIndex, hasSubmitted: true })
+            }
+
+            if (update.questionStartTime) {
+              questionStartTime.value = new Date(update.questionStartTime)
+              timeLimit.value = update.timeLimit || 30
+              resetCountdown()
+            }
           }
         } else {
-          // 普通更新（玩家列表变化等）
+          // 普通更新（玩家列表变化、playerProgress 更新等）
           room.value = update
-          question.value = update.currentQuestion
+          // ASYNC 模式：不覆盖 question（由前端本地索引管理）
+          if (!asyncMode) {
+            question.value = update.currentQuestion
+          }
         }
 
         // 🔥 同步更新playerStore.currentRoom，确保聊天室玩家列表能实时更新
